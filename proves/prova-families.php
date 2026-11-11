@@ -54,17 +54,22 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     $mapa = disseny($cfg, 'mapa.json');
     llocs_carrega($pdo, $mapa);
     $t0 = new DateTimeImmutable('2026-12-15 09:00:00', new DateTimeZone('UTC'));
-    $c = codis_genera($pdo, $cfg['pebre'], 4, $t0)['codis'];
+    $c = codis_genera($pdo, $cfg['pebre'], 6, $t0)['codis'];
     $k = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $t0);
     $crida = function (array $p, string $hora, string $ip = '10.1.0.1') use ($pdo, $cfg) {
         return app_executa($pdo, $cfg, $p, $ip, new DateTimeImmutable($hora, new DateTimeZone('UTC')));
     };
     $snap = function () use ($cfg) { return json_decode((string)file_get_contents($cfg['snapshot']), true); };
+    // Colors d'una figura: els que es donen i 0 per a la resta de parts personalitzables (pell, cabells…)
+    $col = function (string $peca, array $c) use ($cfg) {
+        return array_pad($c, count(disseny($cfg, 'peces.json')['peces'][$peca]['pers']), 0);
+    };
     $un = function (callable $f) use ($mapa) { foreach ($mapa['llocs'] as $l) if ($f($l)) return $l; return null; };
     $persona = $un(function ($l) { return $l['tipus'] === 'persona' && $l['grup'] === 'general' && $l['zona'] === 'Z0'; });
     $persona2 = $un(function ($l) use ($persona) { return $l['tipus'] === 'persona' && $l['grup'] === 'general' && $l['zona'] === 'Z0' && $l['id'] !== $persona['id']; });
     $casa = $un(function ($l) { return $l['tipus'] === 'casa' && $l['grup'] === 'general' && $l['zona'] === 'Z0'; });
     $element = $un(function ($l) { return $l['tipus'] === 'element' && $l['grup'] === 'general' && $l['zona'] === 'Z0'; });
+    $animal = $un(function ($l) { return $l['tipus'] === 'animal' && $l['grup'] === 'general' && $l['zona'] === 'Z0'; });
     $z1 = $un(function ($l) { return $l['grup'] === 'general' && $l['zona'] === 'Z1'; });
     $pastor = $un(function ($l) { return !empty($l['pastor']); });
     $pastor2 = $un(function ($l) use ($pastor) { return !empty($l['pastor']) && $l['id'] !== $pastor['id']; });
@@ -94,11 +99,11 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual([400, 'lloc'], [$e, $r['codi'] ?? ''], 'el claustre no pot triar llocs de les famílies');
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $pastor['id']], $h);
     igual(200, $e, 'el claustre reté un pastor');
-    [$e, $r2] = $crida(['a' => 'claustre.confirmar', 'k' => $k, 'lloc' => $pastor['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => [6, 0]], $h);
+    [$e, $r2] = $crida(['a' => 'claustre.confirmar', 'k' => $k, 'lloc' => $pastor['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => $col('PER-PAS-F', [6, 0])], $h);
     igual([400, 'colors'], [$e, $r2['codi'] ?? ''], 'un pastor no pot portar colors fora de la paleta de terra');
-    [$e] = $crida(['a' => 'claustre.confirmar', 'k' => $k, 'lloc' => $pastor['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => [3, 1]], $h);
+    [$e] = $crida(['a' => 'claustre.confirmar', 'k' => $k, 'lloc' => $pastor['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => $col('PER-PAS-F', [3, 1])], $h);
     igual(200, $e, 'el pastor es confirma amb la paleta de terra');
-    igual(['p' => 'PER-PAS-F', 'm' => 1, 'c' => [3, 1]], $snap()['o'][$pastor['id']] ?? null, 'el snapshot porta el pastor');
+    igual(['p' => 'PER-PAS-F', 'm' => 1, 'c' => $col('PER-PAS-F', [3, 1])], $snap()['o'][$pastor['id']] ?? null, 'el snapshot porta el pastor');
     igual(true, $snap()['claustre'], 'el snapshot indica que el claustre és obert');
     config_desa($pdo, 'claustre_limit', '1');
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $pastor2['id']], $h);
@@ -124,7 +129,7 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual([400, 'peca'], [$e, $r['codi'] ?? ''], 'no es pot posar un animal en un lloc de persona');
     [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $persona['id'], 'retencio' => $ret, 'peca' => 'ESC-MARIA', 'mirall' => 0], $h);
     igual([400, 'peca'], [$e, $r['codi'] ?? ''], 'no es poden posar peces de l\'escena fixa');
-    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $persona['id'], 'retencio' => $ret, 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => [6, 3]], $h);
+    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $persona['id'], 'retencio' => $ret, 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => $col('PER-PAS-F', [6, 3])], $h);
     igual(200, $e, 'una família pot posar un pastor (PER-PAS-F) amb la paleta normal');
     [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona2['id']], $h);
     igual([403, 'codi_no'], [$e, $r['codi'] ?? ''], 'un codi només serveix per a una figura');
@@ -146,9 +151,22 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[1], 'lloc' => $element['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => $element['codi']], $h);
     igual(200, $e, 'una família planta un element (sense colors)');
     igual(true, $snap()['claustre_alliberat'], 'després de les 22:00 del 21 des els llocs del claustre són de les famílies');
+    // Pelatge dels animals i to de pell
+    [, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[4], 'lloc' => $animal['id']], $h);
+    $ret5 = $r['retencio'] ?? '';
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[4], 'lloc' => $animal['id'], 'retencio' => $ret5, 'peca' => 'ANI-GAT-D', 'mirall' => 0, 'colors' => [5]], $h);
+    igual(400, $e, 'un pelatge fora de la paleta → error');
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[4], 'lloc' => $animal['id'], 'retencio' => $ret5, 'peca' => 'ANI-GAT-D', 'mirall' => 0, 'colors' => [2]], $h);
+    igual(200, $e, 'una família posa un gat negre');
+    igual([2], $snap()['o'][$animal['id']]['c'] ?? null, 'el snapshot porta el pelatge del gat');
+    [, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[5], 'lloc' => $persona2['id']], $h);
+    $ret6 = $r['retencio'] ?? '';
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[5], 'lloc' => $persona2['id'], 'retencio' => $ret6, 'peca' => 'PER-ADU-F', 'mirall' => 0, 'colors' => [0, 0, 5]], $h);
+    igual(400, $e, 'un to de pell fora de la paleta → error');
+    [$e] = $crida(['a' => 'codi.deixar', 'c' => $c[5], 'lloc' => $persona2['id'], 'retencio' => $ret6], $h);
     [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[2], 'lloc' => $pastor2['id']], $h);
     igual(200, $e, 'una família pot ocupar un pastor que el claustre ha deixat lliure');
-    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[2], 'lloc' => $pastor2['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-ADU-F', 'mirall' => 0, 'colors' => [2, 1]], $h);
+    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[2], 'lloc' => $pastor2['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-ADU-F', 'mirall' => 0, 'colors' => $col('PER-ADU-F', [2, 1])], $h);
     igual(200, $e, 'als llocs de pastor, també les famílies fan servir la paleta de terra');
     [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[3], 'lloc' => $claus_el['id']], $h);
     igual(in_array($claus_el['zona'], ['Z0'], true) ? 200 : 400, $e, 'un element del claustre alliberat només es pot triar si la seva zona és oberta');
@@ -159,14 +177,26 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     $ret4 = $r['retencio'] ?? '';
     [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[3], 'lloc' => $persona2['id'], 'retencio' => $ret4, 'peca' => 'ANI-GOS-D', 'mirall' => 0], $h);
     igual(400, $e, 'en un lloc de persona no hi va un gos');
-    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[3], 'lloc' => $persona2['id'], 'retencio' => $ret4, 'peca' => 'PER-INF-F', 'mirall' => 0, 'colors' => [1]], $h);
+    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[3], 'lloc' => $persona2['id'], 'retencio' => $ret4, 'peca' => 'PER-INF-F', 'mirall' => 0, 'colors' => $col('PER-INF-F', [1])], $h);
     $s = $snap();
-    igual(['Z0', 'Z1'], $s['zones'], 'Z0 passa de l\'1 % i s\'obre Z1; Z0+Z1 encara no hi arriben i s\'atura');
+    // Esperat: s'obren zones mentre les obertes tinguin com a mínim l'1 % de llocs ocupats (7 participacions reals)
+    $esperades = ['Z0'];
+    foreach (['Z1', 'Z2', 'Z3'] as $z) {
+        $total = count(array_filter($mapa['llocs'], function ($l) use ($esperades) { return $l['grup'] !== 'poble' && in_array($l['zona'], $esperades, true); }));
+        $reals = count(array_filter(array_keys($s['o']), function ($id) use ($mapa, $esperades) {
+            foreach ($mapa['llocs'] as $l) if ($l['id'] === $id) return $l['grup'] !== 'poble' && in_array($l['zona'], $esperades, true);
+            return false;
+        }));
+        if ($reals * 100 < 1 * $total) break;
+        $esperades[] = $z;
+    }
+    comprova(count($esperades) > 1, 'amb un llindar de l\'1 % s\'obre almenys una zona nova');
+    igual($esperades, $s['zones'], 'les zones s\'obren en ordre i s\'aturen quan les obertes no arriben al llindar');
     comprova(!empty($r['zona_nova']), 'la resposta avisa que s\'ha obert una zona');
     $obre = $pdo->query("SELECT COUNT(*) FROM registre WHERE accio = 'zones.obre'")->fetchColumn();
-    igual(1, (int)$obre, 'el registre apunta la zona oberta');
+    igual(count($esperades) - 1, (int)$obre, 'el registre apunta cada zona oberta');
     igual([], snapshot_errors($s, $mapa, disseny($cfg, 'peces.json')['peces'], disseny($cfg, 'paletes.json')), 'el snapshot generat és vàlid');
-    igual(['tipus' => 'participacions', 'fet' => 6, 'fita' => null], $s['comptador'], 'comptador: 6 participacions reals');
+    igual(['tipus' => 'participacions', 'fet' => 7, 'fita' => null], $s['comptador'], 'comptador: 7 participacions reals');
 
     // Registre sense dades personals
     $qui = $pdo->query("SELECT DISTINCT qui FROM registre")->fetchAll(PDO::FETCH_COLUMN);

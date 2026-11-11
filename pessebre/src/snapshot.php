@@ -70,9 +70,9 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         if (!is_array($idx) || count($idx) !== count($pers)) {
             $e[] = "$id: calen " . count($pers) . ' índexs de color';
         } else {
-            $grup = $l['tipus'] === 'casa' ? 'cases' : (!empty($l['pastor']) ? 'pastors' : 'persones');
+            $grup = $l['tipus'] === 'casa' ? 'cases' : ($l['tipus'] === 'animal' ? 'animals' : (!empty($l['pastor']) ? 'pastors' : 'persones'));
             foreach ($pers as $i => $rol) {
-                $n = count($paletes[$grup][$rol]['opcions'] ?? []);
+                $n = count(($paletes[$grup][$rol] ?? $paletes['persones'][$rol] ?? [])['opcions'] ?? []);
                 if (!is_int($idx[$i]) || $idx[$i] < 0 || $idx[$i] >= $n) $e[] = "$id: índex de color no vàlid per a $rol";
             }
         }

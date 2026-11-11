@@ -14,7 +14,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const JSON_F = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 const ELEMENTS_SVG = ['svg', 'g', 'defs', 'symbol', 'path', 'use', 'rect', 'ellipse', 'circle',
                       'pattern', 'linearGradient', 'radialGradient', 'stop'];
-const ROLS_PERSONALITZABLES = ['facana' => 4, 'teulada' => 4, 'porta' => 3, 'flor' => 3, 'roba' => 3, 'mocador' => 3, 'roba2' => 3];
+const ROLS_PERSONALITZABLES = ['facana' => 4, 'teulada' => 4, 'porta' => 3, 'flor' => 3, 'roba' => 3, 'mocador' => 3, 'roba2' => 3,
+                               'pell' => 3, 'cabell' => 3, 'palla' => 3, 'camell' => 3, 'blanc' => 3, 'bru' => 3, 'gris' => 3, 'rosa' => 3];
 const CATEGORIES = ['casa', 'element', 'persona', 'animal', 'escena', 'decoracio', 'marca'];
 const MOMENTS = ['dia', 'posta', 'nit', 'neu'];
 // Colors de la silueta fantasma (compon.FANTASMA de la guia v2)
@@ -289,11 +290,33 @@ function converteix(string $zip, string $arrel): array
     ksort($registre);
     $paletes = valida_paletes(llegeix_json($f, 'paletes.json'), ['cases' => ['facana', 'teulada', 'porta'], 'persones' => ['roba', 'mocador', 'roba2']]);
     // Paletes pròpies (disseny-propi/paletes.json): flors de les cases i roba dels pastors
-    $propies = valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true), ['cases' => ['flor'], 'pastors' => ['roba', 'mocador', 'roba2']]);
+    $propies = valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true),
+        ['cases' => ['flor'], 'pastors' => ['roba', 'mocador', 'roba2'], 'persones' => ['pell', 'cabell', 'palla'],
+         'animals' => ['camell', 'blanc', 'bru', 'gris', 'rosa']]);
     foreach ($propies as $grup => $rols) foreach ($rols as $rol => $v) $paletes[$grup][$rol] = $v;
     // Les cases amb jardineres també tenen el color de les flors personalitzable (després de façana, teulada i porta)
     foreach ($registre as $codi => $p) {
         if ($p['cat'] === 'casa' && in_array('flor', $p['rols'], true) && !in_array('flor', $p['pers'], true)) $registre[$codi]['pers'][] = 'flor';
+    }
+    // Figures de les famílies: pell, cabells i palla (si la peça els té) i el pelatge principal de cada animal
+    $extra = json_decode((string)file_get_contents("$arrel/disseny-propi/personalitzables.json"), true);
+    if (!is_array($extra)) falla('disseny-propi/personalitzables.json no és JSON vàlid');
+    foreach ($registre as $codi => $p) {
+        if ($p['cat'] !== 'persona') continue;
+        foreach ($extra['persones'] as $rol) {
+            if (isset($paletes['persones'][$rol]) && in_array($rol, $p['rols'], true)) $registre[$codi]['pers'][] = $rol;
+        }
+    }
+    foreach ($extra['pelatge'] as $codi => $rol) {
+        if (($registre[$codi]['cat'] ?? '') !== 'animal' || !isset($paletes['animals'][$rol])) falla("personalitzables.json: $codi o $rol no vàlids");
+        $registre[$codi]['pers'][] = $rol;
+    }
+    // Fora les parts personalitzables que la peça no té dibuixades (p. ex. el mocador del pagès amb barret)
+    foreach ($registre as $codi => $p) {
+        $registre[$codi]['pers'] = array_values(array_filter($p['pers'], function ($rol) use ($p) {
+            foreach ($p['rols'] as $r) if ($r === $rol || strncmp($r, "$rol-", strlen($rol) + 1) === 0) return true;
+            return false;
+        }));
     }
 
     // Capes 2400×800 i estils de capa

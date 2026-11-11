@@ -194,7 +194,9 @@ var Visor = (function () {
   function toc(sx, sy) {
     if (!darrer) return;
     var candidats = D.mapa.llocs.filter(function (l) { return op.esCandidat(l, darrer); });
-    var l = Compon.toca(candidats, D.peces, sx, sy);
+    var lliures = candidats.filter(function (l) { return !darrer.o[l.id] && (darrer.r || []).indexOf(l.id) < 0; });
+    // Si sota el dit hi ha un lloc lliure i un d'ocupat (figures que se superposen), mana el lliure
+    var l = Compon.toca(lliures, D.peces, sx, sy) || Compon.toca(candidats, D.peces, sx, sy);
     op.enToc(l, darrer);
   }
 

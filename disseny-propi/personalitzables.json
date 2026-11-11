@@ -1,0 +1,17 @@
+{
+ "nota": "Parts de les figures que les famílies poden pintar, a més de les del paquet v2. «persones»: s'afegeixen si la peça té aquest rol. «pelatge»: rol principal de cada animal que es pot pintar (paleta animals.<rol>).",
+ "persones": [
+  "pell",
+  "cabell",
+  "palla"
+ ],
+ "pelatge": {
+  "ANI-GAT-D": "camell",
+  "ANI-GOS-D": "blanc",
+  "ANI-CABRA-D": "bru",
+  "ANI-CABRIT-D": "bru",
+  "ANI-CONILL-D": "gris",
+  "ANI-PORC-D": "rosa",
+  "ANI-ASE-D": "gris"
+ }
+}

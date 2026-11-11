@@ -187,3 +187,8 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - A més de façana, teulada i porta: **flors** de les jardineres (paleta `cases.flor` a `disseny-propi/paletes.json`; només als models que en tenen), **girar** la casa i **treure finestres** (hi queda paret).
 - Les finestres es detecten automàticament del dibuix (grups de vidres `llum*`); el conversor genera per a cada una una tapa `pc-CODI-F<n>` que continua la paret del costat. Snapshot: `m` (mirall) i `f` (màscara de bits de finestres tretes).
 - A la pàgina dels tutors, les finestres es toquen a la previsualització gran (retallada a la part dibuixada).
+
+## 16. Figures de les famílies més personalitzables (11 nov 2026, decidit)
+- **Persones:** a més de roba/mocador, **to de pell** (5), **cabells i barba** (5, on es veuen) i **barret i cistell** (5, palla). Les parts que la peça no dibuixa no surten (el pagès amb barret no té mocador).
+- **Animals:** **pelatge** del gat, el gos, la cabra, el cabrit, el conill, el porc i l'ase (4–5 opcions). Ovelles, gallines, ànecs i coloms no (ja tenen variants).
+- La primera opció de cada paleta és el color original. Paletes a `disseny-propi/paletes.json` (`persones.*`, `animals.*`); quines parts es poden pintar, a `disseny-propi/personalitzables.json`. Si una paleta no és al grup (p. ex. la pell dels pastors), es fa servir la de persones.

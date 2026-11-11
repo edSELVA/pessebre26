@@ -33,8 +33,8 @@ function ocupacio(array $l, array $peces, array $paletes, array $persones, array
     if (in_array($l['tipus'], ['persona', 'animal'], true)) $o['m'] = mt_rand(0, 1);
     $pers = $peces[$p]['pers'];
     if ($pers) {
-        $grup = $l['tipus'] === 'casa' ? 'cases' : (!empty($l['pastor']) ? 'pastors' : 'persones');
-        $o['c'] = array_map(function ($rol) use ($paletes, $grup) { return mt_rand(0, count($paletes[$grup][$rol]['opcions']) - 1); }, $pers);
+        $grup = $l['tipus'] === 'casa' ? 'cases' : ($l['tipus'] === 'animal' ? 'animals' : (!empty($l['pastor']) ? 'pastors' : 'persones'));
+        $o['c'] = array_map(function ($rol) use ($paletes, $grup) { return mt_rand(0, count(($paletes[$grup][$rol] ?? $paletes['persones'][$rol])['opcions']) - 1); }, $pers);
     }
     return $o;
 }

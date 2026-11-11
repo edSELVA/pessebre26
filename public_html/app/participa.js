@@ -58,8 +58,14 @@
   }
 
   function grupPaleta(peca) {
-    if (D().peces[peca].cat === 'casa') return 'cases';
+    var cat = D().peces[peca].cat;
+    if (cat === 'casa') return 'cases';
+    if (cat === 'animal') return 'animals';
     return tria && tria.lloc.pastor ? 'pastors' : 'persones';
+  }
+
+  function paleta(grup, rol) {
+    return D().paletes[grup][rol] || D().paletes.persones[rol];
   }
 
   function colorsInicials(peca) {
@@ -101,9 +107,11 @@
     function filesColors() {
       zona.textContent = '';
       var p = D().peces[tria.peca];
-      var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', roba: 'Roba', mocador: 'Mocador', roba2: 'Roba' };
+      var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors', roba: 'Roba', mocador: 'Mocador',
+                   roba2: 'Roba', pell: 'Pell', cabell: 'Cabells', palla: 'Barret i cistell',
+                   camell: 'Pelatge', blanc: 'Pelatge', bru: 'Pelatge', gris: 'Pelatge', rosa: 'Pelatge' };
       p.pers.forEach(function (rol, i) {
-        var opcions = D().paletes[grupPaleta(tria.peca)][rol].opcions;
+        var opcions = paleta(grupPaleta(tria.peca), rol).opcions;
         zona.appendChild(UI.filaColors(noms[rol], opcions, tria.colors[i], function (j) { tria.colors[i] = j; pinta(); }));
       });
     }

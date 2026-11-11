@@ -32,6 +32,11 @@ igual(5, count($pj['CASA-MASIA-P']['finestres']), 'CASA-MASIA-P té 5 finestres 
 igual(0, count($pj['CASA-VESSANT-P']['finestres']), 'CASA-VESSANT-P no té finestres de vidre');
 foreach ($pj as $codi => $p) if (!empty($p['finestres'])) foreach ($p['finestres'] as $i => $f) comprova(strpos($fitxers['peces.svg'], 'id="pc-' . $codi . '-F' . $i . '"') !== false, "el sprite té la tapa $i de $codi");
 igual(['facana', 'teulada', 'porta', 'flor'], $pj['CASA-ALTA-P']['pers'], 'les cases amb jardineres tenen el color de les flors personalitzable');
+igual(['roba', 'mocador', 'pell'], $pj['PER-ADU-F']['pers'], 'totes les persones tenen el to de pell personalitzable');
+igual(['roba', 'pell', 'cabell', 'palla'], $pj['PER-ADU-CAPELL']['pers'], 'el pagès amb barret: cabells i barret, sense mocador (no en porta)');
+igual(['roba2', 'pell', 'cabell'], $pj['PER-INF-F']['pers'], 'els infants: roba, pell i cabells');
+igual(['camell'], $pj['ANI-GAT-D']['pers'], 'el gat té el pelatge personalitzable');
+igual([], $pj['ANI-OVELLA-D']['pers'], 'les ovelles no (ja hi ha la blanca i la negra)');
 comprova(strpos($fitxers['escena.css'], '.fantasma-vora {') !== false, 'escena.css té el contorn de les cases lliures');
 igual(1, substr_count($fitxers['terreny.svg'], '<g id="casc-paviment">'), 'el paviment del casc antic és en un grup');
 foreach (['dia', 'posta', 'nit', 'neu'] as $m) comprova(strpos($fitxers['moments.css'], ".moment-$m {") !== false, "moments.css té $m");

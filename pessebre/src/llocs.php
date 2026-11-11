@@ -42,6 +42,7 @@ function lloc(PDO $pdo, string $id): ?array
 function grup_paleta(string $categoria, bool $pastor): string
 {
     if ($categoria === 'casa') return 'cases';
+    if ($categoria === 'animal') return 'animals';
     return $pastor ? 'pastors' : 'persones';
 }
 
@@ -54,7 +55,7 @@ function colors_valids(array $cfg, string $peca, $colors, bool $pastor = false):
     $grup = grup_paleta($p['cat'], $pastor);
     $paletes = disseny($cfg, 'paletes.json');
     foreach ($p['pers'] as $i => $rol) {
-        $n = count($paletes[$grup][$rol]['opcions'] ?? []);
+        $n = count(($paletes[$grup][$rol] ?? $paletes['persones'][$rol] ?? [])['opcions'] ?? []);   // si el grup no la té, la de persones
         if (!is_int($colors[$i]) || $colors[$i] < 0 || $colors[$i] >= $n) return false;
     }
     return true;

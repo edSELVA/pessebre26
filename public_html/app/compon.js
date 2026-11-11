@@ -5,7 +5,7 @@
 var Compon = (function () {
   var SUFIX = ['-clar', '', '-ombra', '-fosc'];
   var NEU = '#F2F7FF';
-  var GRUP_PALETA = { casa: 'cases', persona: 'persones' };
+  var GRUP_PALETA = { casa: 'cases', persona: 'persones', animal: 'animals' };
 
   // Posició d'una peça amb l'ancoratge a (x, y). Mirall horitzontal: matrix(-1 0 0 1 2x 0).
   function colloca(peca, x, y, mirall) {
@@ -21,7 +21,8 @@ var Compon = (function () {
     var vars = {};
     grup = paletes[grup || GRUP_PALETA[peca.cat]] || {};
     (peca.pers || []).forEach(function (rol, i) {
-      var op = grup[rol] && grup[rol].opcions[idx ? idx[i] : 0];
+      var paleta = grup[rol] || (paletes.persones || {})[rol];      // si el grup no la té (p. ex. pastors), la de persones
+      var op = paleta && paleta.opcions[idx ? idx[i] : 0];
       if (!op) return;
       op.forEach(function (c, j) { vars['--' + rol + SUFIX[j]] = c; });
     });
