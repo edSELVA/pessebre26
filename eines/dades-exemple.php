@@ -23,7 +23,8 @@ function ocupacio(array $l, array $peces, array $paletes, array $persones, array
     if ($l['tipus'] === 'casa') {
         $p = $origen === 'admin' ? preg_replace('/-P$/', '-SP', $l['codi']) : $l['codi'];
     } elseif ($l['tipus'] === 'element') {
-        $p = $l['codi'];
+        $alt = $peces[$l['codi']]['alternatives'] ?? [$l['codi']];
+        $p = mt_rand(0, 3) === 0 ? tria($alt) : $l['codi'];      // algunes famílies canvien l'espècie de l'arbre
     } elseif ($l['tipus'] === 'animal') {
         $p = tria($animals);
     } else {
@@ -33,7 +34,7 @@ function ocupacio(array $l, array $peces, array $paletes, array $persones, array
     if (in_array($l['tipus'], ['persona', 'animal'], true)) $o['m'] = mt_rand(0, 1);
     $pers = $peces[$p]['pers'];
     if ($pers) {
-        $grup = $l['tipus'] === 'casa' ? 'cases' : ($l['tipus'] === 'animal' ? 'animals' : (!empty($l['pastor']) ? 'pastors' : 'persones'));
+        $grup = ['casa' => 'cases', 'animal' => 'animals', 'element' => 'elements'][$l['tipus']] ?? (!empty($l['pastor']) ? 'pastors' : 'persones');
         $o['c'] = array_map(function ($rol) use ($paletes, $grup) { return mt_rand(0, count(($paletes[$grup][$rol] ?? $paletes['persones'][$rol])['opcions']) - 1); }, $pers);
     }
     return $o;

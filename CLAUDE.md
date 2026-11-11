@@ -192,3 +192,9 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Persones:** a més de roba/mocador, **to de pell** (5), **cabells i barba** (5, on es veuen) i **barret i cistell** (5, palla). Les parts que la peça no dibuixa no surten (el pagès amb barret no té mocador).
 - **Animals:** **pelatge** del gat, el gos, la cabra, el cabrit, el conill, el porc i l'ase (4–5 opcions). Ovelles, gallines, ànecs i coloms no (ja tenen variants).
 - La primera opció de cada paleta és el color original. Paletes a `disseny-propi/paletes.json` (`persones.*`, `animals.*`); quines parts es poden pintar, a `disseny-propi/personalitzables.json`. Si una paleta no és al grup (p. ex. la pell dels pastors), es fa servir la de persones.
+
+## 17. Participar sense instruccions (11 nov 2026, decidit)
+- **Primer pas «Què vols posar al pessebre?»**: Persona, Animal, Casa o Arbre/element (botons amb dibuix i nombre de llocs lliures). Després només es veuen les siluetes d'aquest tipus.
+- **Siluetes** de persona (PER-ADU-F) i d'animal (ANI-OVELLA-D) en lloc de les marques de pedra; mateix aspecte que les cases lliures (blanc translúcid amb contorn gris).
+- **Arbres:** en un lloc d'arbre es tria l'espècie (11) i en un de mata, la mata (3) (`intercanviables` a `disseny-propi/personalitzables.json`). Colors: fruit del fruiter, flor de l'ametller i de la mata florida, fruit del taronger (paleta `elements`). Parades, pous i fanals no canvien.
+- **Girar** per a totes les peces de les famílies (persones, animals, cases i elements).

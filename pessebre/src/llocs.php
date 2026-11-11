@@ -43,6 +43,7 @@ function grup_paleta(string $categoria, bool $pastor): string
 {
     if ($categoria === 'casa') return 'cases';
     if ($categoria === 'animal') return 'animals';
+    if ($categoria === 'element') return 'elements';
     return $pastor ? 'pastors' : 'persones';
 }
 

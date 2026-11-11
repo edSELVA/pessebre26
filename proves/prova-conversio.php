@@ -37,6 +37,10 @@ igual(['roba', 'pell', 'cabell', 'palla'], $pj['PER-ADU-CAPELL']['pers'], 'el pa
 igual(['roba2', 'pell', 'cabell'], $pj['PER-INF-F']['pers'], 'els infants: roba, pell i cabells');
 igual(['camell'], $pj['ANI-GAT-D']['pers'], 'el gat té el pelatge personalitzable');
 igual([], $pj['ANI-OVELLA-D']['pers'], 'les ovelles no (ja hi ha la blanca i la negra)');
+igual(11, count($pj['ELE-PI']['alternatives'] ?? []), 'en un lloc d\'arbre es pot triar entre 11 espècies');
+comprova(!isset($pj['ELE-POU']['alternatives']), 'els pous, parades i fanals no es poden canviar');
+igual(['fruit'], $pj['ELE-FRUITER']['pers'], 'el fruiter té el color del fruit personalitzable');
+comprova(strpos($fitxers['escena.css'], '.fantasma.persona { opacity') !== false, 'hi ha silueta fantasma per a les persones');
 comprova(strpos($fitxers['escena.css'], '.fantasma-vora {') !== false, 'escena.css té el contorn de les cases lliures');
 igual(1, substr_count($fitxers['terreny.svg'], '<g id="casc-paviment">'), 'el paviment del casc antic és en un grup');
 foreach (['dia', 'posta', 'nit', 'neu'] as $m) comprova(strpos($fitxers['moments.css'], ".moment-$m {") !== false, "moments.css té $m");

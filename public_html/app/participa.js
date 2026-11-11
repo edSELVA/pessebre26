@@ -12,6 +12,13 @@
   var credencial = mode === 'familia' ? { c: hash.c } : (mode === 'claustre' ? { k: hash.k } : {});
   var prefix = mode === 'familia' ? 'codi.' : 'claustre.';
   var tria = null;            // { lloc, retencio, peca, colors, mirall }
+  var filtre = null;          // tipus triat a «Què vols posar?»: persona, animal, casa o element
+  var TIPUS = [
+    { t: 'persona', nom: 'Una persona', peca: 'PER-ADU-F', on: 'Toca una silueta de persona per posar-hi la teva figura.' },
+    { t: 'animal', nom: 'Un animal', peca: 'ANI-OVELLA-D', on: 'Toca una silueta d\'animal per posar-hi el teu.' },
+    { t: 'casa', nom: 'Una casa', peca: 'CASA-MASIA-SP', on: 'Toca una casa transparent per pintar-la.' },
+    { t: 'element', nom: 'Un arbre o element', peca: 'ELE-ARBRE', on: 'Toca un arbre o un element transparent.' }
+  ];
   var aturaCompte = null;
   var pot = false;
 
@@ -27,7 +34,7 @@
   // ── qui pot triar què
 
   function esCandidat(l, s) {
-    if (l.grup === 'poble') return false;
+    if (l.grup === 'poble' || !filtre || l.tipus !== filtre) return false;      // primer cal triar què es vol posar
     if (mode === 'claustre') return l.grup === 'claustre';
     var zona = s.zones.indexOf(l.zona) >= 0;
     return zona && (l.grup === 'general' || (l.grup === 'claustre' && s.claustre_alliberat));
@@ -40,7 +47,8 @@
     if ((s.r || []).indexOf(l.id) >= 0) { UI.avis('Algú altre està triant aquest lloc ara mateix.'); return; }
     api(prefix + 'retenir', { lloc: l.id }).then(function (r) {
       var peces = pecesPossibles(l);
-      tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: peces[0], mirall: l.mirall ? 1 : 0, colors: null };
+      var primera = peces.indexOf(l.codi) >= 0 ? l.codi : peces[0];     // als arbres, comença amb l'espècie del mapa
+      tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: primera, mirall: l.mirall ? 1 : 0, colors: null };
       tria.colors = colorsInicials(tria.peca);
       Visor.centra(l.x, l.y - 20, 240);
       pasTria();
@@ -51,9 +59,10 @@
     });
   }
 
-  // Peces que es poden posar en un lloc: les cases i els elements són els del mapa; persones i animals, a triar.
+  // Peces que es poden posar en un lloc: la casa és la del mapa; els arbres i les mates, del seu grup; persones i animals, a triar.
   function pecesPossibles(l) {
-    if (l.tipus === 'casa' || l.tipus === 'element') return [l.codi];
+    if (l.tipus === 'casa') return [l.codi];
+    if (l.tipus === 'element') return D().peces[l.codi].alternatives || [l.codi];
     return Object.keys(D().peces).filter(function (k) { return D().peces[k].cat === l.tipus; }).sort();
   }
 
@@ -61,6 +70,7 @@
     var cat = D().peces[peca].cat;
     if (cat === 'casa') return 'cases';
     if (cat === 'animal') return 'animals';
+    if (cat === 'element') return 'elements';
     return tria && tria.lloc.pastor ? 'pastors' : 'persones';
   }
 
@@ -80,15 +90,36 @@
 
   // ── panells
 
+  // Pas 1: què vols posar? Quatre botons amb el dibuix i quants llocs lliures en queden.
   function pasInici() {
+    filtre = null;
+    Visor.filtre(null);
     if (mode === 'claustre') setTimeout(function () { Visor.centra(345, 380, 520); }, 0);
-    var s = mode === 'claustre'
-      ? 'Toca un pastor (les marques de la clariana) o un lloc lliure a prop seu.'
-      : 'Toca un lloc lliure: les marques a terra són per a persones o animals; les cases i els arbres transparents també es poden triar.';
+    var botons = TIPUS.map(function (t) {
+      var n = Visor.lliures(t.t).length;
+      var mini = UI.previsualitzacio(D().peces);
+      mini.pinta(t.peca, {}, false);
+      var b = h('button', { type: 'button', class: 'boto-tipus' }, [mini.svg, h('span', { class: 'nom', text: t.nom }),
+        h('span', { class: 'quants', text: n === 0 ? 'cap lloc lliure' : (n === 1 ? '1 lloc lliure' : n + ' llocs lliures') })]);
+      if (n === 0) b.disabled = true;
+      else b.addEventListener('click', function () { pasOn(t); });
+      return b;
+    });
     UI.mostra([
-      h('h2', { text: mode === 'claustre' ? 'Claustre: tria un lloc' : 'Tria un lloc lliure' }),
-      h('p', { text: s }),
-      h('p', { class: 'suau', text: 'Pots moure el pessebre amb el dit i apropar-t\'hi amb dos dits.' })
+      h('h2', { text: mode === 'claustre' ? 'Claustre: què vols posar al pessebre?' : 'Què vols posar al pessebre?' }),
+      h('div', { class: 'tipus' }, botons)
+    ]);
+  }
+
+  // Pas 2: on? Només es veuen les siluetes del tipus triat.
+  function pasOn(t) {
+    filtre = t.t;
+    Visor.filtre(t.t);
+    UI.mostra([
+      h('h2', { text: t.nom }),
+      h('p', { text: t.on }),
+      h('p', { class: 'suau', text: 'Pots moure el pessebre amb el dit i apropar-t\'hi amb dos dits.' }),
+      h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: '← Una altra cosa', clic: pasInici })])
     ]);
   }
 
@@ -109,7 +140,7 @@
       var p = D().peces[tria.peca];
       var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors', roba: 'Roba', mocador: 'Mocador',
                    roba2: 'Roba', pell: 'Pell', cabell: 'Cabells', palla: 'Barret i cistell',
-                   camell: 'Pelatge', blanc: 'Pelatge', bru: 'Pelatge', gris: 'Pelatge', rosa: 'Pelatge' };
+                   camell: 'Pelatge', blanc: 'Pelatge', bru: 'Pelatge', gris: 'Pelatge', rosa: 'Pelatge', fruit: 'Fruits', groc: 'Fruits' };
       p.pers.forEach(function (rol, i) {
         var opcions = paleta(grupPaleta(tria.peca), rol).opcions;
         zona.appendChild(UI.filaColors(noms[rol], opcions, tria.colors[i], function (j) { tria.colors[i] = j; pinta(); }));
@@ -118,7 +149,7 @@
 
     var galeria = null;
     if (peces.length > 1) {
-      galeria = h('div', { class: 'galeria', role: 'group', 'aria-label': l.tipus === 'animal' ? 'Animals' : 'Persones' });
+      galeria = h('div', { class: 'galeria', role: 'group', 'aria-label': { animal: 'Animals', persona: 'Persones', element: 'Arbres' }[l.tipus] });
       peces.forEach(function (codi) {
         var mini = UI.previsualitzacio(D().peces);
         mini.pinta(codi, Compon.colors(D().peces[codi], colorsInicials(codi), D().paletes, grupPaleta(codi)), false);
@@ -136,11 +167,10 @@
     filesColors();
     pinta();
 
-    var titol = { casa: 'Pinta la teva casa', element: 'Aquest lloc serà vostre', persona: 'Tria la teva figura', animal: 'Tria el teu animal' }[l.tipus];
-    var botons = [h('button', { type: 'button', class: 'boto primari', text: 'Confirmar', clic: confirma })];
-    if (l.tipus === 'persona' || l.tipus === 'animal') {
-      botons.push(h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: function () { tria.mirall = tria.mirall ? 0 : 1; pinta(); } }));
-    }
+    var titol = { casa: 'Pinta la teva casa', element: peces.length > 1 ? 'Tria el teu arbre' : 'Aquest lloc serà vostre',
+                  persona: 'Tria la teva figura', animal: 'Tria el teu animal' }[l.tipus];
+    var botons = [h('button', { type: 'button', class: 'boto primari', text: 'Confirmar', clic: confirma }),
+                  h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: function () { tria.mirall = tria.mirall ? 0 : 1; pinta(); } })];
     botons.push(h('button', { type: 'button', class: 'boto suau', text: 'Un altre lloc', clic: deixa }));   // tres botons en una fila
     UI.mostra([
       h('h2', { text: titol }),
@@ -154,7 +184,7 @@
   }
 
   function nomPeca(codi) {
-    return codi.replace(/^(PER|ANI)-/, '').replace(/-D$/, '').toLowerCase().replace(/-/g, ' ');
+    return codi.replace(/^(PER|ANI|ELE)-/, '').replace(/-D$/, '').toLowerCase().replace(/-/g, ' ');
   }
 
   function neteja() {
@@ -204,6 +234,8 @@
 
   function pasFet(zonaNova) {
     pot = false;
+    filtre = null;
+    Visor.filtre(null);
     var fills = [
       h('h2', { text: 'Gràcies! Ja sou al pessebre.' }),
       zonaNova ? h('p', { text: 'Amb la vostra participació s\'ha obert una zona nova del pessebre!' }) : null,
@@ -249,30 +281,32 @@
 
   // ── inici
 
-  var boto = document.getElementById('participar');
-  if (mode) {
-    var avisMode = document.getElementById('avis-mode');
-    avisMode.textContent = mode === 'claustre' ? 'Participar · claustre' : 'Participar';
-    avisMode.hidden = false;
-    boto.hidden = true;
-    api(mode === 'familia' ? 'codi.validar' : 'claustre.estat').then(function (r) {
-      if (!r.pot) { noPot(r.missatge); return; }
-      pot = true;
-      pasInici();
-    }).catch(function (e) {
-      if (mode === 'familia') demanaCodi(e.message); else noPot(e.message);
-    });
-  } else {
-    boto.hidden = false;
-    boto.addEventListener('click', function () { demanaCodi(); });
-  }
-
-  Visor.inicia({
+  // Primer es carrega el pessebre (calen els llocs lliures per als comptadors), i després es comprova el codi o l'enllaç
+  var carregat = Visor.inicia({
     font: /^[a-z0-9-]{1,30}$/.test(hash.s || '') ? 'exemples/' + hash.s + '.json' : 'snapshot.json',
     mode: mode,
     vista: mode === 'claustre' ? { x: 345, y: 390, amplada: 520 } : null,   // el claustre comença a la clariana dels pastors
     refresc: mode ? 30000 : 0,
     esCandidat: mode ? esCandidat : null,
     enToc: mode ? enToc : null
-  }).catch(function () { /* el missatge ja es mostra */ });
+  });
+  carregat.catch(function () { /* el missatge ja es mostra */ });
+
+  var boto = document.getElementById('participar');
+  if (mode) {
+    var avisMode = document.getElementById('avis-mode');
+    avisMode.textContent = mode === 'claustre' ? 'Participar · claustre' : 'Participar';
+    avisMode.hidden = false;
+    boto.hidden = true;
+    Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {
+      if (!r[0].pot) { noPot(r[0].missatge); return; }
+      pot = true;
+      pasInici();
+    }).catch(function (e) {
+      if (mode === 'familia' && e.codi) demanaCodi(e.message); else noPot(e.message || 'No s\'ha pogut carregar.');
+    });
+  } else {
+    boto.hidden = false;
+    boto.addEventListener('click', function () { demanaCodi(); });
+  }
 })();

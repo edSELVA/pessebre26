@@ -212,8 +212,10 @@ function participacio_peca(array $cfg, array $lloc, $peca, $mirall, $colors): ar
     $peces = disseny($cfg, 'peces.json')['peces'];
     $p = is_string($peca) ? ($peces[$peca] ?? null) : null;
     if (!$p || $p['cat'] !== $lloc['tipus']) throw new ErrorPessebre('Aquesta peça no es pot posar en aquest lloc.', 400, 'peca');
-    if (in_array($lloc['tipus'], ['casa', 'element'], true) && $peca !== $lloc['codi']) throw new ErrorPessebre('Aquesta peça no es pot posar en aquest lloc.', 400, 'peca');
-    $m = in_array($lloc['tipus'], ['casa', 'element'], true) ? (int)$lloc['mirall'] : ($mirall === 1 || $mirall === true ? 1 : 0);
+    // Cases: la del mapa. Elements: el del mapa o un del seu grup d'intercanviables (arbres, mates).
+    $permeses = $lloc['tipus'] === 'element' ? ($peces[$lloc['codi']]['alternatives'] ?? [$lloc['codi']]) : [$lloc['codi']];
+    if (in_array($lloc['tipus'], ['casa', 'element'], true) && !in_array($peca, $permeses, true)) throw new ErrorPessebre('Aquesta peça no es pot posar en aquest lloc.', 400, 'peca');
+    $m = $mirall === 1 || $mirall === true ? 1 : 0;
     if (!$p['pers']) $colors = null;
     if (!colors_valids($cfg, $peca, $colors, lloc_es_pastor($cfg, $lloc['id']))) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
     return [$peca, $m, $colors === null ? null : json_encode($colors)];

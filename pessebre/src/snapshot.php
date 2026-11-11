@@ -62,7 +62,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         $p = $peces[$oc['p'] ?? ''] ?? null;
         if (!$p || $p['cat'] !== $l['tipus']) { $e[] = "$id: la peça no és de la categoria del lloc"; continue; }
         if ($l['tipus'] === 'casa' && preg_replace('/-S?P$/', '', $oc['p']) !== preg_replace('/-S?P$/', '', $l['codi'])) $e[] = "$id: la casa ha de ser la del mapa (amb placa o sense)";
-        if ($l['tipus'] === 'element' && $oc['p'] !== $l['codi']) $e[] = "$id: l'element ha de ser el del mapa";
+        if ($l['tipus'] === 'element' && !in_array($oc['p'], $peces[$l['codi']]['alternatives'] ?? [$l['codi']], true)) $e[] = "$id: l'element ha de ser el del mapa o un del seu grup";
         if (isset($oc['m']) && $oc['m'] !== 0 && $oc['m'] !== 1) $e[] = "$id: m ha de ser 0 o 1";
         if (isset($oc['f']) && (!is_int($oc['f']) || $oc['f'] < 1 || $oc['f'] >= (1 << count($p['finestres'] ?? [])))) $e[] = "$id: finestres no vàlides";
         $pers = $p['pers'];
@@ -70,7 +70,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         if (!is_array($idx) || count($idx) !== count($pers)) {
             $e[] = "$id: calen " . count($pers) . ' índexs de color';
         } else {
-            $grup = $l['tipus'] === 'casa' ? 'cases' : ($l['tipus'] === 'animal' ? 'animals' : (!empty($l['pastor']) ? 'pastors' : 'persones'));
+            $grup = ['casa' => 'cases', 'animal' => 'animals', 'element' => 'elements'][$l['tipus']] ?? (!empty($l['pastor']) ? 'pastors' : 'persones');
             foreach ($pers as $i => $rol) {
                 $n = count(($paletes[$grup][$rol] ?? $paletes['persones'][$rol] ?? [])['opcions'] ?? []);
                 if (!is_int($idx[$i]) || $idx[$i] < 0 || $idx[$i] >= $n) $e[] = "$id: índex de color no vàlid per a $rol";

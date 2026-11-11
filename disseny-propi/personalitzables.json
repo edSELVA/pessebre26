@@ -1,5 +1,5 @@
 {
- "nota": "Parts de les figures que les famílies poden pintar, a més de les del paquet v2. «persones»: s'afegeixen si la peça té aquest rol. «pelatge»: rol principal de cada animal que es pot pintar (paleta animals.<rol>).",
+ "nota": "Parts de les figures que les famílies poden pintar, a més de les del paquet v2. «persones»: s'afegeixen si la peça té aquest rol. «pelatge»: rol principal de cada animal que es pot pintar (paleta animals.<rol>). «elements»: parts dels elements que es poden pintar (paleta elements.<rol>). «intercanviables»: en un lloc d'una d'aquestes peces, la família pot triar qualsevol altra del mateix grup.",
  "persones": [
   "pell",
   "cabell",
@@ -13,5 +13,31 @@
   "ANI-CONILL-D": "gris",
   "ANI-PORC-D": "rosa",
   "ANI-ASE-D": "gris"
- }
+ },
+ "elements": {
+  "ELE-FRUITER": "fruit",
+  "ELE-AMETLLER": "flor",
+  "ELE-MATA-FLOR": "flor",
+  "ELE-TARONGER": "groc"
+ },
+ "intercanviables": [
+  [
+   "ELE-ARBRE",
+   "ELE-ARBRE-2",
+   "ELE-FRUITER",
+   "ELE-TARONGER",
+   "ELE-AMETLLER",
+   "ELE-OLIVERA",
+   "ELE-FIGUERA",
+   "ELE-PI",
+   "ELE-XIPRER",
+   "ELE-XIPRER-2",
+   "ELE-PALMERA"
+  ],
+  [
+   "ELE-MATA",
+   "ELE-MATA-FLOR",
+   "ELE-MATA-2"
+  ]
+ ]
 }

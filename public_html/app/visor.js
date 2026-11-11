@@ -10,6 +10,7 @@ var Visor = (function () {
   var capes = {};        // grups SVG on es dibuixa
   var svg, op = {}, darrer = null;
   var propis = {};       // ocupacions locals encara no confirmades (la tria del tutor): id → {p, c}
+  var SILUETA = { persona: 'PER-ADU-F', animal: 'ANI-OVELLA-D' };   // silueta dels llocs sense peça fixa
 
   function llegeixHash() {
     var out = {};
@@ -121,12 +122,16 @@ var Visor = (function () {
         return;
       }
       if (!visibleLliure(l, s, zones)) return;
-      if (l.tipus === 'casa' || l.tipus === 'element') {
-        var ret = retinguts[l.id];
+      var ret = retinguts[l.id];
+      if (op.filtre) {
+        // Mode participar amb un tipus triat: només les siluetes d'aquest tipus als llocs que pot triar aquest grup
+        if (l.tipus !== op.filtre || !llocDelGrup(l, s)) return;
+        var codi = l.codi || SILUETA[l.tipus];
+        llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
+        if (!ret) llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
+      } else if (l.tipus === 'casa' || l.tipus === 'element') {
         llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
         if (l.tipus === 'casa' && !ret) llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
-      } else if (!retinguts[l.id] && marcaVisible(l, s)) {
-        llista.push({ y: l.y, node: usa(l.tipus === 'animal' ? 'MARCA-ANI' : 'MARCA-PER', l.x, l.y) });
       }
     });
 
@@ -150,7 +155,8 @@ var Visor = (function () {
   }
 
   // Marca a terra (persona o animal lliure) només en mode participar i als llocs que pot triar aquest grup.
-  function marcaVisible(l, s) {
+  // El lloc és dels que pot triar el grup que participa (famílies o claustre)?
+  function llocDelGrup(l, s) {
     if (op.mode === 'claustre') return l.grup === 'claustre' && s.claustre;
     if (op.mode === 'familia') return l.grup === 'general' || (l.grup === 'claustre' && !!s.claustre_alliberat);
     return false;
@@ -235,6 +241,17 @@ var Visor = (function () {
     inicia: inicia,
     refresca: refresca,
     redibuixa: function () { if (darrer) dibuixa(darrer); },
+    // Mode participar: mostra només els llocs lliures d'un tipus ('persona', 'animal', 'casa', 'element') o cap (null)
+    filtre: function (tipus) { op.filtre = tipus; if (darrer) dibuixa(darrer); },
+    // Llocs lliures d'un tipus que pot triar el grup que participa
+    lliures: function (tipus) {
+      if (!darrer) return [];
+      var zones = {};
+      darrer.zones.forEach(function (z) { zones[z] = true; });
+      return D.mapa.llocs.filter(function (l) {
+        return l.tipus === tipus && !darrer.o[l.id] && (darrer.r || []).indexOf(l.id) < 0 && visibleLliure(l, darrer, zones) && llocDelGrup(l, darrer);
+      });
+    },
     posa: function (id, o) { propis[id] = o; },
     treu: function (id) { delete propis[id]; },
     disseny: function () { return D; },

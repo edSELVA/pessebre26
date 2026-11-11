@@ -9,13 +9,21 @@
 #llum-tint { mix-blend-mode: multiply; opacity: var(--op-tint,0); }
 #llum-vinyeta { opacity: var(--op-vinyeta,1); }
 #sol { opacity: var(--sol-op,0); transform: translate(var(--sol-x,0px),var(--sol-y,0px)); }
-/* Llocs lliures: silueta fantasma (cases opacitat .62, elements .5) */
+/* Llocs lliures: silueta fantasma (cases, elements i, en mode participar, persones i animals) */
 .fantasma {
   --aigua: #FFF3DA;
   --aigua-clar: #FFFDF4;
   --aigua-ombra: #EBDCC0;
   --blanc: #FFF3DA;
   --blanc-ombra: #EBDCC0;
+  --bru: #FFF3DA;
+  --bru-clar: #FFFDF4;
+  --bru-ombra: #EBDCC0;
+  --cabell: #FFF3DA;
+  --cabell-ombra: #EBDCC0;
+  --camell: #FFF3DA;
+  --camell-clar: #FFFDF4;
+  --camell-ombra: #EBDCC0;
   --contorn: #FFFFFF;
   --escuma: #FFF3DA;
   --facana: #FFF3DA;
@@ -25,6 +33,7 @@
   --flor: #FFF3DA;
   --flor-clar: #FFFDF4;
   --flor-ombra: #EBDCC0;
+  --foc: #FFF3DA;
   --fruit: #FFF3DA;
   --fruit-clar: #FFFDF4;
   --fulla: #FFF3DA;
@@ -35,15 +44,26 @@
   --fusta: #FFF3DA;
   --fusta-clar: #FFFDF4;
   --fusta-ombra: #EBDCC0;
+  --gris: #FFF3DA;
+  --gris-clar: #FFFDF4;
   --gris-ombra: #EBDCC0;
   --groc: #FFF3DA;
   --groc-clar: #FFFDF4;
+  --groc-ombra: #EBDCC0;
   --herba-ombra: #EBDCC0;
   --lila: #FFF3DA;
   --lila-ombra: #EBDCC0;
+  --llana: #FFF3DA;
+  --llana-neg: #FFF3DA;
+  --llana-neg-clar: #FFFDF4;
+  --llana-neg-ombra: #EBDCC0;
+  --llana-ombra: #EBDCC0;
   --llum: #FFF3DA;
   --llum-clar: #FFFDF4;
   --llum-ombra: #EBDCC0;
+  --mocador: #FFF3DA;
+  --mocador-clar: #FFFDF4;
+  --mocador-ombra: #EBDCC0;
   --nit: #FFF3DA;
   --oliva: #FFF3DA;
   --oliva-clar: #FFFDF4;
@@ -52,6 +72,7 @@
   --oliva-ombra: #EBDCC0;
   --ombra-terra: #FFFFFF;
   --or: #FFF3DA;
+  --or-ombra: #EBDCC0;
   --palla: #FFF3DA;
   --palla-clar: #FFFDF4;
   --palla-fosc: #D8C6A6;
@@ -60,14 +81,21 @@
   --pedra-clar: #FFFDF4;
   --pedra-fosc: #D8C6A6;
   --pedra-ombra: #EBDCC0;
+  --pell: #FFF3DA;
+  --pell-ombra: #EBDCC0;
   --placa: #FFF3DA;
   --placa-ombra: #EBDCC0;
   --porta: #FFF3DA;
   --porta-clar: #FFFDF4;
   --porta-ombra: #EBDCC0;
   --roba: #FFF3DA;
+  --roba-clar: #FFFDF4;
   --roba-ombra: #EBDCC0;
   --roba2: #FFF3DA;
+  --roba2-clar: #FFFDF4;
+  --roba2-ombra: #EBDCC0;
+  --rosa: #FFF3DA;
+  --rosa-ombra: #EBDCC0;
   --taronja: #FFF3DA;
   --teulada: #FFF3DA;
   --teulada-clar: #FFFDF4;
@@ -76,6 +104,8 @@
   --tronc: #FFF3DA;
   --tronc-clar: #FFFDF4;
   --tronc-ombra: #EBDCC0;
+  --verd: #FFF3DA;
+  --verd-ombra: #EBDCC0;
   --vermell: #FFF3DA;
   --vermell-ombra: #EBDCC0;
   --xiprer: #FFF3DA;
@@ -85,49 +115,111 @@
 }
 .fantasma.casa { opacity: .32; }
 .fantasma.element { opacity: .25; }
-/* Cases lliures: contorn gris fi a sobre de la silueta */
+.fantasma.persona { opacity: .5; }
+.fantasma.animal { opacity: .5; }
+/* Llocs lliures: contorn gris fi a sobre de la silueta */
 .fantasma-vora {
+  --aigua: transparent;
+  --aigua-clar: transparent;
+  --aigua-ombra: transparent;
   --blanc: transparent;
   --blanc-ombra: transparent;
+  --bru: transparent;
+  --bru-clar: transparent;
+  --bru-ombra: transparent;
+  --cabell: transparent;
+  --cabell-ombra: transparent;
+  --camell: transparent;
+  --camell-clar: transparent;
+  --camell-ombra: transparent;
   --contorn: #6F675E;
+  --escuma: transparent;
   --facana: transparent;
   --facana-clar: transparent;
   --facana-fosc: transparent;
   --facana-ombra: transparent;
   --flor: transparent;
   --flor-clar: transparent;
+  --flor-ombra: transparent;
+  --foc: transparent;
   --fruit: transparent;
   --fruit-clar: transparent;
   --fulla: transparent;
   --fulla-clar: transparent;
+  --fulla-fosc: transparent;
+  --fulla-llum: transparent;
   --fulla-ombra: transparent;
   --fusta: transparent;
   --fusta-clar: transparent;
   --fusta-ombra: transparent;
+  --gris: transparent;
+  --gris-clar: transparent;
+  --gris-ombra: transparent;
+  --groc: transparent;
+  --groc-clar: transparent;
+  --groc-ombra: transparent;
+  --herba-ombra: transparent;
+  --lila: transparent;
+  --lila-ombra: transparent;
+  --llana: transparent;
+  --llana-neg: transparent;
+  --llana-neg-clar: transparent;
+  --llana-neg-ombra: transparent;
+  --llana-ombra: transparent;
   --llum: transparent;
   --llum-clar: transparent;
   --llum-ombra: transparent;
+  --mocador: transparent;
+  --mocador-clar: transparent;
+  --mocador-ombra: transparent;
   --nit: transparent;
+  --oliva: transparent;
+  --oliva-clar: transparent;
+  --oliva-fosc: transparent;
+  --oliva-llum: transparent;
+  --oliva-ombra: transparent;
   --ombra-terra: transparent;
   --or: transparent;
+  --or-ombra: transparent;
   --palla: transparent;
   --palla-clar: transparent;
+  --palla-fosc: transparent;
   --palla-ombra: transparent;
   --pedra: transparent;
   --pedra-clar: transparent;
   --pedra-fosc: transparent;
   --pedra-ombra: transparent;
+  --pell: transparent;
+  --pell-ombra: transparent;
   --placa: transparent;
   --placa-ombra: transparent;
   --porta: transparent;
   --porta-clar: transparent;
   --porta-ombra: transparent;
+  --roba: transparent;
+  --roba-clar: transparent;
+  --roba-ombra: transparent;
   --roba2: transparent;
+  --roba2-clar: transparent;
+  --roba2-ombra: transparent;
+  --rosa: transparent;
+  --rosa-ombra: transparent;
+  --taronja: transparent;
   --teulada: transparent;
   --teulada-clar: transparent;
   --teulada-fosc: transparent;
   --teulada-ombra: transparent;
+  --tronc: transparent;
+  --tronc-clar: transparent;
+  --tronc-ombra: transparent;
+  --verd: transparent;
+  --verd-ombra: transparent;
   --vermell: transparent;
+  --vermell-ombra: transparent;
+  --xiprer: transparent;
+  --xiprer-clar: transparent;
+  --xiprer-fosc: transparent;
+  --xiprer-ombra: transparent;
   opacity: .55;
 }
 #casc-paviment { opacity: var(--casc-op, 1); transition: opacity .8s; }

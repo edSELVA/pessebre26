@@ -1,5 +1,5 @@
 {
- "nota": "Paletes pròpies que s'afegeixen a paletes.json del paquet v2. «pastors» s'aplica als 18 llocs de pastor de la clariana: tons de terra com a les vistes de referència (compon.py). Mocadors: les dues primeres opcions de persones. «cases.flor»: color de les flors de les jardineres (3 tons, clar → ombra). «persones.pell/cabell/palla» i «animals.*»: opcions afegides per a les figures de les famílies (la primera opció és sempre el color original).",
+ "nota": "Paletes pròpies que s'afegeixen a paletes.json del paquet v2. «pastors» s'aplica als 18 llocs de pastor de la clariana: tons de terra com a les vistes de referència (compon.py). Mocadors: les dues primeres opcions de persones. «cases.flor»: color de les flors de les jardineres (3 tons, clar → ombra). «persones.pell/cabell/palla» i «animals.*»: opcions afegides per a les figures de les famílies (la primera opció és sempre el color original). «elements.*»: fruit del fruiter, flor de l'ametller i de la mata florida, i fruit del taronger.",
  "pastors": {
   "roba": {
    "nom": "Roba de pastor",
@@ -324,6 +324,88 @@
      "#6A6470",
      "#4A4450",
      "#2E2A34"
+    ]
+   ]
+  }
+ },
+ "elements": {
+  "fruit": {
+   "nom": "Fruits",
+   "opcions": [
+    [
+     "#FF8A6A",
+     "#E5443A",
+     "#A82A22"
+    ],
+    [
+     "#FFF0A0",
+     "#F2CC3A",
+     "#C89A2A"
+    ],
+    [
+     "#C8E870",
+     "#8CC43C",
+     "#5E9228"
+    ],
+    [
+     "#FFC07A",
+     "#F39A2E",
+     "#C06A1A"
+    ]
+   ]
+  },
+  "flor": {
+   "nom": "Flors",
+   "opcions": [
+    [
+     "#FFA6CE",
+     "#F0649E",
+     "#B93C78"
+    ],
+    [
+     "#FF8A7A",
+     "#E5443A",
+     "#A82A22"
+    ],
+    [
+     "#FFF0A0",
+     "#FFD23F",
+     "#E0A020"
+    ],
+    [
+     "#FFFFFF",
+     "#F2EEE6",
+     "#CFC8BA"
+    ],
+    [
+     "#D8B4F0",
+     "#A97BD8",
+     "#7650A8"
+    ],
+    [
+     "#FFC07A",
+     "#F39A2E",
+     "#C06A1A"
+    ]
+   ]
+  },
+  "groc": {
+   "nom": "Fruits",
+   "opcions": [
+    [
+     "#FFF0A0",
+     "#FFD23F",
+     "#E0A020"
+    ],
+    [
+     "#FFC07A",
+     "#F39A2E",
+     "#C06A1A"
+    ],
+    [
+     "#FF8A7A",
+     "#E5443A",
+     "#A82A22"
     ]
    ]
   }

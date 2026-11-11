@@ -5,7 +5,7 @@
 var Compon = (function () {
   var SUFIX = ['-clar', '', '-ombra', '-fosc'];
   var NEU = '#F2F7FF';
-  var GRUP_PALETA = { casa: 'cases', persona: 'persones', animal: 'animals' };
+  var GRUP_PALETA = { casa: 'cases', persona: 'persones', animal: 'animals', element: 'elements' };
 
   // Posició d'una peça amb l'ancoratge a (x, y). Mirall horitzontal: matrix(-1 0 0 1 2x 0).
   function colloca(peca, x, y, mirall) {

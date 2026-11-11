@@ -146,10 +146,18 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual(403, $e, 'a la segona ronda, com a molt dues figures per codi');
     config_desa($pdo, 'ronda', '1');
 
-    // Element (sense colors) i llocs del claustre alliberats
-    [, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[1], 'lloc' => $element['id']], $h);
-    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[1], 'lloc' => $element['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => $element['codi']], $h);
-    igual(200, $e, 'una família planta un element (sense colors)');
+    // Element: un arbre es pot canviar per una altra espècie (i girar), però no per una peça d'un altre grup
+    $arbre = $un(function ($l) { return $l['tipus'] === 'element' && $l['grup'] === 'general' && $l['zona'] === 'Z0' && strpos($l['codi'], 'ELE-ARBRE') === 0; });
+    [, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[1], 'lloc' => $arbre['id']], $h);
+    $ret7 = $r['retencio'] ?? '';
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[1], 'lloc' => $arbre['id'], 'retencio' => $ret7, 'peca' => 'ELE-POU', 'mirall' => 0], $h);
+    igual(400, $e, 'en un lloc d\'arbre no s\'hi pot posar un pou');
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[1], 'lloc' => $arbre['id'], 'retencio' => $ret7, 'peca' => 'ELE-FRUITER', 'mirall' => 1, 'colors' => [9]], $h);
+    igual(400, $e, 'un color de fruit fora de la paleta → error');
+    [$e] = $crida(['a' => 'codi.confirmar', 'c' => $c[1], 'lloc' => $arbre['id'], 'retencio' => $ret7, 'peca' => 'ELE-FRUITER', 'mirall' => 1, 'colors' => [1]], $h);
+    igual(200, $e, 'una família canvia l\'arbre per un fruiter de fruita groga i el gira');
+    $o = $snap()['o'][$arbre['id']] ?? [];
+    igual(['ELE-FRUITER', [1]], [$o['p'] ?? null, $o['c'] ?? null], 'el snapshot porta l\'espècie triada i el color del fruit');
     igual(true, $snap()['claustre_alliberat'], 'després de les 22:00 del 21 des els llocs del claustre són de les famílies');
     // Pelatge dels animals i to de pell
     [, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[4], 'lloc' => $animal['id']], $h);
@@ -197,6 +205,7 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual(count($esperades) - 1, (int)$obre, 'el registre apunta cada zona oberta');
     igual([], snapshot_errors($s, $mapa, disseny($cfg, 'peces.json')['peces'], disseny($cfg, 'paletes.json')), 'el snapshot generat és vàlid');
     igual(['tipus' => 'participacions', 'fet' => 7, 'fita' => null], $s['comptador'], 'comptador: 7 participacions reals');
+    igual(1, $s['o'][$arbre['id']]['m'] ?? $arbre['mirall'], 'l\'arbre queda girat (m al snapshot si és diferent del mapa)');
 
     // Registre sense dades personals
     $qui = $pdo->query("SELECT DISTINCT qui FROM registre")->fetchAll(PDO::FETCH_COLUMN);

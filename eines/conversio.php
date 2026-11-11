@@ -15,14 +15,15 @@ const JSON_F = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 const ELEMENTS_SVG = ['svg', 'g', 'defs', 'symbol', 'path', 'use', 'rect', 'ellipse', 'circle',
                       'pattern', 'linearGradient', 'radialGradient', 'stop'];
 const ROLS_PERSONALITZABLES = ['facana' => 4, 'teulada' => 4, 'porta' => 3, 'flor' => 3, 'roba' => 3, 'mocador' => 3, 'roba2' => 3,
-                               'pell' => 3, 'cabell' => 3, 'palla' => 3, 'camell' => 3, 'blanc' => 3, 'bru' => 3, 'gris' => 3, 'rosa' => 3];
+                               'pell' => 3, 'cabell' => 3, 'palla' => 3, 'camell' => 3, 'blanc' => 3, 'bru' => 3, 'gris' => 3, 'rosa' => 3,
+                               'fruit' => 3, 'groc' => 3];
 const CATEGORIES = ['casa', 'element', 'persona', 'animal', 'escena', 'decoracio', 'marca'];
 const MOMENTS = ['dia', 'posta', 'nit', 'neu'];
 // Colors de la silueta fantasma (compon.FANTASMA de la guia v2)
 const FANTASMA = ['-clar' => '#FFFDF4', '' => '#FFF3DA', '-ombra' => '#EBDCC0', '-fosc' => '#D8C6A6'];
 // Opacitat de la silueta fantasma dels llocs lliures. La guia v2 diu cases .62 i elements .5;
 // l'Eduard va triar l'opció més transparent (11 nov 2026).
-const OPACITAT_FANTASMA = ['casa' => '.32', 'element' => '.25'];
+const OPACITAT_FANTASMA = ['casa' => '.32', 'element' => '.25', 'persona' => '.5', 'animal' => '.5'];
 // Contorn gris fi de les cases lliures, perquè es vegin sobre el paviment del casc antic
 const VORA_FANTASMA = ['color' => '#6F675E', 'opacitat' => '.55'];
 
@@ -292,7 +293,7 @@ function converteix(string $zip, string $arrel): array
     // Paletes pròpies (disseny-propi/paletes.json): flors de les cases i roba dels pastors
     $propies = valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true),
         ['cases' => ['flor'], 'pastors' => ['roba', 'mocador', 'roba2'], 'persones' => ['pell', 'cabell', 'palla'],
-         'animals' => ['camell', 'blanc', 'bru', 'gris', 'rosa']]);
+         'animals' => ['camell', 'blanc', 'bru', 'gris', 'rosa'], 'elements' => ['fruit', 'flor', 'groc']]);
     foreach ($propies as $grup => $rols) foreach ($rols as $rol => $v) $paletes[$grup][$rol] = $v;
     // Les cases amb jardineres també tenen el color de les flors personalitzable (després de façana, teulada i porta)
     foreach ($registre as $codi => $p) {
@@ -310,6 +311,17 @@ function converteix(string $zip, string $arrel): array
     foreach ($extra['pelatge'] as $codi => $rol) {
         if (($registre[$codi]['cat'] ?? '') !== 'animal' || !isset($paletes['animals'][$rol])) falla("personalitzables.json: $codi o $rol no vàlids");
         $registre[$codi]['pers'][] = $rol;
+    }
+    foreach ($extra['elements'] as $codi => $rol) {
+        if (($registre[$codi]['cat'] ?? '') !== 'element' || !isset($paletes['elements'][$rol])) falla("personalitzables.json: $codi o $rol no vàlids");
+        $registre[$codi]['pers'][] = $rol;
+    }
+    // Grups d'elements intercanviables (arbres, mates): cada peça sap per quines es pot canviar
+    foreach ($extra['intercanviables'] as $grup) {
+        foreach ($grup as $codi) {
+            if (($registre[$codi]['cat'] ?? '') !== 'element') falla("personalitzables.json: $codi no és un element");
+            $registre[$codi]['alternatives'] = $grup;
+        }
     }
     // Fora les parts personalitzables que la peça no té dibuixades (p. ex. el mocador del pagès amb barret)
     foreach ($registre as $codi => $p) {
@@ -842,9 +854,9 @@ function escena_css(array $css, array $registre): string
     foreach ($css as $sel => $decls) $o .= "$sel { " . implode('; ', $decls) . "; }\n";
     // Silueta fantasma (compon.estil_fantasma): tots els rols de cases i elements en clar.
     $rols = [];
-    foreach ($registre as $p) if (in_array($p['cat'], ['casa', 'element'], true)) foreach ($p['rols'] as $r) $rols[$r] = true;
+    foreach ($registre as $p) if (in_array($p['cat'], ['casa', 'element', 'persona', 'animal'], true)) foreach ($p['rols'] as $r) $rols[$r] = true;
     ksort($rols);
-    $o .= "/* Llocs lliures: silueta fantasma (cases opacitat .62, elements .5) */\n.fantasma {\n";
+    $o .= "/* Llocs lliures: silueta fantasma (cases, elements i, en mode participar, persones i animals) */\n.fantasma {\n";
     foreach (array_keys($rols) as $r) {
         if ($r === 'contorn' || $r === 'ombra-terra') { $c = '#FFFFFF'; }
         else {
@@ -857,10 +869,8 @@ function escena_css(array $css, array $registre): string
     $o .= "}\n";
     foreach (OPACITAT_FANTASMA as $cat => $op) $o .= ".fantasma.$cat { opacity: $op; }\n";
     // Contorn de les cases lliures: només el rol contorn, en gris; la resta transparent.
-    $rols_casa = [];
-    foreach ($registre as $p) if ($p['cat'] === 'casa') foreach ($p['rols'] as $r) $rols_casa[$r] = true;
-    ksort($rols_casa);
-    $o .= "/* Cases lliures: contorn gris fi a sobre de la silueta */\n.fantasma-vora {\n";
+    $rols_casa = $rols;
+    $o .= "/* Llocs lliures: contorn gris fi a sobre de la silueta */\n.fantasma-vora {\n";
     foreach (array_keys($rols_casa) as $r) $o .= "  --$r: " . ($r === 'contorn' ? VORA_FANTASMA['color'] : 'transparent') . ";\n";
     $o .= "  opacity: " . VORA_FANTASMA['opacitat'] . ";\n}\n";
     // Paviment del casc antic: el visor en baixa la intensitat mentre falten cases de classe (--casc-op).

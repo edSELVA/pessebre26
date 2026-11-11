@@ -39,7 +39,7 @@ body {
 .missatge { margin: 40vh 16px 0; text-align: center; color: var(--text-suau); }
 
 /* Llocs retinguts per una altra persona: més apagats i sense contorn */
-.fantasma.retingut.casa, .fantasma.retingut.element { opacity: .14; }
+.fantasma.retingut.casa, .fantasma.retingut.element, .fantasma.retingut.persona, .fantasma.retingut.animal { opacity: .14; }
 
 .placa-text {
   font: bold 5px/1 system-ui, sans-serif;
@@ -207,6 +207,26 @@ body {
   cursor: pointer;
 }
 .boto-participar[hidden] { display: none; }
+.tipus { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.boto-tipus {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 64px;
+  padding: 8px 10px;
+  border: 1px solid #C9B79A;
+  border-radius: 14px;
+  background: #FFFFFF;
+  color: #2A2018;
+  text-align: left;
+  cursor: pointer;
+}
+.boto-tipus svg { grid-row: 1 / 3; width: 44px; height: 48px; }
+.boto-tipus .nom { font: 700 15px/1.2 system-ui, sans-serif; }
+.boto-tipus .quants { font-size: 12px; color: #6A5A48; }
+.boto-tipus:disabled { opacity: .45; cursor: default; }
 .galeria { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 -2px 6px; }
 .peca-mini {
   flex: 0 0 auto;
