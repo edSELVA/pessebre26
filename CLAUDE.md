@@ -169,5 +169,5 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Gestió sense pàgina d'administració (decidit):** fins a la Fase D, ordres de terminal a `eines/gestio.php` (installa, classes, enllac, allibera, tanca, aturada, estat).
 - **Flux del tutor (decidit):** primer tria la classe, després toca una casa transparent del casc antic (retinguda 10 min), tria façana, teulada i porta amb llum neutra i confirma.
 - **Etapes (decidit):** 5, amb llar d'infants (`llar`, `infantil`, `primaria`, `secundaria`, `cicles`).
-- **Hosting (pendent):** cal demanar-lo a informàtica. Mentrestant es prova en local (SQLite; MySQL amb MAMP si s'engega).
+- **Hosting (pendent):** cal demanar-lo a informàtica. Mentrestant es prova en local: proves de reserva superades amb SQLite i amb MySQL 8.0 (MAMP), amb PHP 8.1 i 8.3 (11 nov).
 - **Llista de classes:** fitxer `classes.csv` (`etapa;nom`, noms de 8 caràcters com a molt), que no es puja mai. Exemple inventat a `eines/classes-exemple.txt`.
