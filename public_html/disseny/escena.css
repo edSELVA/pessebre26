@@ -83,5 +83,5 @@
   --xiprer-fosc: #D8C6A6;
   --xiprer-ombra: #EBDCC0;
 }
-.fantasma.casa { opacity: .62; }
-.fantasma.element { opacity: .5; }
+.fantasma.casa { opacity: .32; }
+.fantasma.element { opacity: .25; }

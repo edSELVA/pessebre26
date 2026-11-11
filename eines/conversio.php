@@ -19,8 +19,9 @@ const CATEGORIES = ['casa', 'element', 'persona', 'animal', 'escena', 'decoracio
 const MOMENTS = ['dia', 'posta', 'nit', 'neu'];
 // Colors de la silueta fantasma (compon.FANTASMA de la guia v2)
 const FANTASMA = ['-clar' => '#FFFDF4', '' => '#FFF3DA', '-ombra' => '#EBDCC0', '-fosc' => '#D8C6A6'];
-// Opacitat de la silueta fantasma dels llocs lliures (la guia v2 diu cases .62 i elements .5)
-const OPACITAT_FANTASMA = ['casa' => '.62', 'element' => '.5'];
+// Opacitat de la silueta fantasma dels llocs lliures. La guia v2 diu cases .62 i elements .5;
+// l'Eduard va triar l'opció més transparent (11 nov 2026).
+const OPACITAT_FANTASMA = ['casa' => '.32', 'element' => '.25'];
 
 class ErrorPaquet extends Exception {}
 
