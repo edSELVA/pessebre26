@@ -132,7 +132,7 @@ $base = ['pebre' => bin2hex(random_bytes(32)), 'web' => "$ARREL/public_html", 's
          'hash_admin' => password_hash('admin-de-prova-1234', PASSWORD_DEFAULT), 'hash_lectura' => password_hash('lectura-de-prova-1234', PASSWORD_DEFAULT)];
 $prova_admin($base + ['bd_tipus' => 'sqlite', 'bd_sqlite' => "$tmp/pessebre.sqlite"], 'SQLite');
 if (getenv('PESSEBRE_MYSQL_DSN')) {
-    $prova_admin($base + ['bd_tipus' => 'mysql', 'bd_mysql' => ['dsn' => getenv('PESSEBRE_MYSQL_DSN'), 'usuari' => getenv('PESSEBRE_MYSQL_USUARI'), 'opcio' => getenv('PESSEBRE_MYSQL_CLAU')]], 'MySQL');
+    $prova_admin($base + ['bd_tipus' => 'mysql', 'bd_mysql' => ['dsn' => getenv('PESSEBRE_MYSQL_DSN'), 'usuari' => getenv('PESSEBRE_MYSQL_USUARI'), 'clau' => getenv('PESSEBRE_MYSQL_CLAU')]], 'MySQL');
 }
 array_map('unlink', glob("$tmp/*"));
 rmdir($tmp);
