@@ -57,11 +57,13 @@ var Zoom = (function () {
   }
 
   // Centra la vista al punt (x, y) de l'escena, amb una amplada visible d'«amplada» unitats (opcional).
+  // Si el panell inferior és obert, el punt queda a la part de dalt (30 %) perquè no quedi tapat.
   function centra(x, y, amplada) {
     var m = mida();
+    var alcada = document.body.classList.contains('amb-full') ? 0.3 : 0.5;
     if (amplada) v.k = Math.max(m.h / ALT, m.w / amplada);
     v.x = m.w / 2 - x * v.k;
-    v.y = m.h / 2 - y * v.k;
+    v.y = m.h * alcada - y * v.k;
     aplica();
     fixa();
   }

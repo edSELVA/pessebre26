@@ -75,6 +75,7 @@
   // ── panells
 
   function pasInici() {
+    if (mode === 'claustre') setTimeout(function () { Visor.centra(345, 380, 520); }, 0);
     var s = mode === 'claustre'
       ? 'Toca un pastor (les marques de la clariana) o un lloc lliure a prop seu.'
       : 'Toca un lloc lliure: les marques a terra són per a persones o animals; les cases i els arbres transparents també es poden triar.';
