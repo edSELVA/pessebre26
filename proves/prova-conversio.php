@@ -28,6 +28,8 @@ foreach ($peces as $codi => $p) {
     comprova(strpos($fitxers['peces.svg'], 'id="pc-' . $codi . '"') !== false, "el sprite té $codi");
 }
 comprova(strpos($fitxers['escena.css'], '.fantasma {') !== false, 'escena.css té la silueta fantasma');
+comprova(strpos($fitxers['escena.css'], '.fantasma-vora {') !== false, 'escena.css té el contorn de les cases lliures');
+igual(1, substr_count($fitxers['terreny.svg'], '<g id="casc-paviment">'), 'el paviment del casc antic és en un grup');
 foreach (['dia', 'posta', 'nit', 'neu'] as $m) comprova(strpos($fitxers['moments.css'], ".moment-$m {") !== false, "moments.css té $m");
 
 // La llista blanca rebutja SVG perillosos

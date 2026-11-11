@@ -85,3 +85,49 @@
 }
 .fantasma.casa { opacity: .32; }
 .fantasma.element { opacity: .25; }
+/* Cases lliures: contorn gris fi a sobre de la silueta */
+.fantasma-vora {
+  --blanc: transparent;
+  --blanc-ombra: transparent;
+  --contorn: #6F675E;
+  --facana: transparent;
+  --facana-clar: transparent;
+  --facana-fosc: transparent;
+  --facana-ombra: transparent;
+  --flor: transparent;
+  --flor-clar: transparent;
+  --fruit: transparent;
+  --fruit-clar: transparent;
+  --fulla: transparent;
+  --fulla-clar: transparent;
+  --fulla-ombra: transparent;
+  --fusta: transparent;
+  --fusta-clar: transparent;
+  --fusta-ombra: transparent;
+  --llum: transparent;
+  --llum-clar: transparent;
+  --llum-ombra: transparent;
+  --nit: transparent;
+  --ombra-terra: transparent;
+  --or: transparent;
+  --palla: transparent;
+  --palla-clar: transparent;
+  --palla-ombra: transparent;
+  --pedra: transparent;
+  --pedra-clar: transparent;
+  --pedra-fosc: transparent;
+  --pedra-ombra: transparent;
+  --placa: transparent;
+  --placa-ombra: transparent;
+  --porta: transparent;
+  --porta-clar: transparent;
+  --porta-ombra: transparent;
+  --roba2: transparent;
+  --teulada: transparent;
+  --teulada-clar: transparent;
+  --teulada-fosc: transparent;
+  --teulada-ombra: transparent;
+  --vermell: transparent;
+  opacity: .55;
+}
+#casc-paviment { opacity: var(--casc-op, 1); transition: opacity .8s; }

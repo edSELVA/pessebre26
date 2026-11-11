@@ -122,10 +122,16 @@
       if (!visibleLliure(l, s, zones)) return;
       if (l.tipus === 'casa' || l.tipus === 'element') {
         llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus) });
+        if (l.tipus === 'casa') llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
       } else if (mode && !retinguts[l.id] && l.grup === (mode === 'claustre' ? 'claustre' : 'general')) {
         llista.push({ y: l.y, node: usa(l.tipus === 'animal' ? 'MARCA-ANI' : 'MARCA-PER', l.x, l.y) });
       }
     });
+
+    // El paviment del casc antic «es construeix» amb les cases de classe: del 35 % (cap) al 100 % (totes)
+    var poble = 0, ocupades = 0;
+    D.mapa.llocs.forEach(function (l) { if (l.grup === 'poble') { poble++; if (s.o[l.id]) ocupades++; } });
+    svg.style.setProperty('--casc-op', (0.35 + 0.65 * ocupades / poble).toFixed(2));
 
     var frag = document.createDocumentFragment();
     Compon.ordena(llista).forEach(function (e) { frag.appendChild(e.node); });

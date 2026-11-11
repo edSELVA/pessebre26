@@ -22,6 +22,8 @@ const FANTASMA = ['-clar' => '#FFFDF4', '' => '#FFF3DA', '-ombra' => '#EBDCC0', 
 // Opacitat de la silueta fantasma dels llocs lliures. La guia v2 diu cases .62 i elements .5;
 // l'Eduard va triar l'opció més transparent (11 nov 2026).
 const OPACITAT_FANTASMA = ['casa' => '.32', 'element' => '.25'];
+// Contorn gris fi de les cases lliures, perquè es vegin sobre el paviment del casc antic
+const VORA_FANTASMA = ['color' => '#6F675E', 'opacitat' => '.55'];
 
 class ErrorPaquet extends Exception {}
 
@@ -204,6 +206,31 @@ function placa_dibuixada(DOMDocument $doc): ?array
     return $x1 < 0 ? null : [$x0, $y0, $x1 - $x0, $y1 - $y0];
 }
 
+/**
+ * Agrupa el paviment del turó del casc antic (vora, empedrat i llambordes) en <g id="casc-paviment">,
+ * perquè el visor el pugui suavitzar mentre les classes encara no hi han posat les cases.
+ * L'ombra verda de sota (feixa-ombra) es queda fora del grup.
+ */
+function agrupa_paviment_casc(DOMDocument $doc): void
+{
+    $base = null;
+    foreach ($doc->getElementsByTagNameNS(SVG_NS, 'path') as $el) {
+        if (strpos($el->getAttribute('fill'), 'var(--empedrat,') === 0 && $el->parentNode->localName !== 'pattern') { $base = $el; break; }
+    }
+    if (!$base) falla('terreny.svg: no es troba el paviment del casc antic');
+    $d = $base->getAttribute('d');
+    $grup = $doc->createElementNS(SVG_NS, 'g');
+    $grup->setAttribute('id', 'casc-paviment');
+    $peces = [];
+    foreach ($base->parentNode->childNodes as $f) {
+        if ($f instanceof DOMElement && $f->localName === 'path' && $f->getAttribute('d') === $d
+            && strpos($f->getAttribute('fill'), 'var(--feixa-ombra,') !== 0) $peces[] = $f;
+    }
+    if (count($peces) !== 3) falla('terreny.svg: el paviment del casc antic no té les 3 capes esperades');
+    $base->parentNode->insertBefore($grup, $peces[0]);
+    foreach ($peces as $p) $grup->appendChild($p);
+}
+
 function ids_de(DOMDocument $doc): array
 {
     $ids = [];
@@ -271,6 +298,7 @@ function converteix(string $zip, string $arrel): array
         if ($d->documentElement->getAttribute('viewBox') !== '0 0 2400 800') falla("$n: el viewBox no és 0 0 2400 800");
         estils_a_css($d, $n, $css);
     }
+    agrupa_paviment_casc($terreny);
     // Els degradats de llum es copien una sola vegada: llum-aire fa servir els de llum-terra.
     $defs_terra = fills_defs($terra);
     foreach (fills_defs($aire) as $id => $xml) {
@@ -672,6 +700,15 @@ function escena_css(array $css, array $registre): string
     }
     $o .= "}\n";
     foreach (OPACITAT_FANTASMA as $cat => $op) $o .= ".fantasma.$cat { opacity: $op; }\n";
+    // Contorn de les cases lliures: només el rol contorn, en gris; la resta transparent.
+    $rols_casa = [];
+    foreach ($registre as $p) if ($p['cat'] === 'casa') foreach ($p['rols'] as $r) $rols_casa[$r] = true;
+    ksort($rols_casa);
+    $o .= "/* Cases lliures: contorn gris fi a sobre de la silueta */\n.fantasma-vora {\n";
+    foreach (array_keys($rols_casa) as $r) $o .= "  --$r: " . ($r === 'contorn' ? VORA_FANTASMA['color'] : 'transparent') . ";\n";
+    $o .= "  opacity: " . VORA_FANTASMA['opacitat'] . ";\n}\n";
+    // Paviment del casc antic: el visor en baixa la intensitat mentre falten cases de classe (--casc-op).
+    $o .= "#casc-paviment { opacity: var(--casc-op, 1); transition: opacity .8s; }\n";
     return $o;
 }
 
