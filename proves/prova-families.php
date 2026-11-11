@@ -211,7 +211,10 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
 
     // Registre sense dades personals
     $qui = $pdo->query("SELECT DISTINCT qui FROM registre")->fetchAll(PDO::FETCH_COLUMN);
-    comprova(count(array_filter($qui, function ($q) { return preg_match('/^(codi #\d+ \(lot \d+\)|claustre|automàtic)$/u', $q) !== 1; })) === 0, 'el registre només apunta «codi #n (lot)», «claustre» o «automàtic»');
+    comprova(count(array_filter($qui, function ($q) { return preg_match('/^(família|claustre|automàtic)$/u', $q) !== 1; })) === 0, 'el registre només apunta «família», «claustre» o «automàtic» (sense codis)');
+    igual(0, (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE estat = 'confirmat' AND codi_id IS NOT NULL")->fetchColumn(),
+          'participació anònima: cap figura confirmada queda vinculada al seu codi');
+    comprova(strpos(json_encode($pdo->query('SELECT * FROM registre')->fetchAll()), 'codi #') === false, 'el registre no apunta cap número de codi');
     $text = json_encode($pdo->query('SELECT * FROM registre')->fetchAll());
     foreach ($c as $codi) comprova(strpos($text, $codi) === false, 'el registre no conté cap codi en clar');
     comprova(strpos(json_encode($pdo->query('SELECT * FROM codis')->fetchAll()), $c[0]) === false, 'la taula de codis no conté cap codi en clar');

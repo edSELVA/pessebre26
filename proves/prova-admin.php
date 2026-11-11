@@ -86,11 +86,23 @@ $prova_admin = function (array $cfg, string $nom) {
                    'colors' => array_fill(0, count($peces['PER-ADU-F']['pers']), 0)]);
     igual(200, $e, 'una família participa amb un codi nou');
     [$e, $r] = $crida(['a' => 'admin.cercar', 'codi' => $codi] + $L);
-    igual([true, 1, $persona['id']], [$r['trobat'] ?? null, $r['usos'] ?? null, $r['llocs'][0]['lloc_id'] ?? null], 'la cerca troba el codi, els usos i el lloc');
-    [$e] = $crida(['a' => 'admin.alliberar', 'lloc' => $persona['id'], 'reactiva' => true] + $A);
+    igual([true, 1], [$r['trobat'] ?? null, $r['usos'] ?? null], 'la cerca troba el codi i quantes vegades s\'ha fet servir');
+    comprova(!isset($r['llocs']), 'la cerca no diu on és la figura (participació anònima)');
+    [, $r] = $crida(['a' => 'admin.lloc', 'lloc' => $persona['id']] + $L);
+    igual('familia', $r['ocupacio']['origen'] ?? null, 'el lloc diu que és d\'una família…');
+    comprova(strpos(json_encode($r), $codi) === false && !isset($r['ocupacio']['codi']), '…però no quin codi');
+    [$e] = $crida(['a' => 'admin.alliberar', 'lloc' => $persona['id']] + $A);
     igual(200, $e, 'l\'administració allibera el lloc');
     [, $r] = $crida(['a' => 'admin.cercar', 'codi' => $codi] + $L);
-    igual(0, $r['usos'] ?? null, 'en alliberar amb «reactivar», el codi torna a servir');
+    igual(1, $r['usos'] ?? null, 'alliberar no toca el codi (no se sap quin era)');
+    [$e] = $crida(['a' => 'admin.reactivar', 'codi' => $codi] + $L);
+    igual(403, $e, 'la contrasenya de lectura no pot reactivar codis');
+    [$e] = $crida(['a' => 'admin.reactivar', 'codi' => $codi] + $A);
+    igual(200, $e, 'l\'administració reactiva el codi escrivint-lo');
+    [, $r] = $crida(['a' => 'admin.cercar', 'codi' => $codi] + $L);
+    igual(0, $r['usos'] ?? null, 'el codi reactivat torna a servir');
+    [$e] = $crida(['a' => 'admin.reactivar', 'codi' => $codi] + $A);
+    igual(409, $e, 'un codi sense usar no es pot reactivar');
     [$e] = $crida(['a' => 'admin.alliberar', 'lloc' => $persona['id']] + $A);
     igual(409, $e, 'no es pot alliberar un lloc que ja és lliure');
 
@@ -119,7 +131,7 @@ $prova_admin = function (array $cfg, string $nom) {
     // Registre
     [$e, $r] = $crida(['a' => 'admin.registre'] + $L);
     $accions = array_column($r['registre'] ?? [], 'accio');
-    foreach (['admin.alliberar', 'admin.canvia', 'admin.casa_sense_placa', 'admin.config', 'admin.enllac', 'admin.generar_codis', 'admin.classes'] as $acc) {
+    foreach (['admin.alliberar', 'admin.canvia', 'admin.casa_sense_placa', 'admin.config', 'admin.enllac', 'admin.generar_codis', 'admin.classes', 'admin.reactivar'] as $acc) {
         comprova(in_array($acc, $accions, true), "el registre apunta $acc");
     }
     igual([], snapshot_errors($snap(), $mapa, $peces, disseny($cfg, 'paletes.json')), 'el snapshot continua essent vàlid');

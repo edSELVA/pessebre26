@@ -204,3 +204,8 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Contrasenyes (decidit):** administració i **només lectura** (equip de valors, direcció). `password_hash` a config.php (`php eines/gestio.php contrasenya admin|lectura`). Es demanen a cada càrrega, només a memòria; 5 fallades → 15 min.
 - **Codis i etiquetes des de l'admin (decidit):** es generen i s'imprimeixen des del navegador (A4 de 24); els codis es veuen un sol cop. També la llista de classes es pot enganxar a l'admin (per si l'hosting no té terminal).
 - **Configuració editable:** dates (hora de Barcelona), límit del claustre, llindar de zones, zones forçades (en ordre), segona ronda i aturada. Fites i participació automàtica: a la Fase E.
+
+## 19. Participació anònima (11 nov 2026, decidit)
+- **No es desa qui ha posat cada figura.** En confirmar, el vincle codi → lloc (`ocupacions.codi_id`) s'esborra; del codi només queden els usos (per a «un codi, una figura»). Substitueix el «registre codi → lloc → hora» del §5 i el §7: el registre apunta «família», sense codi. Durant la retenció (5 min) el vincle és temporal i desapareix en confirmar o caducar.
+- **Corregir un error d'una família:** l'administració allibera la figura (tocant-la al pessebre) i, si la família ha de tornar a participar, reactiva el codi escrivint-lo (pestanya «Codis»).
+- Les classes sí que queden vinculades a la seva casa (el nom ja surt a la placa; no són dades personals).

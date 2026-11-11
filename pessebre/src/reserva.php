@@ -268,10 +268,11 @@ function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, Da
     return $o;
 }
 
+/** Confirma una figura de família o del claustre. Participació anònima: el vincle amb el codi (codi_id) s'esborra aquí. */
 function confirma_ocupacio(PDO $pdo, string $lloc_id, array $peca, DateTimeImmutable $ara): void
 {
     [$p, $m, $c, $f] = $peca;
-    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, finestres = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, finestres = ?, codi_id = NULL, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
         ->execute([$p, $m, $c, $f, bd_hora($ara), $lloc_id]);
 }
 
@@ -300,7 +301,7 @@ function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, 
     $st->execute([$codi['id'], $e['permesos']]);
     if ($st->rowCount() !== 1) throw new ErrorPessebre('Aquest codi ja s\'ha fet servir.', 409, 'codi_no');
     confirma_ocupacio($pdo, $o['lloc_id'], $p, $ara);
-    registre_afegeix($pdo, $ara, 'codi #' . $codi['id'] . ' (lot ' . $codi['lot'] . ')', 'codi.confirmar', $o['lloc_id'], $p[0]);
+    registre_afegeix($pdo, $ara, 'família', 'codi.confirmar', $o['lloc_id'], $p[0]);     // sense el codi: participació anònima
     $obertes = zones_actualitza($pdo, $ara);
     return ['lloc' => $o['lloc_id'], 'zona_nova' => $obertes];
 }

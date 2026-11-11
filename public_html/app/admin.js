@@ -123,25 +123,24 @@
       fills.push(h('p', { text: 'Lliure.' }));
       if (admin() && l.grup === 'poble') fills.push(h('div', { class: 'botons' }, [boto('Posar-hi una casa sense placa', function () { edita(lm, null); }, 'primari')]));
     } else {
-      var qui = o.classe ? 'Classe «' + o.classe + '»' : (o.codi ? 'Família (codi #' + o.codi.id + ', lot ' + o.codi.lot + ')' : { claustre: 'Claustre', admin: 'Administració', auto: 'Automàtica' }[o.origen] || o.origen);
+      // Participació anònima: d'una família no se sap el codi
+      var qui = o.classe ? 'Classe «' + o.classe + '»' : ({ familia: 'Una família', claustre: 'Claustre', admin: 'Administració', auto: 'Automàtica' }[o.origen] || o.origen);
       fills.push(fila('Estat', o.estat === 'confirmat' ? 'Confirmat' : 'Retingut fins a les ' + (o.caduca || '').slice(11)));
       fills.push(fila('Qui', qui));
       fills.push(fila('Peça', UI.nomPeca(o.peca || '') + (o.mirall ? ' (girada)' : '')));
       fills.push(fila('Hora', o.hora));
       if (admin()) {
-        var reactiva = h('input', { type: 'checkbox', id: 'reactiva' });
-        if (o.codi) reactiva.checked = true;
         var botons = [];
         if (o.estat === 'confirmat') botons.push(boto('Canviar peça o colors', function () { edita(lm, o); }, 'primari'));
         botons.push(boto(o.estat === 'confirmat' ? 'Alliberar' : 'Alliberar la retenció', function () {
           if (!window.confirm('Segur que vols alliberar el lloc ' + l.id + '?')) return;
-          api('admin.alliberar', { lloc: l.id, reactiva: reactiva.checked }).then(function () {
+          api('admin.alliberar', { lloc: l.id }).then(function () {
             UI.avis('Lloc ' + l.id + ' alliberat.');
             return refresca().then(function () { tria(lm); });
           }).catch(function (e) { UI.avis(e.message); });
         }));
         fills.push(h('div', { class: 'botons' }, botons));
-        if (o.codi && o.estat === 'confirmat') fills.push(h('label', { class: 'casella', for: 'reactiva' }, [reactiva, ' En alliberar-lo, el codi de la família torna a servir']));
+        if (o.origen === 'familia') fills.push(h('p', { class: 'suau', text: 'Si la família ha de tornar a participar, demana-li el codi i reactiva\'l a «Codis».' }));
       }
     }
     if (sel.registre.length) {
@@ -237,7 +236,8 @@
     var lots = estat.lots.map(function (l) { return h('li', { text: 'Lot ' + l.lot + ': ' + l.codis + ' codis, ' + (+l.usats || 0) + ' usats' }); });
     mostra([
       h('h2', { text: 'Codis de família' }),
-      h('h3', { text: 'Cercar un codi' }),
+      h('h3', { text: 'Cercar o reactivar un codi' }),
+      h('p', { class: 'suau', text: 'La participació és anònima: no es pot saber quina figura ha posat cada codi.' }),
       h('form', { class: 'form-codi' }, [cerca, h('button', { type: 'submit', class: 'boto', text: 'Cercar' })]),
       resultat,
       admin() ? h('h3', { text: 'Generar codis i etiquetes' }) : null,
@@ -251,10 +251,13 @@
       api('admin.cercar', { codi: cerca.value }).then(function (r) {
         resultat.textContent = '';
         if (!r.trobat) { resultat.appendChild(h('p', { text: 'Aquest codi no existeix.' })); return; }
-        resultat.appendChild(fila('Codi', '#' + r.id + ' (lot ' + r.lot + ')'));
-        resultat.appendChild(fila('Usos', r.usos));
-        resultat.appendChild(h('div', { class: 'fila-dada' }, [h('span', { class: 'etiqueta', text: 'Llocs' })].concat(
-          r.llocs.length ? r.llocs.map(function (o) { return enllacLloc(o.lloc_id); }) : [h('span', { text: 'cap' })])));
+        resultat.appendChild(fila('Lot', r.lot));
+        resultat.appendChild(fila('Fet servir', r.usos + ' de ' + r.permesos + (r.usos ? ' (figura posada)' : '')));
+        if (admin() && r.usos > 0) resultat.appendChild(h('div', { class: 'botons' }, [boto('Reactivar (que pugui tornar a participar)', function () {
+          if (!window.confirm('Reactivar aquest codi? Abans cal haver alliberat la figura de la família.')) return;
+          api('admin.reactivar', { codi: cerca.value }).then(function () { UI.avis('Codi reactivat.'); resultat.textContent = ''; })
+            .catch(function (e) { UI.avis(e.message); });
+        })]));
       }).catch(function (e) { UI.avis(e.message); });
     });
   }

@@ -81,15 +81,13 @@ function admin_lloc(PDO $pdo, $lloc_id): array
 {
     $l = is_string($lloc_id) ? lloc($pdo, $lloc_id) : null;
     if (!$l) throw new ErrorPessebre('Aquest lloc no existeix.', 400, 'lloc');
-    $st = $pdo->prepare("SELECT o.*, c.nom AS classe, k.lot FROM ocupacions o LEFT JOIN classes c ON c.id = o.classe_id
-                         LEFT JOIN codis k ON k.id = o.codi_id WHERE o.lloc_id = ?");
+    $st = $pdo->prepare("SELECT o.*, c.nom AS classe FROM ocupacions o LEFT JOIN classes c ON c.id = o.classe_id WHERE o.lloc_id = ?");
     $st->execute([$l['id']]);
     $o = $st->fetch() ?: null;
     $reg = $pdo->prepare('SELECT hora, qui, accio, detall FROM registre WHERE lloc_id = ? ORDER BY id DESC LIMIT 20');
     $reg->execute([$l['id']]);
     $ocupacio = $o === null ? null : [
         'estat' => $o['estat'], 'origen' => $o['origen'], 'classe' => $o['classe'],
-        'codi' => $o['codi_id'] === null ? null : ['id' => (int)$o['codi_id'], 'lot' => (int)$o['lot']],
         'peca' => $o['peca'], 'mirall' => (int)$o['mirall'], 'colors' => json_decode((string)$o['colors'], true),
         'finestres' => (int)$o['finestres'], 'hora' => hora_local($o['hora']), 'caduca' => hora_local($o['caduca']),
     ];
@@ -97,16 +95,25 @@ function admin_lloc(PDO $pdo, $lloc_id): array
             'registre' => array_map(function ($r) { $r['hora'] = hora_local($r['hora']); return $r; }, $reg->fetchAll())];
 }
 
-/** Cerca un codi de família escrit (amb guions o sense). */
+/** Cerca un codi de família escrit (amb guions o sense). No diu on és la figura: no es desa (participació anònima). */
 function admin_cerca_codi(PDO $pdo, array $cfg, $text): array
 {
     $c = codi_normalitza($text);
     if ($c === null || !codi_control_ok($c)) throw new ErrorPessebre('El codi no té el format bo (o hi ha un caràcter mal copiat).', 400, 'format');
     $r = codi_busca($pdo, $cfg['pebre'], $c);
     if (!$r) return ['trobat' => false];
-    $st = $pdo->prepare("SELECT lloc_id, estat FROM ocupacions WHERE codi_id = ?");
-    $st->execute([$r['id']]);
-    return ['trobat' => true, 'id' => (int)$r['id'], 'lot' => (int)$r['lot'], 'usos' => (int)$r['usos'], 'llocs' => $st->fetchAll()];
+    return ['trobat' => true, 'lot' => (int)$r['lot'], 'usos' => (int)$r['usos'], 'permesos' => codi_usos_permesos($pdo)];
+}
+
+/** Torna a deixar fer servir un codi (quan l'administració ha retirat la figura d'una família que s'havia equivocat). */
+function admin_reactiva_codi(PDO $pdo, array $cfg, $text, DateTimeImmutable $ara): array
+{
+    $r = admin_cerca_codi($pdo, $cfg, $text);
+    if (!$r['trobat']) throw new ErrorPessebre('Aquest codi no existeix.', 400, 'codi_no');
+    if ($r['usos'] === 0) throw new ErrorPessebre('Aquest codi encara no s\'ha fet servir.', 409, 'sense_usos');
+    $pdo->prepare('UPDATE codis SET usos = usos - 1 WHERE hash = ? AND usos > 0')->execute([codi_hash($cfg['pebre'], codi_normalitza($text))]);
+    registre_afegeix($pdo, $ara, 'administració', 'admin.reactivar', null, 'lot ' . $r['lot']);
+    return ['usos' => $r['usos'] - 1];
 }
 
 function admin_registre(PDO $pdo, int $quants): array
@@ -116,18 +123,14 @@ function admin_registre(PDO $pdo, int $quants): array
     return array_map(function ($r) { $r['hora'] = hora_local($r['hora']); return $r; }, $st->fetchAll());
 }
 
-/** Allibera un lloc. Si era d'una família i es demana, el codi torna a quedar disponible. */
-function admin_alliberar(PDO $pdo, $lloc_id, bool $reactiva, DateTimeImmutable $ara): array
+/** Allibera un lloc. (El codi d'una família no se sap; si cal, es reactiva escrivint-lo a «Codis».) */
+function admin_alliberar(PDO $pdo, $lloc_id, DateTimeImmutable $ara): array
 {
     $info = admin_lloc($pdo, $lloc_id);
     $o = $info['ocupacio'];
     if (!$o) throw new ErrorPessebre('Aquest lloc ja és lliure.', 409, 'lliure');
     $pdo->prepare('DELETE FROM ocupacions WHERE lloc_id = ?')->execute([$info['lloc']['id']]);
-    if ($reactiva && $o['codi'] && $o['estat'] === 'confirmat') {
-        $pdo->prepare('UPDATE codis SET usos = usos - 1 WHERE id = ? AND usos > 0')->execute([$o['codi']['id']]);
-    }
-    registre_afegeix($pdo, $ara, 'administració', 'admin.alliberar', $info['lloc']['id'],
-        trim(($o['classe'] ? 'classe ' . $o['classe'] : '') . ($o['codi'] ? ' codi #' . $o['codi']['id'] : '') . ($reactiva ? ' (codi reactivat)' : '')));
+    registre_afegeix($pdo, $ara, 'administració', 'admin.alliberar', $info['lloc']['id'], $o['classe'] ? 'classe ' . $o['classe'] : $o['origen']);
     return ['lloc' => $info['lloc']['id']];
 }
 
@@ -244,7 +247,8 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
             throw new ErrorPessebre('Amb la contrasenya de lectura no es poden fer canvis.', 403, 'lectura');
         }
         switch ($a) {
-            case 'admin.alliberar': return admin_alliberar($pdo, $p['lloc'] ?? null, !empty($p['reactiva']), $ara);
+            case 'admin.alliberar': return admin_alliberar($pdo, $p['lloc'] ?? null, $ara);
+            case 'admin.reactivar': return admin_reactiva_codi($pdo, $cfg, $p['codi'] ?? null, $ara);
             case 'admin.canvia': return admin_ocupacio($pdo, $cfg, $p, $ara, false);
             case 'admin.casa_sense_placa': return admin_ocupacio($pdo, $cfg, $p, $ara, true);
             case 'admin.config': return admin_config($pdo, $p['opcio'] ?? null, $p['valor'] ?? null, $ara);
