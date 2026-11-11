@@ -63,6 +63,22 @@ function app_etapa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable
     return $e['etapa'];
 }
 
+/** Codi de família de la petició (comprovant el límit d'intents). */
+function app_codi(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
+{
+    limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
+    return codi_comprova($pdo, $cfg, $p['c'] ?? null);
+}
+
+/** Enllaç del claustre de la petició (comprovant el límit d'intents). */
+function app_claustre(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): void
+{
+    limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
+    if (!enllac_valida($pdo, $cfg['pebre'], $p['k'] ?? null, 'claustre')) {
+        throw new ErrorPessebre('Aquest enllaç del claustre no és vàlid o ja no està actiu.', 403, 'enllac');
+    }
+}
+
 /** @return array{0: int, 1: array} */
 function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
 {
@@ -94,12 +110,44 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 });
                 return [200, ['ok' => true] + $res];
 
+            case 'codi.validar':
+                $codi = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_codi($pdo, $cfg, $p, $ip, $ara); });
+                return [200, ['ok' => true] + codi_estat($pdo, $codi, $ara)];
+
+            case 'codi.retenir':
+            case 'codi.confirmar':
+            case 'codi.deixar':
+                $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
+                    $codi = app_codi($pdo, $cfg, $p, $ip, $ara);
+                    aturada_comprova($pdo);
+                    if ($a === 'codi.retenir') return codi_retenir($pdo, $cfg, $codi, $p['lloc'] ?? null, $ara);
+                    if ($a === 'codi.confirmar') return codi_confirmar($pdo, $cfg, $codi, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara);
+                    return codi_deixar($pdo, $cfg, $codi, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
+                });
+                return [200, ['ok' => true] + $res];
+
+            case 'claustre.estat':
+                app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_claustre($pdo, $cfg, $p, $ip, $ara); });
+                return [200, ['ok' => true] + claustre_estat($pdo, $ara)];
+
+            case 'claustre.retenir':
+            case 'claustre.confirmar':
+            case 'claustre.deixar':
+                $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
+                    app_claustre($pdo, $cfg, $p, $ip, $ara);
+                    if ($a === 'claustre.retenir') return claustre_retenir($pdo, $cfg, $p['lloc'] ?? null, $ara);
+                    if ($a === 'claustre.confirmar') return claustre_confirmar($pdo, $cfg, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara);
+                    return claustre_deixar($pdo, $cfg, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
+                });
+                return [200, ['ok' => true] + $res];
+
             default:
                 return [400, ['ok' => false, 'error' => 'Acció desconeguda.', 'codi' => 'accio']];
         }
     } catch (ErrorPessebre $e) {
-        // Les fallades d'enllaç s'han de desar encara que la transacció s'hagi desfet.
-        if ($e->codi === 'enllac') app_apunta_fallada($pdo, $ip, $ara);
+        // Les fallades d'enllaç o de codi s'han de desar encara que la transacció s'hagi desfet.
+        // Els errors de format o del caràcter de control (transcripció) no compten com a intents.
+        if ($e->codi === 'enllac' || $e->codi === 'codi') app_apunta_fallada($pdo, $ip, $ara);
         return [$e->estat, ['ok' => false, 'error' => $e->getMessage(), 'codi' => $e->codi]];
     }
 }

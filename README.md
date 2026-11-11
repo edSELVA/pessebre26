@@ -1,7 +1,7 @@
 # Pessebre col·laboratiu de l'escola
 
 Pessebre digital on cada classe, el claustre i les famílies hi afegeixen una peça. Mirar és obert; participar demana un codi.
-Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase B** (reserva de cases per als tutors).
+Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase C** (famílies amb codi i etiquetes QR, i enllaç del claustre).
 
 ## Provar-ho (cal PHP 7.4–8.3)
 
@@ -21,7 +21,9 @@ php eines/gestio.php classes eines/classes-exemple.txt # classes inventades
 php eines/gestio.php enllac primaria                   # mostra l'enllaç classes.html#e=… (un sol cop)
 ```
 
-Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
+Famílies i claustre (Fase C): `php eines/gestio.php codis 30` crea un lot de codis i el full d'etiquetes amb QR (a `pessebre/dades/`, esborra'l després d'imprimir); `enllac claustre` dona l'enllaç `#k=…`. Per provar-ho abans del 21 de desembre: `calendari families_des "2026-11-11 00:00"` (i `claustre_des`, `claustre_tanca`).
+
+Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ronda 1|2`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
 ## Instal·lació (hosting, a partir de la Fase B)
 

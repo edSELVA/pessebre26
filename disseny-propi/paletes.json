@@ -1,0 +1,30 @@
+{
+ "nota": "Paletes pròpies que s'afegeixen a paletes.json del paquet v2. «pastors» s'aplica als 18 llocs de pastor de la clariana: tons de terra com a les vistes de referència (compon.py). Mocadors: les dues primeres opcions de persones.",
+ "pastors": {
+  "roba": {
+   "nom": "Roba de pastor",
+   "opcions": [
+    ["#C89A62", "#A6763E", "#7C5428"],
+    ["#B8866A", "#96644A", "#6E4632"],
+    ["#9AA06A", "#787E48", "#565C30"],
+    ["#D9B078", "#BC8E52", "#8E6836"]
+   ]
+  },
+  "mocador": {
+   "nom": "Mocador",
+   "opcions": [
+    ["#FFFFFF", "#F3EBDD", "#CBBBA4"],
+    ["#FFE9A8", "#F2CC6A", "#C89A3A"]
+   ]
+  },
+  "roba2": {
+   "nom": "Roba de pastoret",
+   "opcions": [
+    ["#C89A62", "#A6763E", "#7C5428"],
+    ["#B8866A", "#96644A", "#6E4632"],
+    ["#9AA06A", "#787E48", "#565C30"],
+    ["#D9B078", "#BC8E52", "#8E6836"]
+   ]
+  }
+ }
+}

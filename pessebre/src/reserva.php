@@ -124,3 +124,248 @@ function reserva_allibera(PDO $pdo, string $lloc_id, string $qui, DateTimeImmuta
     registre_afegeix($pdo, $ara, $qui, 'admin.alliberar', $lloc_id);
     return true;
 }
+
+// ───────────────────────────── Famílies (codi) i claustre (enllaç comú)
+// Retenció de 5 minuts. Famílies: un codi = una participació (dues si l'administració activa la segona ronda).
+// Claustre: fins a «claustre_limit» participacions (50) i fins a «claustre_tanca» (21 des a les 22:00).
+
+const RETENCIO_FAMILIES = 300;
+const ORDRE_ZONES = ['Z0', 'Z1', 'Z2', 'Z3'];
+const DEFECTES_CALENDARI = [
+    'families_des'  => '2026-12-20 23:00:00',   // 21 des 00:00 (Barcelona)
+    'families_fins' => '2027-01-05 23:00:00',   // 6 gen 00:00 (Barcelona)
+    'claustre_des'  => '2026-12-20 23:00:00',   // 21 des 00:00
+    'claustre_tanca' => '2026-12-21 21:00:00',  // 21 des 22:00
+];
+
+function calendari(PDO $pdo, string $clau): string
+{
+    return (string)config_llegeix($pdo, $clau, DEFECTES_CALENDARI[$clau]);
+}
+
+/** 'abans', 'obert' o 'tancat' segons les dues claus de calendari. */
+function finestra(PDO $pdo, string $des, string $fins, DateTimeImmutable $ara): string
+{
+    $t = bd_hora($ara);
+    if ($t < calendari($pdo, $des)) return 'abans';
+    return $t < calendari($pdo, $fins) ? 'obert' : 'tancat';
+}
+
+function claustre_alliberat(PDO $pdo, DateTimeImmutable $ara): bool
+{
+    return bd_hora($ara) >= calendari($pdo, 'claustre_tanca');
+}
+
+function aturada_comprova(PDO $pdo): void
+{
+    if (config_llegeix($pdo, 'aturada', '0') === '1') {
+        throw new ErrorPessebre('Ara mateix la participació està aturada. Torna-ho a provar més tard.', 403, 'aturada');
+    }
+}
+
+function zones_obertes(PDO $pdo): array
+{
+    return array_values(array_filter(explode(',', config_llegeix($pdo, 'zones', 'Z0'))));
+}
+
+/** Valida el codi escrit. Els errors de format o de control no compten com a intents; un codi inexistent, sí. */
+function codi_comprova(PDO $pdo, array $cfg, $text): array
+{
+    $c = codi_normalitza($text);
+    if ($c === null) throw new ErrorPessebre('El codi té 10 caràcters (lletres i xifres), com K7M-QX4-P9TR. Revisa\'l.', 400, 'format');
+    if (!codi_control_ok($c)) throw new ErrorPessebre('Sembla que hi ha un caràcter mal copiat. Revisa el codi.', 400, 'control');
+    $r = codi_busca($pdo, $cfg['pebre'], $c);
+    if (!$r) throw new ErrorPessebre('Aquest codi no existeix. Revisa\'l.', 403, 'codi');
+    return $r;
+}
+
+function codi_usos_permesos(PDO $pdo): int
+{
+    return config_llegeix($pdo, 'ronda', '1') === '2' ? 2 : 1;
+}
+
+/** Estat del codi per a la pàgina (no canvia res). */
+function codi_estat(PDO $pdo, array $codi, DateTimeImmutable $ara): array
+{
+    $f = finestra($pdo, 'families_des', 'families_fins', $ara);
+    $permesos = codi_usos_permesos($pdo);
+    $missatge = null;
+    if ($f === 'abans') $missatge = 'Les famílies podran participar a partir del 21 de desembre. Guarda el codi!';
+    elseif ($f === 'tancat') $missatge = 'La participació ja s\'ha tancat. Moltes gràcies!';
+    elseif ((int)$codi['usos'] >= $permesos) $missatge = 'Aquest codi ja s\'ha fet servir. Moltes gràcies per participar!';
+    elseif (config_llegeix($pdo, 'aturada', '0') === '1') $missatge = 'Ara mateix la participació està aturada. Torna-ho a provar més tard.';
+    return ['pot' => $missatge === null, 'missatge' => $missatge, 'usos' => (int)$codi['usos'], 'permesos' => $permesos];
+}
+
+/** Comprova que la peça, el mirall i els colors encaixen amb el lloc. Retorna [peça, mirall, colors JSON]. */
+function participacio_peca(array $cfg, array $lloc, $peca, $mirall, $colors): array
+{
+    $peces = disseny($cfg, 'peces.json')['peces'];
+    $p = is_string($peca) ? ($peces[$peca] ?? null) : null;
+    if (!$p || $p['cat'] !== $lloc['tipus']) throw new ErrorPessebre('Aquesta peça no es pot posar en aquest lloc.', 400, 'peca');
+    if (in_array($lloc['tipus'], ['casa', 'element'], true) && $peca !== $lloc['codi']) throw new ErrorPessebre('Aquesta peça no es pot posar en aquest lloc.', 400, 'peca');
+    $m = in_array($lloc['tipus'], ['casa', 'element'], true) ? (int)$lloc['mirall'] : ($mirall === 1 || $mirall === true ? 1 : 0);
+    if (!$p['pers']) $colors = null;
+    if (!colors_valids($cfg, $peca, $colors, lloc_es_pastor($cfg, $lloc['id']))) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
+    return [$peca, $m, $colors === null ? null : json_encode($colors)];
+}
+
+function lloc_es_pastor(array $cfg, string $id): bool
+{
+    static $pastors = null;
+    if ($pastors === null) {
+        $pastors = [];
+        foreach (disseny($cfg, 'mapa.json')['llocs'] as $l) if (!empty($l['pastor'])) $pastors[$l['id']] = true;
+    }
+    return isset($pastors[$id]);
+}
+
+/** El lloc existeix i està lliure (ni ocupat ni retingut per algú altre). */
+function lloc_lliure(PDO $pdo, $lloc_id): array
+{
+    $l = is_string($lloc_id) ? lloc($pdo, $lloc_id) : null;
+    if (!$l) throw new ErrorPessebre('Aquest lloc no existeix.', 400, 'lloc');
+    $st = $pdo->prepare('SELECT estat FROM ocupacions WHERE lloc_id = ?');
+    $st->execute([$l['id']]);
+    $o = $st->fetchColumn();
+    if ($o === 'confirmat') throw new ErrorPessebre('Aquest lloc ja és ocupat. Tria\'n un altre.', 409, 'ocupat');
+    if ($o === 'retingut') throw new ErrorPessebre('Algú altre està triant aquest lloc ara mateix. Tria\'n un altre.', 409, 'ocupat');
+    return $l;
+}
+
+function retencio_nova(PDO $pdo, array $cfg, array $l, string $origen, ?int $codi_id, DateTimeImmutable $ara): array
+{
+    $t = testimoni_nou();
+    $caduca = $ara->modify('+' . RETENCIO_FAMILIES . ' seconds');
+    $pdo->prepare("INSERT INTO ocupacions (lloc_id, estat, origen, codi_id, peca, mirall, hash_retencio, caduca, hora)
+                   VALUES (?, 'retingut', ?, ?, ?, ?, ?, ?, ?)")
+        ->execute([$l['id'], $origen, $codi_id, $l['codi'], $l['mirall'], testimoni_hash($cfg['pebre'], $t), bd_hora($caduca), bd_hora($ara)]);
+    return ['retencio' => $t, 'segons' => RETENCIO_FAMILIES, 'lloc' => $l['id']];
+}
+
+/** Retenció d'un lloc per testimoni (famílies i claustre). */
+function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, DateTimeImmutable $ara): array
+{
+    $st = $pdo->prepare("SELECT * FROM ocupacions WHERE lloc_id = ? AND estat = 'retingut' AND origen = ?");
+    $st->execute([is_string($lloc_id) ? $lloc_id : '', $origen]);
+    $o = $st->fetch();
+    if (!$o || !testimoni_format_ok($t) || !hash_equals($o['hash_retencio'], testimoni_hash($cfg['pebre'], $t)) || $o['caduca'] <= bd_hora($ara)) {
+        throw new ErrorPessebre('La reserva temporal ha caducat o no és vàlida. Torna a triar el lloc.', 409, 'retencio');
+    }
+    return $o;
+}
+
+function confirma_ocupacio(PDO $pdo, string $lloc_id, array $peca, DateTimeImmutable $ara): void
+{
+    [$p, $m, $c] = $peca;
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+        ->execute([$p, $m, $c, bd_hora($ara), $lloc_id]);
+}
+
+// Famílies
+
+function codi_retenir(PDO $pdo, array $cfg, array $codi, $lloc_id, DateTimeImmutable $ara): array
+{
+    $e = codi_estat($pdo, $codi, $ara);
+    if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'codi_no');
+    $pdo->prepare("DELETE FROM ocupacions WHERE codi_id = ? AND estat = 'retingut'")->execute([$codi['id']]);
+    $l = lloc_lliure($pdo, $lloc_id);
+    $permes = $l['grup'] === 'general' || ($l['grup'] === 'claustre' && claustre_alliberat($pdo, $ara));
+    if (!$permes) throw new ErrorPessebre('Aquest lloc està reservat. Tria un lloc amb marca a terra o una peça transparent.', 400, 'lloc');
+    if (!in_array($l['zona'], zones_obertes($pdo), true)) throw new ErrorPessebre('Aquesta zona encara no és oberta.', 400, 'zona');
+    return retencio_nova($pdo, $cfg, $l, 'familia', (int)$codi['id'], $ara);
+}
+
+function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara): array
+{
+    $e = codi_estat($pdo, $codi, $ara);
+    if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'codi_no');
+    $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'familia', $ara);
+    if ((int)$o['codi_id'] !== (int)$codi['id']) throw new ErrorPessebre('La reserva temporal no és d\'aquest codi.', 409, 'retencio');
+    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors);
+    $st = $pdo->prepare('UPDATE codis SET usos = usos + 1 WHERE id = ? AND usos < ?');
+    $st->execute([$codi['id'], $e['permesos']]);
+    if ($st->rowCount() !== 1) throw new ErrorPessebre('Aquest codi ja s\'ha fet servir.', 409, 'codi_no');
+    confirma_ocupacio($pdo, $o['lloc_id'], $p, $ara);
+    registre_afegeix($pdo, $ara, 'codi #' . $codi['id'] . ' (lot ' . $codi['lot'] . ')', 'codi.confirmar', $o['lloc_id'], $p[0]);
+    $obertes = zones_actualitza($pdo, $ara);
+    return ['lloc' => $o['lloc_id'], 'zona_nova' => $obertes];
+}
+
+function codi_deixar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, DateTimeImmutable $ara): array
+{
+    $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'familia', $ara);
+    if ((int)$o['codi_id'] !== (int)$codi['id']) throw new ErrorPessebre('La reserva temporal no és d\'aquest codi.', 409, 'retencio');
+    $pdo->prepare('DELETE FROM ocupacions WHERE lloc_id = ?')->execute([$o['lloc_id']]);
+    return ['lloc' => $o['lloc_id']];
+}
+
+// Claustre
+
+function claustre_estat(PDO $pdo, DateTimeImmutable $ara): array
+{
+    $f = finestra($pdo, 'claustre_des', 'claustre_tanca', $ara);
+    $limit = (int)config_llegeix($pdo, 'claustre_limit', '50');
+    $fetes = (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'claustre' AND estat = 'confirmat'")->fetchColumn();
+    $missatge = null;
+    if ($f === 'abans') $missatge = 'L\'enllaç del claustre s\'obre el 21 de desembre.';
+    elseif ($f === 'tancat') $missatge = 'El claustre ja ha tancat la seva part del pessebre. Gràcies!';
+    elseif ($fetes >= $limit) $missatge = 'El claustre ja ha arribat a les ' . $limit . ' participacions. Gràcies!';
+    elseif (config_llegeix($pdo, 'aturada', '0') === '1') $missatge = 'Ara mateix la participació està aturada. Torna-ho a provar més tard.';
+    return ['pot' => $missatge === null, 'missatge' => $missatge, 'fetes' => $fetes, 'limit' => $limit];
+}
+
+function claustre_retenir(PDO $pdo, array $cfg, $lloc_id, DateTimeImmutable $ara): array
+{
+    $e = claustre_estat($pdo, $ara);
+    if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
+    $st = $pdo->prepare("SELECT COUNT(*) FROM ocupacions WHERE origen = 'claustre' AND estat = 'retingut' AND caduca > ?");
+    $st->execute([bd_hora($ara)]);
+    if ($e['fetes'] + (int)$st->fetchColumn() >= $e['limit']) throw new ErrorPessebre('Ara mateix tots els llocs que queden s\'estan triant. Torna-ho a provar d\'aquí a uns minuts.', 409, 'ple');
+    $l = lloc_lliure($pdo, $lloc_id);
+    if ($l['grup'] !== 'claustre') throw new ErrorPessebre('Aquest lloc no és del claustre. Tria un pastor o un lloc prop de la clariana.', 400, 'lloc');
+    return retencio_nova($pdo, $cfg, $l, 'claustre', null, $ara);
+}
+
+function claustre_confirmar(PDO $pdo, array $cfg, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara): array
+{
+    $e = claustre_estat($pdo, $ara);
+    if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
+    $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'claustre', $ara);
+    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors);
+    confirma_ocupacio($pdo, $o['lloc_id'], $p, $ara);
+    registre_afegeix($pdo, $ara, 'claustre', 'claustre.confirmar', $o['lloc_id'], $p[0]);
+    return ['lloc' => $o['lloc_id'], 'zona_nova' => zones_actualitza($pdo, $ara)];
+}
+
+function claustre_deixar(PDO $pdo, array $cfg, $lloc_id, $t, DateTimeImmutable $ara): array
+{
+    $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'claustre', $ara);
+    $pdo->prepare('DELETE FROM ocupacions WHERE lloc_id = ?')->execute([$o['lloc_id']]);
+    return ['lloc' => $o['lloc_id']];
+}
+
+// Zones
+
+/** Obre la zona següent quan les obertes arriben al llindar d'ocupació real (75 %). Retorna les zones obertes ara (o null si no canvia). */
+function zones_actualitza(PDO $pdo, DateTimeImmutable $ara): ?array
+{
+    $obertes = zones_obertes($pdo);
+    $llindar = (int)config_llegeix($pdo, 'llindar_zona', '75');
+    $canvi = false;
+    while (count($obertes) < count(ORDRE_ZONES)) {
+        $marques = implode(',', array_fill(0, count($obertes), '?'));
+        $st = $pdo->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN o.estat = 'confirmat' AND o.origen <> 'auto' THEN 1 ELSE 0 END) AS reals
+                             FROM llocs l LEFT JOIN ocupacions o ON o.lloc_id = l.id
+                             WHERE l.grup <> 'poble' AND l.zona IN ($marques)");
+        $st->execute($obertes);
+        $r = $st->fetch();
+        if (!$r['total'] || (int)$r['reals'] * 100 < $llindar * (int)$r['total']) break;
+        $seguent = ORDRE_ZONES[count($obertes)];
+        $obertes[] = $seguent;
+        config_desa($pdo, 'zones', implode(',', $obertes));
+        registre_afegeix($pdo, $ara, 'automàtic', 'zones.obre', null, $seguent);
+        $canvi = true;
+    }
+    return $canvi ? $obertes : null;
+}

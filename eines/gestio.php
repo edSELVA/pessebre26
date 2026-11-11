@@ -3,7 +3,10 @@
 //
 //   php eines/gestio.php installa                 crea la base de dades i carrega els llocs (en local, també config.php de proves)
 //   php eines/gestio.php classes FITXER            carrega la llista de classes (format: etapa;nom)
-//   php eines/gestio.php enllac ETAPA|totes        crea o regenera enllaços d'etapa (es mostren UN SOL COP)
+//   php eines/gestio.php enllac ETAPA|totes|claustre  crea o regenera enllaços d'etapa o del claustre (es mostren UN SOL COP)
+//   php eines/gestio.php codis N                   crea un lot de N codis de família i el full d'etiquetes per imprimir
+//   php eines/gestio.php ronda 1|2                 segona ronda: cada codi permet una segona participació
+//   php eines/gestio.php calendari CLAU "AAAA-MM-DD hh:mm"   families_des, families_fins, claustre_des, claustre_tanca (hora de Barcelona)
 //   php eines/gestio.php allibera LLOC             allibera una casa (p. ex. C014)
 //   php eines/gestio.php tanca "AAAA-MM-DD hh:mm"  hora de tancament de les classes (hora de Barcelona)
 //   php eines/gestio.php aturada si|no             atura o reprèn les reserves
@@ -12,6 +15,7 @@
 // Opció: --config=CAMÍ (per defecte pessebre/config.php)
 declare(strict_types=1);
 require __DIR__ . '/../pessebre/src/app.php';
+require __DIR__ . '/../pessebre/src/etiquetes.php';
 
 const NOM_CLASSE = '/^[\p{L}\p{N} .·\'-]{1,8}$/u';
 
@@ -47,7 +51,8 @@ switch ($ordre) {
     case 'installa':
         bd_esquema($pdo);
         $n = llocs_carrega($pdo, disseny($cfg, 'mapa.json'));
-        $defectes = ['classes_tanca' => '2026-12-21 22:59:00', 'claustre_tanca' => '2026-12-21 21:00:00', 'moment' => 'dia', 'zones' => 'Z0', 'aturada' => '0'];
+        $defectes = DEFECTES_CALENDARI + ['classes_tanca' => '2026-12-21 22:59:00', 'moment' => 'dia', 'zones' => 'Z0', 'aturada' => '0',
+                                          'claustre_limit' => '50', 'ronda' => '1', 'llindar_zona' => '75'];
         foreach ($defectes as $k => $v) if (config_llegeix($pdo, $k) === null) config_desa($pdo, $k, $v);
         snapshot_regenera($pdo, $cfg, $ara);
         echo "Base de dades a punt: $n llocs. snapshot.json regenerat.\n";
@@ -88,7 +93,13 @@ switch ($ordre) {
         break;
 
     case 'enllac':
-        $quina = $args[1] ?? surt('Ús: php eines/gestio.php enllac ETAPA|totes  (etapes: ' . implode(', ', array_keys(ETAPES)) . ')');
+        $quina = $args[1] ?? surt('Ús: php eines/gestio.php enllac ETAPA|totes|claustre  (etapes: ' . implode(', ', array_keys(ETAPES)) . ')');
+        if ($quina === 'claustre') {
+            $t = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $ara);
+            registre_afegeix($pdo, $ara, 'terminal', 'admin.enllac', null, 'claustre');
+            echo "Enllaç nou del claustre (es mostra UN SOL COP; l'anterior deixa de funcionar):\n\n  {$cfg['url_base']}#k=$t\n\n";
+            break;
+        }
         $etapes = $quina === 'totes' ? array_keys(ETAPES) : [$quina];
         foreach ($etapes as $e) if (!isset(ETAPES[$e])) surt("Etapa desconeguda: $e");
         echo "Enllaços nous (es mostren UN SOL COP; els anteriors deixen de funcionar):\n\n";
@@ -98,6 +109,35 @@ switch ($ordre) {
             printf("  %-26s %sclasses.html#e=%s\n", ETAPES[$e], $cfg['url_base'], $t);
         }
         echo "\n";
+        break;
+
+    case 'codis':
+        $n = (int)($args[1] ?? 0);
+        if ($n < 1 || $n > 5000) surt('Ús: php eines/gestio.php codis N  (entre 1 i 5000)');
+        $pdo->beginTransaction();
+        $lot = codis_genera($pdo, $cfg['pebre'], $n, $ara);
+        registre_afegeix($pdo, $ara, 'terminal', 'admin.generar_codis', null, "lot {$lot['lot']}: $n codis");
+        $pdo->commit();
+        $fitxer = dirname($cfg['bloqueig']) . "/etiquetes-lot-{$lot['lot']}.html";
+        file_put_contents($fitxer, etiquetes_html($lot['codis'], $cfg['url_base'], $lot['lot']));
+        chmod($fitxer, 0600);
+        echo "Lot {$lot['lot']}: $n codis.\nFull d'etiquetes: $fitxer\n";
+        echo "Obre'l amb el navegador i imprimeix-lo a mida real. Conté codis vàlids: ESBORRA'L quan l'hagis imprès.\n";
+        break;
+
+    case 'ronda':
+        $v = $args[1] ?? '';
+        if ($v !== '1' && $v !== '2') surt('Ús: php eines/gestio.php ronda 1|2');
+        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $v) { config_desa($pdo, 'ronda', $v); });
+        echo $v === '2' ? "Segona ronda ACTIVADA: cada codi permet una segona participació.\n" : "Una participació per codi.\n";
+        break;
+
+    case 'calendari':
+        $clau = $args[1] ?? '';
+        if (!isset(DEFECTES_CALENDARI[$clau]) || !isset($args[2])) surt('Ús: php eines/gestio.php calendari ' . implode('|', array_keys(DEFECTES_CALENDARI)) . ' "AAAA-MM-DD hh:mm"');
+        $t = DateTimeImmutable::createFromFormat('Y-m-d H:i', $args[2], new DateTimeZone('Europe/Madrid')) ?: surt('Format: AAAA-MM-DD hh:mm');
+        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $clau, $t) { config_desa($pdo, $clau, bd_hora($t)); });
+        echo "$clau = {$args[2]} (hora de Barcelona).\n";
         break;
 
     case 'allibera':
@@ -133,8 +173,13 @@ switch ($ordre) {
         $ret = $pdo->prepare("SELECT COUNT(*) FROM ocupacions WHERE estat = 'retingut' AND caduca > ?");
         $ret->execute([bd_hora($ara)]);
         echo "Retencions actives ara: " . $ret->fetchColumn() . "\n";
+        $mad = function ($clau) use ($pdo) { return (new DateTimeImmutable(calendari($pdo, $clau), new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Madrid'))->format('Y-m-d H:i'); };
+        echo "Famílies: " . $mad('families_des') . " → " . $mad('families_fins') . " · ronda " . config_llegeix($pdo, 'ronda', '1') . "\n";
+        echo "Claustre: " . $mad('claustre_des') . " → " . $mad('claustre_tanca') . " · " . claustre_estat($pdo, $ara)['fetes'] . " de " . config_llegeix($pdo, 'claustre_limit', '50') . "\n";
+        $cod = $pdo->query('SELECT COUNT(*) AS n, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats FROM codis')->fetch();
+        echo "Codis: {$cod['n']} creats, " . (int)$cod['usats'] . " usats · zones obertes: " . implode(', ', zones_obertes($pdo)) . "\n";
         break;
 
     default:
-        surt("Ordres: installa, classes, enllac, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
+        surt("Ordres: installa, classes, enllac, codis, ronda, calendari, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
 }

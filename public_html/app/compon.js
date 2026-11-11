@@ -16,9 +16,10 @@ var Compon = (function () {
   }
 
   // Variables CSS d'una ocupació a partir dels índexs de paleta (en l'ordre de peca.pers).
-  function colors(peca, idx, paletes) {
+  // grup: 'pastors' als llocs de pastor; si no, el de la categoria de la peça.
+  function colors(peca, idx, paletes, grup) {
     var vars = {};
-    var grup = paletes[GRUP_PALETA[peca.cat]] || {};
+    grup = paletes[grup || GRUP_PALETA[peca.cat]] || {};
     (peca.pers || []).forEach(function (rol, i) {
       var op = grup[rol] && grup[rol].opcions[idx ? idx[i] : 0];
       if (!op) return;
@@ -60,11 +61,14 @@ var Compon = (function () {
     return { x0: esq, y0: y0 + c[1], x1: esq + (c[2] - c[0]), y1: y0 + c[3] };
   }
 
+  // Caixa de toc dels llocs sense peça fixa (persones i animals): la mida d'una figura adulta o d'un animal mitjà.
+  var CAIXA_PUNT = { persona: { vb: [18, 27], a: [9, 25], caixa: [2, 0, 16, 26] }, animal: { vb: [22, 16], a: [11, 14], caixa: [0, 0, 22, 16] } };
+
   // Quin lloc hi ha al punt (sx, sy) de l'escena? Si n'hi ha diversos, el de davant (y més gran). Marge de 2 unitats.
   function toca(llocs, peces, sx, sy) {
     var millor = null;
     llocs.forEach(function (l) {
-      var p = peces[l.codi];
+      var p = peces[l.codi] || CAIXA_PUNT[l.tipus];
       if (!p) return;
       var c = caixa(p, l.x, l.y, !!l.mirall);
       if (sx >= c.x0 - 2 && sx <= c.x1 + 2 && sy >= c.y0 - 2 && sy <= c.y1 + 2 && (!millor || l.y > millor.y)) millor = l;

@@ -15,6 +15,7 @@
 <header class="capcal">
   <h1>Pessebre de l'escola</h1>
   <p id="avis-mode" class="avis-mode" hidden></p>
+  <button id="participar" type="button" class="boto-participar" hidden>Participar</button>
 </header>
 
 <main id="escena" class="escena" aria-label="Pessebre. Arrossega per moure't i pessiga per apropar-te.">
@@ -27,6 +28,9 @@
   <button id="zoom-tot" type="button" aria-label="Veure tot el pessebre">⤢</button>
 </div>
 
+<p id="avis" class="avis" role="status" aria-live="polite" hidden></p>
+<section id="full" class="full" aria-live="polite" hidden></section>
+
 <footer class="peu">
   <div id="comptador" class="comptador" hidden>
     <span id="comptador-text"></span>
@@ -38,5 +42,7 @@
 <script src="app/compon.js"></script>
 <script src="app/zoom.js"></script>
 <script src="app/visor.js"></script>
+<script src="app/ui.js"></script>
+<script src="app/participa.js"></script>
 </body>
 </html>

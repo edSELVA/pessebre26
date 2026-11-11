@@ -171,3 +171,14 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Etapes (decidit):** 5, amb llar d'infants (`llar`, `infantil`, `primaria`, `secundaria`, `cicles`).
 - **Hosting (pendent):** cal demanar-lo a informàtica. Mentrestant es prova en local: proves de reserva superades amb SQLite i amb MySQL 8.0 (MAMP), amb PHP 8.1 i 8.3 (11 nov).
 - **Llista de classes:** fitxer `classes.csv` (`etapa;nom`, noms de 8 caràcters com a molt), que no es puja mai. Exemple inventat a `eines/classes-exemple.txt`.
+
+## 14. Decisions de la Fase C (11 nov 2026)
+- **Etiquetes:** format pendent; per defecte A4 de 24 (70×37 mm), es canvia a `pessebre/src/etiquetes.php` (`ETIQUETES`). Cada etiqueta: QR (adreça `#c=CODI`), codi amb guions i instruccions curtes.
+- **Codis:** caràcter de control amb **suma ponderada mòdul 31** (detecta tots els caràcters mal copiats i tots els intercanvis de veïns; el Luhn mòdul 31 no ho garantia perquè 31 és senar). Errors de format o de control no compten com a intents.
+- **Claustre (decidit):** els seus llocs que quedin lliures a les 22:00 del 21 des **passen a les famílies** (si la zona és oberta). Límit de 50 participacions (`claustre_limit`). El claustre veu els seus llocs encara que la zona sigui tancada.
+- **Pastors:** paleta de terra a `disseny-propi/paletes.json` (grup `pastors`), també quan una família ocupa un lloc de pastor alliberat.
+- **Desfer (decidit):** no; només l'administració retira.
+- **Famílies (decidit):** des del **21 des a les 00:00** fins al 6 gen (`families_des`, `families_fins`). Retenció de 5 minuts. Segona ronda: `ronda 2` (dues figures per codi).
+- **Zones:** s'obren automàticament (Z0 → Z1 → Z2 → Z3) quan les obertes arriben al **75 %** d'ocupació real (`llindar_zona`; no compten les automàtiques).
+- **QR propi** (`pessebre/src/qr.php`, versions 1–9, nivell M) generat al servidor; comprovat amb un lector real. No hi ha `app/qr.js`.
+- **Visor públic:** botó «Participar» per escriure el codi si no es pot escanejar el QR.

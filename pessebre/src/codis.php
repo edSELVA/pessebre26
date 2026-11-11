@@ -49,3 +49,78 @@ function enllac_valida(PDO $pdo, string $pebre, $t, string $tipus): ?array
     $e = $st->fetch();
     return $e ?: null;
 }
+
+// ── Codis de família: 10 caràcters d'un alfabet de 31 sense ambigus (sense 0, 1, I, L, O):
+//    9 aleatoris (generador criptogràfic) + 1 de control (suma ponderada mòdul 31). S'imprimeixen com K7M-QX4-P9TR.
+//    La base de dades només en desa l'HMAC amb el pebre.
+
+const ALFABET_CODIS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+/**
+ * Caràcter de control dels 9 primers: tria c perquè Σ (posició × valor) ≡ 0 (mòdul 31), amb posicions 1..10.
+ * Com que 31 és primer, detecta qualsevol caràcter mal copiat i qualsevol intercanvi de dos caràcters.
+ */
+function codi_control(string $nou): string
+{
+    $suma = 0;
+    for ($i = 0; $i < 9; $i++) $suma += ($i + 1) * strpos(ALFABET_CODIS, $nou[$i]);
+    $invers_de_10 = 28;                       // 10 × 28 = 280 ≡ 1 (mòdul 31)
+    return ALFABET_CODIS[((31 - $suma % 31) * $invers_de_10) % 31];
+}
+
+function codi_nou(): string
+{
+    $c = '';
+    for ($i = 0; $i < 9; $i++) $c .= ALFABET_CODIS[random_int(0, strlen(ALFABET_CODIS) - 1)];
+    return $c . codi_control($c);
+}
+
+/** Treu guions i espais i ho passa a majúscules. Retorna null si no té el format (10 caràcters de l'alfabet). */
+function codi_normalitza($text): ?string
+{
+    if (!is_string($text)) return null;
+    $c = strtoupper(preg_replace('/[\s\-.]/', '', $text));
+    return preg_match('/^[' . ALFABET_CODIS . ']{10}$/', $c) ? $c : null;
+}
+
+/** El caràcter de control quadra? (detecta un caràcter mal copiat i la majoria d'intercanvis de veïns) */
+function codi_control_ok(string $c): bool
+{
+    return codi_control(substr($c, 0, 9)) === $c[9];
+}
+
+function codi_impres(string $c): string
+{
+    return substr($c, 0, 3) . '-' . substr($c, 3, 3) . '-' . substr($c, 6, 4);
+}
+
+function codi_hash(string $pebre, string $c): string
+{
+    return hash_hmac('sha256', 'codi:' . $c, $pebre);
+}
+
+/** Genera un lot de codis nous. Retorna els codis en clar (es mostren UN SOL COP; la BD només en desa l'HMAC). */
+function codis_genera(PDO $pdo, string $pebre, int $quants, DateTimeImmutable $ara): array
+{
+    $lot = (int)$pdo->query('SELECT COALESCE(MAX(lot), 0) + 1 FROM codis')->fetchColumn();
+    $st = $pdo->prepare('INSERT INTO codis (hash, lot, usos, creat) VALUES (?, ?, 0, ?)');
+    $existeix = $pdo->prepare('SELECT COUNT(*) FROM codis WHERE hash = ?');
+    $out = [];
+    while (count($out) < $quants) {
+        $c = codi_nou();
+        $h = codi_hash($pebre, $c);
+        $existeix->execute([$h]);
+        if ((int)$existeix->fetchColumn() || isset($out[$c])) continue;
+        $st->execute([$h, $lot, bd_hora($ara)]);
+        $out[$c] = true;
+    }
+    return ['lot' => $lot, 'codis' => array_keys($out)];
+}
+
+function codi_busca(PDO $pdo, string $pebre, string $c): ?array
+{
+    $st = $pdo->prepare('SELECT * FROM codis WHERE hash = ?');
+    $st->execute([codi_hash($pebre, $c)]);
+    $r = $st->fetch();
+    return $r ?: null;
+}

@@ -287,7 +287,9 @@ function converteix(string $zip, string $arrel): array
         $f["peces/$codi.svg"] = (string)file_get_contents("$arrel/disseny-propi/peces/$codi.svg");
     }
     ksort($registre);
-    $paletes = valida_paletes(llegeix_json($f, 'paletes.json'));
+    $paletes = valida_paletes(llegeix_json($f, 'paletes.json'), ['cases' => ['facana', 'teulada', 'porta'], 'persones' => ['roba', 'mocador', 'roba2']]);
+    // Paleta pròpia dels pastors (disseny-propi/paletes.json)
+    $paletes += valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true), ['pastors' => ['roba', 'mocador', 'roba2']]);
 
     // Capes 2400×800 i estils de capa
     $css = [];
@@ -342,7 +344,7 @@ function converteix(string $zip, string $arrel): array
     $sortida['peces.json'] = json_objecte_per_linies(['nota' => 'Generat per eines/converteix.php. vb = mida del viewBox, a = ancoratge, pers = rols personalitzables (ordre dels índexs de colors).'], 'peces', $peces);
     $sortida['mapa.json'] = json_llista_per_linies($mapa['cap'], 'llocs', $mapa['llocs']);
     $sortida['escena-fixa.json'] = json_llista_per_linies(['nota' => 'Peces fixes (no participables). ordre = y de dibuix quan no coincideix amb y.'], 'peces', $fixa);
-    $sortida['paletes.json'] = json_encode($paletes, JSON_F | JSON_PRETTY_PRINT) . "\n";
+    $sortida['paletes.json'] = json_encode($paletes, JSON_F | JSON_PRETTY_PRINT) . "\n";   // cases, persones i pastors
     $sortida['reis-cami.json'] = json_encode($reis, JSON_F) . "\n";
     $sortida['moments.css'] = "/* Generat per eines/converteix.php a partir de moments/*.css del paquet v2. */\n" . $moments;
     $sortida['escena.css'] = escena_css($css, $registre);
@@ -380,9 +382,8 @@ function valida_registre(array $r): array
     return $out;
 }
 
-function valida_paletes(array $p): array
+function valida_paletes(array $p, array $esperat): array
 {
-    $esperat = ['cases' => ['facana', 'teulada', 'porta'], 'persones' => ['roba', 'mocador', 'roba2']];
     $out = [];
     foreach ($esperat as $grup => $rols) {
         foreach ($rols as $rol) {

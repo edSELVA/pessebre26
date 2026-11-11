@@ -38,12 +38,20 @@ function lloc(PDO $pdo, string $id): ?array
     return $l ?: null;
 }
 
+/** Grup de paleta d'una peça en un lloc: cases, persones o pastors (els 18 llocs de pastor). */
+function grup_paleta(string $categoria, bool $pastor): string
+{
+    if ($categoria === 'casa') return 'cases';
+    return $pastor ? 'pastors' : 'persones';
+}
+
 /** Comprova que els índexs de colors són vàlids per a la peça (en l'ordre de "pers"). */
-function colors_valids(array $cfg, string $peca, $colors): bool
+function colors_valids(array $cfg, string $peca, $colors, bool $pastor = false): bool
 {
     $p = disseny($cfg, 'peces.json')['peces'][$peca] ?? null;
+    if ($colors === null && $p && !$p['pers']) return true;
     if (!$p || !is_array($colors) || count($colors) !== count($p['pers']) || array_values($colors) !== $colors) return false;
-    $grup = $p['cat'] === 'casa' ? 'cases' : 'persones';
+    $grup = grup_paleta($p['cat'], $pastor);
     $paletes = disseny($cfg, 'paletes.json');
     foreach ($p['pers'] as $i => $rol) {
         $n = count($paletes[$grup][$rol]['opcions'] ?? []);

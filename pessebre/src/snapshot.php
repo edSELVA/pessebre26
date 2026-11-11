@@ -10,7 +10,8 @@
 //   "moment": "dia|posta|nit|neu",
 //   "zones": ["Z0", "Z1"],           zones obertes
 //   "classes": true,                 període de tutories obert (les cases de classe lliures es veuen en transparent)
-//   "claustre": false,               enllaç del claustre obert
+//   "claustre": false,               enllaç del claustre obert (21 des fins a les 22:00)
+//   "claustre_alliberat": false,     els llocs del claustre que han quedat lliures ja són de les famílies
 //   "comptador": {"tipus": "classes", "fet": 52, "total": 74}
 //             o {"tipus": "participacions", "fet": 312, "fita": 400}  (fita null després de l'última)
 //   "o": {"C001": {"p": "CASA-BAIXA-P", "c": [2, 0, 1], "n": "Nom"}, "P0001": {"p": "ANI-GOS-D", "m": 1}, …}
@@ -22,7 +23,6 @@ declare(strict_types=1);
 ini_set('serialize_precision', '-1');   // decimals curts a json_encode, sigui quin sigui el php.ini
 
 const SNAPSHOT_MOMENTS = ['dia', 'posta', 'nit', 'neu'];
-const GRUP_PALETA = ['casa' => 'cases', 'persona' => 'persones'];
 
 /** Retorna una llista d'errors (buida si el snapshot és vàlid). */
 function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): array
@@ -37,7 +37,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
     if (!in_array($s['moment'] ?? null, SNAPSHOT_MOMENTS, true)) $e[] = 'moment desconegut';
     $zones = $s['zones'] ?? null;
     if (!is_array($zones) || array_diff($zones, array_keys($mapa['franges'])) || !in_array('Z0', $zones, true)) $e[] = 'zones no vàlides (Z0 sempre oberta)';
-    foreach (['classes', 'claustre'] as $k) if (!is_bool($s[$k] ?? null)) $e[] = "$k ha de ser true o false";
+    foreach (['classes', 'claustre', 'claustre_alliberat'] as $k) if (!is_bool($s[$k] ?? null)) $e[] = "$k ha de ser true o false";
 
     $c = $s['comptador'] ?? null;
     if (!is_array($c) || !is_int($c['fet'] ?? null)) {
@@ -68,8 +68,9 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         if (!is_array($idx) || count($idx) !== count($pers)) {
             $e[] = "$id: calen " . count($pers) . ' índexs de color';
         } else {
+            $grup = $l['tipus'] === 'casa' ? 'cases' : (!empty($l['pastor']) ? 'pastors' : 'persones');
             foreach ($pers as $i => $rol) {
-                $n = count($paletes[GRUP_PALETA[$l['tipus']] ?? '-'][$rol]['opcions'] ?? []);
+                $n = count($paletes[$grup][$rol]['opcions'] ?? []);
                 if (!is_int($idx[$i]) || $idx[$i] < 0 || $idx[$i] >= $n) $e[] = "$id: índex de color no vàlid per a $rol";
             }
         }
@@ -86,7 +87,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         if (!is_string($id) || !isset($llocs[$id])) $e[] = 'r: lloc desconegut';
         elseif (isset($o[$id])) $e[] = "r: $id ja és ocupat";
     }
-    if (array_diff(array_keys($s), ['versio', 'generat', 'data', 'moment', 'zones', 'classes', 'claustre', 'comptador', 'o', 'r'])) $e[] = 'camps de primer nivell no permesos';
+    if (array_diff(array_keys($s), ['versio', 'generat', 'data', 'moment', 'zones', 'classes', 'claustre', 'claustre_alliberat', 'comptador', 'o', 'r'])) $e[] = 'camps de primer nivell no permesos';
     return $e;
 }
 
@@ -140,7 +141,8 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
         'moment' => config_llegeix($pdo, 'moment', 'dia'),
         'zones' => $zones,
         'classes' => $classes,
-        'claustre' => false,      // Fase C
+        'claustre' => finestra($pdo, 'claustre_des', 'claustre_tanca', $ara) === 'obert',
+        'claustre_alliberat' => claustre_alliberat($pdo, $ara),
         'comptador' => $classes
             ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => $poble]
             : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita === null ? null : (int)$fita],

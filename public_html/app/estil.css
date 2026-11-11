@@ -176,6 +176,46 @@ body {
   box-shadow: 0 4px 16px #0006;
 }
 .avis[hidden] { display: none; }
+.full[hidden] { display: none; }
+.boto-participar {
+  margin-left: auto;
+  pointer-events: auto;
+  min-height: 36px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--or);
+  color: #3A2820;
+  font: 700 15px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.boto-participar[hidden] { display: none; }
+.galeria { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 -2px 6px; }
+.peca-mini {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 56px;
+  padding: 4px;
+  border: 2px solid #E2D4BC;
+  border-radius: 10px;
+  background: #EDE3CF;
+  cursor: pointer;
+}
+.peca-mini svg { width: 100%; height: 100%; }
+.peca-mini[aria-pressed="true"] { border-color: #2A2018; background: #FFFFFF; }
+.form-codi { display: flex; gap: 8px; margin: 8px 0; }
+.camp {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #C9B79A;
+  border-radius: 12px;
+  font: 600 18px/1 ui-monospace, Menlo, Consolas, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.error { color: #A3271E; font-weight: 600; }
 body.amb-full .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom: auto; }
 
 /* Pàgina de privacitat */

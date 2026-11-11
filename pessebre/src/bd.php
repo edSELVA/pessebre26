@@ -49,6 +49,7 @@ function bd_esquema(PDO $pdo): void
         "ocupacions (lloc_id VARCHAR(8) NOT NULL PRIMARY KEY, estat VARCHAR(10) NOT NULL, origen VARCHAR(10) NOT NULL,
                      classe_id INTEGER NULL UNIQUE, codi_id INTEGER NULL, peca VARCHAR(30) NULL, mirall INTEGER NULL,
                      colors VARCHAR(40) NULL, hash_retencio CHAR(64) NULL, caduca VARCHAR(19) NULL, hora VARCHAR(19) NOT NULL)",
+        "codis (id $auto, hash CHAR(64) NOT NULL UNIQUE, lot INTEGER NOT NULL, usos INTEGER NOT NULL DEFAULT 0, creat VARCHAR(19) NOT NULL)",
         "registre (id $auto, hora VARCHAR(19) NOT NULL, qui VARCHAR(60) NOT NULL, accio VARCHAR(30) NOT NULL,
                    lloc_id VARCHAR(8) NULL, detall VARCHAR(200) NULL)",
         "config (clau VARCHAR(40) NOT NULL PRIMARY KEY, valor VARCHAR(200) NOT NULL)",

@@ -1,7 +1,5 @@
 // Visor del pessebre: carrega el disseny i el snapshot, dibuixa l'escena i gestiona el zoom tàctil.
-// El fan servir index.html (visor públic) i classes.html (tutors).
-// Visor públic: mode participar amb #c=CODI (famílies) o #k=ENLLAÇ (claustre); el que va després del # no arriba mai al servidor.
-// Només per a proves: #s=nom carrega exemples/nom.json en lloc de snapshot.json.
+// El fan servir index.html (visor públic i mode participar, a participa.js) i classes.html (tutors, a classes.js).
 'use strict';
 
 var Visor = (function () {
@@ -111,7 +109,7 @@ var Visor = (function () {
       if (o) {
         var peca = D.peces[o.p];
         var mirall = o.m !== undefined ? !!o.m : !!l.mirall;
-        var vars = Compon.colors(peca, o.c, D.paletes);
+        var vars = Compon.colors(peca, o.c, D.paletes, l.pastor ? 'pastors' : null);
         if (s.moment === 'neu' && peca.cat === 'casa') Compon.neuTeulada(vars);
         llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, propis[l.id] ? 'propia' : null) });
         if (peca.cat === 'casa') capes.tolls.appendChild(usa('LLUM-TOLL', l.x, l.y + 5));
@@ -124,7 +122,7 @@ var Visor = (function () {
         var ret = retinguts[l.id];
         llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
         if (l.tipus === 'casa' && !ret) llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
-      } else if ((op.mode === 'familia' || op.mode === 'claustre') && !retinguts[l.id] && l.grup === (op.mode === 'claustre' ? 'claustre' : 'general')) {
+      } else if (!retinguts[l.id] && marcaVisible(l, s)) {
         llista.push({ y: l.y, node: usa(l.tipus === 'animal' ? 'MARCA-ANI' : 'MARCA-PER', l.x, l.y) });
       }
     });
@@ -141,8 +139,18 @@ var Visor = (function () {
   // Un lloc lliure es dibuixa (en transparent) si la seva zona és oberta, amb excepcions per grup.
   function visibleLliure(l, s, zones) {
     if (l.grup === 'poble') return s.classes;                       // cases de classe: només durant les tutories
-    if (l.grup === 'claustre' && op.mode === 'claustre' && s.claustre) return true;   // el claustre els veu encara que la zona sigui tancada
+    if (l.grup === 'claustre') {
+      if (op.mode === 'claustre' && s.claustre) return true;       // el claustre els veu encara que la zona sigui tancada
+      return !!s.claustre_alliberat && !!zones[l.zona];             // després de les 22:00 del 21 des, són de les famílies
+    }
     return !!zones[l.zona];
+  }
+
+  // Marca a terra (persona o animal lliure) només en mode participar i als llocs que pot triar aquest grup.
+  function marcaVisible(l, s) {
+    if (op.mode === 'claustre') return l.grup === 'claustre' && s.claustre;
+    if (op.mode === 'familia') return l.grup === 'general' || (l.grup === 'claustre' && !!s.claustre_alliberat);
+    return false;
   }
 
   // Nom de la classe sobre la placa. Si la peça no porta la placa dibuixada, el visor la dibuixa.
@@ -230,21 +238,3 @@ var Visor = (function () {
     error: error
   };
 })();
-
-// Visor públic (index.html)
-if (document.body.getAttribute('data-pagina') === 'visor') {
-  (function () {
-    var hash = Visor.hash();
-    var mode = hash.c ? 'familia' : (hash.k ? 'claustre' : null);
-    if (mode) {
-      var avis = document.getElementById('avis-mode');
-      avis.textContent = mode === 'claustre' ? 'Mode participar · claustre' : 'Mode participar';
-      avis.hidden = false;
-    }
-    Visor.inicia({
-      font: /^[a-z0-9-]{1,30}$/.test(hash.s || '') ? 'exemples/' + hash.s + '.json' : 'snapshot.json',
-      mode: mode,
-      refresc: mode ? 60000 : 0
-    }).catch(function () { /* el missatge ja es mostra */ });
-  })();
-}
