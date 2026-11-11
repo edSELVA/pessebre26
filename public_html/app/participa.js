@@ -48,7 +48,7 @@
     api(prefix + 'retenir', { lloc: l.id }).then(function (r) {
       var peces = pecesPossibles(l);
       var primera = peces.indexOf(l.codi) >= 0 ? l.codi : peces[0];     // als arbres, comença amb l'espècie del mapa
-      tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: primera, mirall: l.mirall ? 1 : 0, colors: null };
+      tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: primera, mirall: l.mirall ? 1 : 0, colors: null, finestres: 0 };
       tria.colors = colorsInicials(tria.peca);
       Visor.centra(l.x, l.y - 20, 240);
       pasTria();
@@ -84,7 +84,7 @@
   }
 
   function mostraALescena() {
-    Visor.posa(tria.lloc.id, { p: tria.peca, c: tria.colors, m: tria.mirall });
+    Visor.posa(tria.lloc.id, { p: tria.peca, c: tria.colors, m: tria.mirall, f: tria.finestres });
     Visor.redibuixa();
   }
 
@@ -126,12 +126,15 @@
   function pasTria() {
     var l = tria.lloc;
     var peces = pecesPossibles(l);
-    var prev = UI.previsualitzacio(D().peces);
     var zona = h('div', { class: 'colors' });
     var compte = h('span', { class: 'compte' });
+    var colorsAra = function () { return Compon.colors(D().peces[tria.peca], tria.colors, D().paletes, grupPaleta(tria.peca)); };
+    // Les cases es veuen grans i amb les finestres que es poden treure; la resta, en una previsualització petita
+    var casa = l.tipus === 'casa' ? UI.previsualitzacioCasa(D().peces[l.codi], l.codi, tria, colorsAra, function () { pinta(); }) : null;
+    var prev = casa ? { svg: casa.svg } : UI.previsualitzacio(D().peces);
 
     function pinta() {
-      prev.pinta(tria.peca, Compon.colors(D().peces[tria.peca], tria.colors, D().paletes, grupPaleta(tria.peca)), tria.mirall);
+      if (casa) casa.pinta(); else prev.pinta(tria.peca, colorsAra(), tria.mirall);
       mostraALescena();
     }
 
@@ -176,7 +179,13 @@
       h('h2', { text: titol }),
       h('p', { class: 'suau' }, ['El lloc és teu durant ', compte, '.']),
       galeria,
-      h('div', { class: 'tria' }, [h('div', { class: 'previsualitzacio' }, [prev.svg]), zona]),
+      h('div', { class: 'tria' }, [
+        casa ? h('div', { class: 'columna-casa' }, [
+          h('div', { class: 'previsualitzacio gran' }, [prev.svg]),
+          casa.teFinestres ? h('p', { class: 'peu-casa', text: 'Toca una finestra per treure-la (hi quedarà paret) o tornar-la a posar.' }) : null
+        ]) : h('div', { class: 'previsualitzacio' }, [prev.svg]),
+        zona
+      ]),
       h('div', { class: 'botons' }, botons)
     ]);
     if (aturaCompte) aturaCompte();
@@ -215,7 +224,7 @@
       ? 'Confirmes? Amb aquest codi només es pot posar una figura.'
       : 'Confirmes aquesta figura per al pessebre?';
     if (!window.confirm(avisConf)) return;
-    api(prefix + 'confirmar', { lloc: tria.lloc.id, retencio: tria.retencio, peca: tria.peca, mirall: tria.mirall, colors: tria.colors })
+    api(prefix + 'confirmar', { lloc: tria.lloc.id, retencio: tria.retencio, peca: tria.peca, mirall: tria.mirall, colors: tria.colors, finestres: tria.finestres })
       .then(function (r) {
         var id = tria.lloc.id;
         if (aturaCompte) aturaCompte();

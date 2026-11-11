@@ -121,7 +121,7 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                     $codi = app_codi($pdo, $cfg, $p, $ip, $ara);
                     aturada_comprova($pdo);
                     if ($a === 'codi.retenir') return codi_retenir($pdo, $cfg, $codi, $p['lloc'] ?? null, $ara);
-                    if ($a === 'codi.confirmar') return codi_confirmar($pdo, $cfg, $codi, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara);
+                    if ($a === 'codi.confirmar') return codi_confirmar($pdo, $cfg, $codi, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara, $p['finestres'] ?? 0);
                     return codi_deixar($pdo, $cfg, $codi, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
                 });
                 return [200, ['ok' => true] + $res];
@@ -136,7 +136,7 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
                     app_claustre($pdo, $cfg, $p, $ip, $ara);
                     if ($a === 'claustre.retenir') return claustre_retenir($pdo, $cfg, $p['lloc'] ?? null, $ara);
-                    if ($a === 'claustre.confirmar') return claustre_confirmar($pdo, $cfg, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara);
+                    if ($a === 'claustre.confirmar') return claustre_confirmar($pdo, $cfg, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $ara, $p['finestres'] ?? 0);
                     return claustre_deixar($pdo, $cfg, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
                 });
                 return [200, ['ok' => true] + $res];

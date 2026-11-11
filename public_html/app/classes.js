@@ -119,49 +119,10 @@
     var finestres = peca.finestres || [];
     actualitzaLocal();
 
-    // Previsualització gran amb llum neutra (fora de l'escena, sense moment del dia).
-    // Cada finestra té una zona que es pot tocar per treure-la (hi queda paret) o tornar-la a posar.
-    var prev = document.createElementNS(NS, 'svg');
-    var dib = peca.dibuix || [0, 0, peca.vb[0], peca.vb[1]];       // només la part dibuixada, amb 1 px de marge
-    var dx = estat.mirall ? peca.vb[0] - dib[0] - dib[2] : dib[0];
-    prev.setAttribute('viewBox', (dx - 1) + ' ' + (dib[1] - 1) + ' ' + (dib[2] + 2) + ' ' + (dib[3] + 2));
-    prev.setAttribute('shape-rendering', 'crispEdges');
-    var g = document.createElementNS(NS, 'g');
-    prev.appendChild(g);
-    var zones = document.createElementNS(NS, 'g');
-    prev.appendChild(zones);
-    function useDe(simbol) {
-      var u = document.createElementNS(NS, 'use');
-      u.setAttribute('href', '#pc-' + simbol);
-      u.setAttribute('width', peca.vb[0]);
-      u.setAttribute('height', peca.vb[1]);
-      return u;
-    }
-    function pinta() {
-      var vars = Compon.colors(peca, estat.colors, D.paletes);
-      var x0 = estat.mirall ? peca.vb[0] - dib[0] - dib[2] : dib[0];
-      prev.setAttribute('viewBox', (x0 - 1) + ' ' + (dib[1] - 1) + ' ' + (dib[2] + 2) + ' ' + (dib[3] + 2));
-      g.setAttribute('transform', estat.mirall ? 'matrix(-1 0 0 1 ' + peca.vb[0] + ' 0)' : '');
-      g.textContent = '';
-      [l.codi].concat(Compon.finestresTapades(estat.finestres).map(function (i) { return l.codi + '-F' + i; })).forEach(function (sim) {
-        var u = useDe(sim);
-        Object.keys(vars).forEach(function (k) { u.style.setProperty(k, vars[k]); });
-        g.appendChild(u);
-      });
-      zones.textContent = '';
-      finestres.forEach(function (f, i) {
-        var x = estat.mirall ? peca.vb[0] - f[0] - f[2] : f[0];
-        var r = document.createElementNS(NS, 'rect');
-        r.setAttribute('x', x - 0.5); r.setAttribute('y', f[1] - 0.5);
-        r.setAttribute('width', f[2] + 1); r.setAttribute('height', f[3] + 1);
-        r.setAttribute('class', 'zona-finestra' + (estat.finestres & (1 << i) ? ' treta' : ''));
-        r.setAttribute('role', 'button');
-        r.setAttribute('aria-label', 'Finestra ' + (i + 1) + (estat.finestres & (1 << i) ? ', treta' : ''));
-        r.addEventListener('click', function () { estat.finestres ^= (1 << i); pinta(); });
-        zones.appendChild(r);
-      });
-      actualitzaLocal();
-    }
+    // Previsualització gran amb llum neutra (fora de l'escena), amb les finestres que es poden treure
+    var casa = UI.previsualitzacioCasa(peca, l.codi, estat, function () { return Compon.colors(peca, estat.colors, D.paletes); }, function () { pinta(); });
+    var prev = casa.svg;
+    function pinta() { casa.pinta(); actualitzaLocal(); }
     pinta();
 
     var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors' };

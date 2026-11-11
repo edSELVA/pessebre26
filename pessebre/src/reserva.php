@@ -206,8 +206,8 @@ function codi_estat(PDO $pdo, array $codi, DateTimeImmutable $ara): array
     return ['pot' => $missatge === null, 'missatge' => $missatge, 'usos' => (int)$codi['usos'], 'permesos' => $permesos];
 }
 
-/** Comprova que la peça, el mirall i els colors encaixen amb el lloc. Retorna [peça, mirall, colors JSON]. */
-function participacio_peca(array $cfg, array $lloc, $peca, $mirall, $colors): array
+/** Comprova que la peça, el mirall, els colors i les finestres tretes encaixen amb el lloc. Retorna [peça, mirall, colors JSON, finestres]. */
+function participacio_peca(array $cfg, array $lloc, $peca, $mirall, $colors, $finestres = 0): array
 {
     $peces = disseny($cfg, 'peces.json')['peces'];
     $p = is_string($peca) ? ($peces[$peca] ?? null) : null;
@@ -218,7 +218,9 @@ function participacio_peca(array $cfg, array $lloc, $peca, $mirall, $colors): ar
     $m = $mirall === 1 || $mirall === true ? 1 : 0;
     if (!$p['pers']) $colors = null;
     if (!colors_valids($cfg, $peca, $colors, lloc_es_pastor($cfg, $lloc['id']))) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
-    return [$peca, $m, $colors === null ? null : json_encode($colors)];
+    $finestres = $finestres ?? 0;
+    if ($finestres !== 0 && ($lloc['tipus'] !== 'casa' || !finestres_valides($cfg, $peca, $finestres))) throw new ErrorPessebre('Les finestres triades no són vàlides.', 400, 'finestres');
+    return [$peca, $m, $colors === null ? null : json_encode($colors), $finestres ?: null];
 }
 
 function lloc_es_pastor(array $cfg, string $id): bool
@@ -268,9 +270,9 @@ function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, Da
 
 function confirma_ocupacio(PDO $pdo, string $lloc_id, array $peca, DateTimeImmutable $ara): void
 {
-    [$p, $m, $c] = $peca;
-    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
-        ->execute([$p, $m, $c, bd_hora($ara), $lloc_id]);
+    [$p, $m, $c, $f] = $peca;
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, finestres = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+        ->execute([$p, $m, $c, $f, bd_hora($ara), $lloc_id]);
 }
 
 // Famílies
@@ -287,13 +289,13 @@ function codi_retenir(PDO $pdo, array $cfg, array $codi, $lloc_id, DateTimeImmut
     return retencio_nova($pdo, $cfg, $l, 'familia', (int)$codi['id'], $ara);
 }
 
-function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara): array
+function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara, $finestres = 0): array
 {
     $e = codi_estat($pdo, $codi, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'codi_no');
     $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'familia', $ara);
     if ((int)$o['codi_id'] !== (int)$codi['id']) throw new ErrorPessebre('La reserva temporal no és d\'aquest codi.', 409, 'retencio');
-    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors);
+    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors, $finestres);
     $st = $pdo->prepare('UPDATE codis SET usos = usos + 1 WHERE id = ? AND usos < ?');
     $st->execute([$codi['id'], $e['permesos']]);
     if ($st->rowCount() !== 1) throw new ErrorPessebre('Aquest codi ja s\'ha fet servir.', 409, 'codi_no');
@@ -338,12 +340,12 @@ function claustre_retenir(PDO $pdo, array $cfg, $lloc_id, DateTimeImmutable $ara
     return retencio_nova($pdo, $cfg, $l, 'claustre', null, $ara);
 }
 
-function claustre_confirmar(PDO $pdo, array $cfg, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara): array
+function claustre_confirmar(PDO $pdo, array $cfg, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara, $finestres = 0): array
 {
     $e = claustre_estat($pdo, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
     $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'claustre', $ara);
-    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors);
+    $p = participacio_peca($cfg, lloc($pdo, $o['lloc_id']), $peca, $mirall, $colors, $finestres);
     confirma_ocupacio($pdo, $o['lloc_id'], $p, $ara);
     registre_afegeix($pdo, $ara, 'claustre', 'claustre.confirmar', $o['lloc_id'], $p[0]);
     return ['lloc' => $o['lloc_id'], 'zona_nova' => zones_actualitza($pdo, $ara)];

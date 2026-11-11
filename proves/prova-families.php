@@ -140,8 +140,10 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     config_desa($pdo, 'ronda', '2');
     [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $casa['id']], $h);
     igual(200, $e, 'amb la segona ronda el mateix codi pot tornar a participar');
-    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $casa['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => $casa['codi'], 'colors' => array_slice([2, 1, 0, 3], 0, count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['pers']))], $h);
-    igual(200, $e, 'una família pinta una casa de la perifèria');
+    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $casa['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => $casa['codi'], 'colors' => array_slice([2, 1, 0, 3], 0, count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['pers'])),
+                       'finestres' => count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['finestres']) ? 1 : 0], $h);
+    igual(200, $e, 'una família pinta una casa de la perifèria (i hi treu una finestra)');
+    if (count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['finestres'])) igual(1, $snap()['o'][$casa['id']]['f'] ?? null, 'el snapshot porta la finestra treta de la casa de la família');
     [$e] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona2['id']], $h);
     igual(403, $e, 'a la segona ronda, com a molt dues figures per codi');
     config_desa($pdo, 'ronda', '1');

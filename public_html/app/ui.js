@@ -86,6 +86,50 @@ var UI = (function () {
     return { svg: svg, pinta: pinta };
   }
 
+  // Previsualització gran d'una casa, retallada a la part dibuixada, amb les finestres que es toquen per treure-les
+  // (hi queda paret) o tornar-les a posar. estat: {mirall, finestres (màscara de bits)}; vars(): variables de color;
+  // enCanvi(): es crida quan es toca una finestra. Retorna {svg, pinta()}.
+  function previsualitzacioCasa(peca, codi, estat, vars, enCanvi) {
+    var finestres = peca.finestres || [];
+    var dib = peca.dibuix || [0, 0, peca.vb[0], peca.vb[1]];
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('shape-rendering', 'crispEdges');
+    var g = document.createElementNS(NS, 'g');
+    var zones = document.createElementNS(NS, 'g');
+    svg.appendChild(g);
+    svg.appendChild(zones);
+    function pinta() {
+      var v = vars();
+      var x0 = estat.mirall ? peca.vb[0] - dib[0] - dib[2] : dib[0];
+      svg.setAttribute('viewBox', (x0 - 1) + ' ' + (dib[1] - 1) + ' ' + (dib[2] + 2) + ' ' + (dib[3] + 2));
+      g.setAttribute('transform', estat.mirall ? 'matrix(-1 0 0 1 ' + peca.vb[0] + ' 0)' : '');
+      g.textContent = '';
+      [codi].concat(Compon.finestresTapades(estat.finestres).map(function (i) { return codi + '-F' + i; })).forEach(function (sim) {
+        var u = document.createElementNS(NS, 'use');
+        u.setAttribute('href', '#pc-' + sim);
+        u.setAttribute('width', peca.vb[0]);
+        u.setAttribute('height', peca.vb[1]);
+        Object.keys(v).forEach(function (k) { u.style.setProperty(k, v[k]); });
+        g.appendChild(u);
+      });
+      zones.textContent = '';
+      finestres.forEach(function (f, i) {
+        var treta = (estat.finestres & (1 << i)) !== 0;
+        var r = document.createElementNS(NS, 'rect');
+        r.setAttribute('x', (estat.mirall ? peca.vb[0] - f[0] - f[2] : f[0]) - 0.5);
+        r.setAttribute('y', f[1] - 0.5);
+        r.setAttribute('width', f[2] + 1);
+        r.setAttribute('height', f[3] + 1);
+        r.setAttribute('class', 'zona-finestra' + (treta ? ' treta' : ''));
+        r.setAttribute('role', 'button');
+        r.setAttribute('aria-label', 'Finestra ' + (i + 1) + (treta ? ', treta' : ''));
+        r.addEventListener('click', function () { estat.finestres ^= (1 << i); enCanvi(); });
+        zones.appendChild(r);
+      });
+    }
+    return { svg: svg, pinta: pinta, teFinestres: finestres.length > 0 };
+  }
+
   // Compte enrere en m:ss dins d'un element. Crida enFi() quan arriba a zero. Retorna una funció per aturar-lo.
   function compteEnrere(el, fins, enFi) {
     var tic = function () {
@@ -98,5 +142,6 @@ var UI = (function () {
     return function () { clearInterval(id); };
   }
 
-  return { h: h, mostra: mostra, avis: avis, api: api, filaColors: filaColors, previsualitzacio: previsualitzacio, compteEnrere: compteEnrere };
+  return { h: h, mostra: mostra, avis: avis, api: api, filaColors: filaColors, previsualitzacio: previsualitzacio,
+           previsualitzacioCasa: previsualitzacioCasa, compteEnrere: compteEnrere };
 })();
