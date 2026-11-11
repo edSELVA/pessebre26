@@ -188,6 +188,22 @@ function estils_a_css(DOMDocument $doc, string $nom, array &$css): void
     }
 }
 
+/** Rectangle [x, y, w, h] que ocupen els camins de rol placa/placa-ombra d'una peça (null si no n'hi ha). */
+function placa_dibuixada(DOMDocument $doc): ?array
+{
+    $x0 = $y0 = PHP_INT_MAX;
+    $x1 = $y1 = -1;
+    foreach ($doc->getElementsByTagNameNS(SVG_NS, 'path') as $el) {
+        if (!in_array($el->getAttribute('class'), ['placa', 'placa-ombra'], true)) continue;
+        preg_match_all('/M(\d+) (\d+)h(\d+)v(\d+)/', $el->getAttribute('d'), $m, PREG_SET_ORDER);
+        foreach ($m as [, $x, $y, $w, $h]) {
+            $x0 = min($x0, (int)$x); $y0 = min($y0, (int)$y);
+            $x1 = max($x1, (int)$x + (int)$w); $y1 = max($y1, (int)$y + (int)$h);
+        }
+    }
+    return $x1 < 0 ? null : [$x0, $y0, $x1 - $x0, $y1 - $y0];
+}
+
 function ids_de(DOMDocument $doc): array
 {
     $ids = [];
@@ -269,6 +285,19 @@ function converteix(string $zip, string $arrel): array
     $tots = array_merge(ids_de($terreny), ids_de($terra), ids_de($aire), ids_de($sprite));
     $dup = array_keys(array_filter(array_count_values($tots), function ($n) { return $n > 1; }));
     if ($dup) falla('Ids repetits entre capes: ' . implode(', ', $dup));
+
+    // Algunes cases tenen rectangle de placa al registre però no la porten dibuixada: la dibuixa el visor,
+    // amb la mateixa mida que les altres (14×5 de text + 1 de vora).
+    $sense = [];
+    foreach ($peces as $codi => $p) {
+        if ($p['placa'] && !in_array('placa', $p['rols'], true)) {
+            [$x, $y, $w, $h] = $p['placa'];
+            $peces[$codi]['placa'] = [$x + 1, $y + 1, $w - 2, $h - 2];
+            $peces[$codi]['placa_propia'] = 1;
+            $sense[] = $codi;
+        }
+    }
+    if ($sense) $avisos[] = implode(', ', $sense) . ': el registre diu que té placa però no la porta dibuixada. La dibuixa el visor.';
 
     $mapa = normalitza_mapa(llegeix_json($f, 'mapa.json'), $registre, $avisos);
     $fixa = valida_escena_fixa(llegeix_json($f, 'escena-fixa.json'), $registre);
@@ -377,6 +406,8 @@ function sprite_peces(array $f, array $registre, array $defs_terra): array
             if ($anc[0] != $reg['a'][0] || $anc[1] != $reg['a'][1]) falla("$nom: l'ancoratge no coincideix amb registre.json");
         }
         foreach (ids_de($p) as $id) falla("$nom: una peça no pot tenir ids interns ($id)");
+        // La placa es pren del dibuix (el rectangle del registre no coincideix amb el dibuix en molts models)
+        if (!$es_llum && $peces[$codi]['placa'] && ($rect = placa_dibuixada($p))) $peces[$codi]['placa'] = $rect;
         $s = $doc->createElementNS(SVG_NS, 'symbol');
         $s->setAttribute('id', 'pc-' . $codi);
         $s->setAttribute('viewBox', $r->getAttribute('viewBox'));

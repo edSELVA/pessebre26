@@ -14,7 +14,7 @@
 //   "comptador": {"tipus": "classes", "fet": 52, "total": 74}
 //             o {"tipus": "participacions", "fet": 312, "fita": 400}  (fita null després de l'última)
 //   "o": {"C001": {"p": "CASA-BAIXA-P", "c": [2, 0, 1], "n": "Nom"}, "P0001": {"p": "ANI-GOS-D", "m": 1}, …}
-//        p = peça, m = mirall (0/1), c = índexs de paleta en l'ordre de "pers" de la peça, n = nom de placa
+//        p = peça, m = mirall (0/1), c = índexs de paleta en l'ordre de "pers" de la peça, n = nom de placa (fins a 8 caràcters)
 //   "r": ["P0012", …]                llocs retinguts (només l'id)
 // }
 // Mai s'hi posen colors en cru ni dates de les fites.
@@ -75,7 +75,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         }
         if (isset($oc['n'])) {
             if ($l['grup'] !== 'poble' || !$p['placa']) $e[] = "$id: només les cases de classe amb placa porten nom";
-            elseif (!is_string($oc['n']) || !preg_match('/^[\p{L}\p{N} .·\'-]{1,12}$/u', $oc['n'])) $e[] = "$id: nom de placa no vàlid";
+            elseif (!is_string($oc['n']) || !preg_match('/^[\p{L}\p{N} .·\'-]{1,8}$/u', $oc['n'])) $e[] = "$id: nom de placa no vàlid";
             elseif (isset($noms[$oc['n']])) $e[] = "$id: nom de placa repetit";
             else $noms[$oc['n']] = true;
         }

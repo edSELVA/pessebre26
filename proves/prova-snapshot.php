@@ -33,6 +33,7 @@ $errada(function (&$s) use ($persona) { $s['o'][$persona]['c'] = [99, 0]; }, 'í
 $errada(function (&$s) use ($persona) { $s['o'][$persona]['c'] = ['#FF0000', 0]; }, 'color en cru');
 $errada(function (&$s) use ($casa) { $s['o'][$casa]['p'] = 'CASA-ALTA-P'; }, 'casa diferent de la del mapa');
 $errada(function (&$s) use ($casa) { $s['o'][$casa]['n'] = '<b>x</b>'; }, 'nom de placa amb caràcters no permesos');
+$errada(function (&$s) use ($casa) { $s['o'][$casa]['n'] = '3r ESO BC'; }, 'nom de placa de més de 8 caràcters');
 $errada(function (&$s) use ($persona) { $s['o'][$persona]['n'] = 'Nom'; }, 'nom en una persona');
 $errada(function (&$s) use ($casa) { $s['r'][] = $casa; }, 'lloc retingut i ocupat alhora');
 $errada(function (&$s) { $s['moment'] = 'tarda'; }, 'moment desconegut');

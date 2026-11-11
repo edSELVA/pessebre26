@@ -11,7 +11,12 @@ foreach ($fitxers as $nom => $contingut) {
 }
 [$dues] = converteix("$ARREL/disseny-origen/pessebre-disseny-v2.zip", $ARREL);
 comprova($dues === $fitxers, 'la conversió és determinista');
-igual(1, count($avisos), 'només hi ha l\'avís conegut (pastors amb zona Z0)');
+igual(2, count($avisos), 'només hi ha els avisos coneguts (pastors amb zona Z0, CASA-BAIXA-P sense placa)');
+$pj = json_decode($fitxers['peces.json'], true)['peces'];
+igual(1, $pj['CASA-BAIXA-P']['placa_propia'] ?? null, 'CASA-BAIXA-P: el visor hi dibuixa la placa');
+igual([25, 52, 14, 5], $pj['CASA-BAIXA-P']['placa'], 'CASA-BAIXA-P: placa de la mateixa mida que les altres');
+igual([17, 52, 14, 5], $pj['CASA-FRONTAL-P']['placa'], 'CASA-FRONTAL-P: la placa es pren del dibuix, no del registre');
+foreach ($pj as $codi => $p) if (substr($codi, 0, 5) === 'CASA-' && substr($codi, -2) === '-P') igual([14, 5], [$p['placa'][2], $p['placa'][3]], "$codi: placa de 14×5");
 
 // Res de contingut actiu als SVG generats
 foreach (['terreny.svg', 'llum-terra.svg', 'llum-aire.svg', 'peces.svg'] as $nom) {

@@ -140,12 +140,19 @@
     return !!zones[l.zona];
   }
 
+  // Nom de la classe sobre la placa. Si la peça no porta la placa dibuixada, el visor la dibuixa.
   function textPlaca(peca, l, mirall, nom) {
     var p = Compon.placa(peca, l.x, l.y, mirall);
-    var t = el('text', { x: p.x + p.w / 2, y: p.y + p.h / 2 + 1.9, class: 'placa-text', 'text-anchor': 'middle' });
+    var g = el('g', { class: 'placa' });
+    if (peca.placa_propia) {
+      el('rect', { x: p.x - 1, y: p.y - 1, width: p.w + 2, height: p.h + 2, fill: 'var(--contorn, #3A2820)' }, g);
+      el('rect', { x: p.x, y: p.y, width: p.w, height: p.h, fill: 'var(--placa, #F6E6C0)' }, g);
+      el('rect', { x: p.x, y: p.y + p.h - 1, width: p.w, height: 1, fill: 'var(--placa-ombra, #D4BC8E)' }, g);
+    }
+    var t = el('text', { x: p.x + p.w / 2, y: p.y + p.h / 2 + 1.9, class: 'placa-text', 'text-anchor': 'middle' }, g);
     t.textContent = nom;
     if (nom.length > 4) { t.setAttribute('textLength', p.w - 2); t.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
-    return t;
+    return g;
   }
 
   function mostraComptador(c) {

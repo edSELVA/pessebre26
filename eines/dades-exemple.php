@@ -11,15 +11,9 @@ $mapa = json_decode(file_get_contents("$d/mapa.json"), true);
 $peces = json_decode(file_get_contents("$d/peces.json"), true)['peces'];
 $paletes = json_decode(file_get_contents("$d/paletes.json"), true);
 
-const NOMS_INVENTATS = ['Lluna', 'Estels', 'Pins', 'Roure', 'Riu', 'Cabres', 'Mussols', 'Guineus', 'Esquirols', 'Cargols', 'Abelles', 'Grills',
-    'Pomes', 'Nespres', 'Codonys', 'Figues', 'Glans', 'Bolets', 'Molses', 'Falgueres', 'Ginesta', 'Romaní', 'Farigola', 'Espígol',
-    'Óssos', 'Llops', 'Daines', 'Isards', 'Senglars', 'Teixons', 'Llúdrigues', 'Garses', 'Merles', 'Pardals', 'Orenetes', 'Gavines',
-    'Fars', 'Velers', 'Barques', 'Rems', 'Àncores', 'Petxines', 'Corals', 'Algues', 'Dofins', 'Balenes', 'Tortugues', 'Crancs',
-    'Núvols', 'Llamps', 'Trons', 'Boira', 'Rosada', 'Gebre', 'Calamarsa', 'Arc de Sant', 'Ventada', 'Brisa', 'Tramuntana', 'Garbí',
-    'Llebeig', 'Xaloc', 'Mestral', 'Gregal', 'Ponent', 'Llevant', 'Migjorn', 'Cometes', 'Planetes', 'Galàxies', 'Llumins', 'Espurnes',
-    'Fanals', 'Ciris'];
+const NOMS_INVENTATS = ['3r ESO B', 'Estels', 'Pins', 'Roure', 'Riu', 'Cabres', 'Mussols', 'Guineus', 'Esquirol', 'Cargols', 'Abelles', 'Grills', 'Pomes', 'Nespres', 'Codonys', 'Figues', 'Glans', 'Bolets', 'Molses', 'Falguera', 'Ginesta', 'Romaní', 'Farigola', 'Espígol', 'Óssos', 'Llops', 'Daines', 'Isards', 'Senglars', 'Teixons', 'Llúdriga', 'Garses', 'Merles', 'Pardals', 'Orenetes', 'Gavines', 'Fars', 'Velers', 'Barques', 'Rems', 'Àncores', 'Petxines', 'Corals', 'Algues', 'Dofins', 'Balenes', 'Tortuga', 'Crancs', 'Núvols', 'Llamps', 'Trons', 'Boira', 'Rosada', 'Gebre', 'Pedra', 'Arc', 'Ventada', 'Brisa', 'Ponentol', 'Garbí', 'Llebeig', 'Xaloc', 'Mestral', 'Gregal', 'Ponent', 'Llevant', 'Migjorn', 'Cometes', 'Planetes', 'Galàxies', 'Llumins', 'Espurnes', 'Fanals', 'Ciris'];
 
-$persones = array_keys(array_filter($peces, function ($p, $k) { return $p['cat'] === 'persona' && $k !== 'PER-PAS-F'; }, ARRAY_FILTER_USE_BOTH));
+$persones = array_keys(array_filter($peces, function ($p) { return $p['cat'] === 'persona'; }));   // PER-PAS-F també: tothom la pot triar
 $animals = array_keys(array_filter($peces, function ($p) { return $p['cat'] === 'animal'; }));
 
 function tria(array $a) { return $a[mt_rand(0, count($a) - 1)]; }

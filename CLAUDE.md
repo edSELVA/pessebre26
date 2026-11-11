@@ -155,3 +155,12 @@ proves/    proves automàtiques PHP
 
 ## 11. Pendents (de l'Eduard)
 Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, IP) · enllaç de privacitat i correu · decisió de la DPD · dates i llindars de les fites · quants llocs automàtics per fase · marge de desfer per a famílies · format de les etiquetes adhesives i quantitats · llicència.
+
+## 12. Decisions i descobertes de la Fase A (11 nov 2026)
+- **Grup del claustre (decidit):** 18 pastors + els **32 llocs participables més propers a la clariana** (persones, animals i elements; cap casa) = 50. Es calculen a `eines/conversio.php` (`CLAUSTRE_PROPERS`). Són a Z1–Z3; el claustre els veu encara que la zona sigui tancada.
+- **Pastors (decidit):** paleta de roba pròpia de **tons de terra** (a `disseny-propi/`, Fase C). La peça `PER-PAS-F` la pot triar **tothom** (també les famílies).
+- **Reis (decidit):** davant, el **rei blanc** (barba i cabells blancs); al mig, el **ros**; darrere, el **rei negre** (pell fosca, sense barba, amb **turbant**: peça pròpia `ESC-REI-TURBANT`). S'aturen el 5 gen davant del naixement (`eines/reis-cami-font.json`, `final_x`).
+- **Transparència dels llocs lliures (decidit):** cases .32, elements .25 (la guia deia .62 i .5).
+- **Noms de placa (decidit):** fins a **8 caràcters** (p. ex. «3r ESO B»).
+- **Peces i canvis propis:** van a `disseny-propi/` (el zip no s'edita) i passen per la mateixa llista blanca.
+- **Discrepàncies del paquet v2** (mana el zip, corregides a la conversió): no hi ha camp `grup`; els pastors porten `zona: Z0` però són a x 263–427; el camí dels Reis només és a `terreny.py`; el rectangle de `placa` del registre és el mateix per a tots els models i no coincideix amb el dibuix (es pren del dibuix); `CASA-BAIXA-P` no porta placa dibuixada (la dibuixa el visor); els 9 atributs `style` de les capes passen a `disseny/escena.css` per la CSP.
