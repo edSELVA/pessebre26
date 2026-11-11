@@ -1,7 +1,7 @@
 # Pessebre col·laboratiu de l'escola
 
 Pessebre digital on cada classe, el claustre i les famílies hi afegeixen una peça. Mirar és obert; participar demana un codi.
-Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase D** (administració mínima a `admin.html`).
+Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase E** feta (fites, moments del dia, participació automàtica, Reis i tancament). Falta instal·lar-ho a l'hosting.
 
 ## Provar-ho (cal PHP 7.4–8.3)
 

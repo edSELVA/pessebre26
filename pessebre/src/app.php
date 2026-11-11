@@ -11,6 +11,8 @@ require_once __DIR__ . '/limit.php';
 require_once __DIR__ . '/reserva.php';
 require_once __DIR__ . '/snapshot.php';
 require_once __DIR__ . '/qr.php';
+require_once __DIR__ . '/fites.php';
+require_once __DIR__ . '/auto.php';
 require_once __DIR__ . '/admin.php';
 
 const SNAPSHOT_EDAT_TICK = 900;   // el «tick» públic només fa feina si el snapshot té més de 15 minuts
@@ -35,6 +37,7 @@ function app_escriu(PDO $pdo, array $cfg, DateTimeImmutable $ara, callable $fein
         try {
             reserva_purga($pdo, $ara);
             $res = $feina();
+            app_progressa($pdo, $cfg, $ara);
             $pdo->commit();
         } catch (Throwable $e) {
             $pdo->rollBack();
@@ -46,6 +49,14 @@ function app_escriu(PDO $pdo, array $cfg, DateTimeImmutable $ara, callable $fein
         flock($f, LOCK_UN);
         fclose($f);
     }
+}
+
+/** Fites per data o per participació i participació automàtica (a cada escriptura i a cada «tick»). */
+function app_progressa(PDO $pdo, array $cfg, DateTimeImmutable $ara): void
+{
+    if (config_llegeix($pdo, 'tancat', '0') === '1' || bd_hora($ara) >= calendari($pdo, 'families_fins')) return;
+    fites_aplica($pdo, $ara);
+    auto_aplica($pdo, $cfg, $ara);
 }
 
 /** Transacció curta sense bloqueig ni snapshot (per a lectures que només toquen el límit d'intents). */
@@ -86,6 +97,11 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
 {
     try {
         $a = $p['a'] ?? '';
+        // Després de «Tancar i esborrar» (Reis) ja no es pot escriure res: el pessebre queda com a pàgina estàtica
+        if (config_llegeix($pdo, 'tancat', '0') === '1' && !in_array($a, ['admin.estat', 'admin.lloc', 'admin.registre'], true)) {
+            if ($a === 'tick') return [200, ['ok' => true, 'fet' => false]];
+            throw new ErrorPessebre('El pessebre d\'aquest any ja s\'ha tancat. Moltes gràcies per participar!', 403, 'tancat');
+        }
         switch ($a) {
             case 'tick':
                 clearstatcache();

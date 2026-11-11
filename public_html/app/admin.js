@@ -90,7 +90,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.pestanyes button'), function (b) {
       b.setAttribute('aria-selected', String(b.getAttribute('data-p') === p));
     });
-    ({ lloc: pLloc, estat: pEstat, codis: pCodis, enllacos: pEnllacos, config: pConfig, registre: pRegistre })[p]();
+    ({ lloc: pLloc, estat: pEstat, codis: pCodis, enllacos: pEnllacos, config: pConfig, fites: pFites, registre: pRegistre })[p]();
   }
 
   // ── Lloc
@@ -385,6 +385,74 @@
           return refresca();
         }).catch(function (e) { UI.avis(e.message); });
       })]) : null
+    ]));
+  }
+
+  // ── Fites, moments, participació automàtica i tancament
+
+  var NOM_MOMENT = { dia: 'Dia', posta: 'Posta de sol', nit: 'Nit', neu: 'Neu' };
+
+  function campNumeric(k, nom, min, max) {
+    var camp = h('input', { type: 'number', class: 'camp curt', min: String(min), max: String(max), value: estat.config[k], 'aria-label': nom });
+    if (!admin()) camp.disabled = true;
+    return h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: nom }), camp,
+      admin() ? boto('Desar', function () { desaConfig(k, camp.value); }) : null]);
+  }
+
+  function pFites() {
+    var e = estat, c = e.config;
+    var files = e.fites.map(function (f) {
+      var data = h('input', { type: 'datetime-local', class: 'camp', value: (f.data_limit || '').replace(' ', 'T'), 'aria-label': 'Data límit ' + f.moment });
+      var inc = h('input', { type: 'number', class: 'camp curt', min: '1', max: '100', value: String(f.increment), 'aria-label': 'Increment ' + f.moment });
+      var editable = admin() && !f.assolida;
+      if (!editable) { data.disabled = true; inc.disabled = true; }
+      var que = f.base === 'classes' ? '% de les cases de classe' : '% de l\'objectiu, a sumar a la participació quan salta l\'anterior';
+      return h('div', { class: 'fita' + (f.assolida ? ' assolida' : '') }, [
+        h('h4', { text: f.numero + '. ' + NOM_MOMENT[f.moment] + (f.assolida ? ' · assolida ' + f.assolida + (f.per === 'data' ? ' (per data)' : ' (per participació)') : '') }),
+        h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: 'Llindar' }),
+          h('span', { text: f.llindar === null ? 'es fixarà quan salti l\'anterior' : f.llindar + (f.base === 'classes' ? ' cases de classe' : ' participacions') })]),
+        h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: 'Increment' }), inc, h('span', { class: 'suau', text: que })]),
+        h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: 'Data límit (no es mostra al públic)' }), data]),
+        editable ? h('div', { class: 'botons' }, [boto('Desar la fita', function () {
+          api('admin.fita', { numero: f.numero, data: data.value, increment: +inc.value }).then(function () {
+            UI.avis('Desat.');
+            return refresca().then(function () { obre('fites'); });
+          }).catch(function (er) { UI.avis(er.message); });
+        })]) : null
+      ]);
+    });
+    var tancament;
+    if (c.tancat === '1') tancament = h('p', { text: 'El pessebre està tancat i les dades s\'han esborrat.' });
+    else if (e.pot_tancar && admin()) tancament = h('div', { class: 'botons' }, [boto('Tancar i esborrar', function () {
+      if (!window.confirm('Tancar el pessebre? S\'esborraran els codis, els enllaços, els intents i el registre. No es pot desfer.')) return;
+      if (!window.confirm('Segur? Després ja no es podrà fer cap canvi.')) return;
+      api('admin.tancar').then(function () { UI.avis('Pessebre tancat.'); return refresca().then(function () { obre('fites'); }); })
+        .catch(function (er) { UI.avis(er.message); });
+    }, 'perill')]);
+    else tancament = h('p', { class: 'suau', text: 'Es podrà tancar a partir del final de la participació (' + c.families_fins + '). Aleshores ja no s\'accepten participacions.' });
+    mostra([
+      h('h2', { text: 'Fites i moments del dia' }),
+      fila('Moment actual', NOM_MOMENT[c.moment] || c.moment),
+      fila('Participació real', e.participacio.reals + ' (cases de classe: ' + e.participacio.classes + ')'),
+      h('h3', { text: 'Fites' }),
+      h('p', { class: 'suau', text: 'Cada fita salta amb el primer que arribi: el llindar o la data límit. No es desfà mai.' })
+    ].concat(files).concat([
+      campNumeric('objectiu', 'Objectiu de participació', 10, 5000),
+      campNumeric('minim_dies', 'Dies mínims entre fites', 0, 10),
+      h('h3', { text: 'Participació automàtica' }),
+      h('p', { class: 'suau', text: 'Només quan una fita salta per data. Omple fins a aquest % de les zones obertes, sense passar del màxim per zona, a poc a poc.' }),
+      fila('Ara n\'hi ha', e.automatiques + (c.auto_fase ? ' (omplint la fase «' + (NOM_MOMENT[c.auto_fase] || c.auto_fase) + '»)' : '')),
+      campNumeric('auto_posta', 'Objectiu a la posta (%)', 0, 100),
+      campNumeric('auto_nit', 'Objectiu a la nit (%)', 0, 100),
+      campNumeric('auto_neu', 'Objectiu a la neu (%)', 0, 100),
+      campNumeric('auto_max_zona', 'Màxim d\'automàtiques per zona (%)', 0, 100),
+      admin() && e.automatiques ? h('div', { class: 'botons' }, [boto('Retirar totes les automàtiques', function () {
+        if (!window.confirm('Retirar les ' + e.automatiques + ' figures automàtiques?')) return;
+        api('admin.retirar_auto').then(function (r) { UI.avis(r.retirades + ' retirades.'); return refresca().then(function () { obre('fites'); }); })
+          .catch(function (er) { UI.avis(er.message); });
+      })]) : null,
+      h('h3', { text: 'Tancament (Reis)' }),
+      tancament
     ]));
   }
 

@@ -292,6 +292,10 @@ body.amb-full .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bott
 .llista { margin: 4px 0; padding-left: 18px; font-size: 14px; }
 .enllac { padding: 0; border: 0; background: none; color: #1F5FA8; text-decoration: underline; font: inherit; cursor: pointer; }
 .casella { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.fita { margin: 8px 0; padding: 8px 10px; border: 1px solid #E2D4BC; border-radius: 12px; background: #FFFFFF; }
+.fita.assolida { background: #F1F7EC; }
+.fita h4 { margin: 0 0 4px; font-size: 14px; }
+.boto.perill { background: #A3271E; border-color: #A3271E; color: #FFFFFF; }
 details summary { cursor: pointer; padding: 4px 0; font-size: 14px; }
 body.admin .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom: auto; }
 @media (min-width: 900px) {

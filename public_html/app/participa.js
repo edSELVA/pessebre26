@@ -228,6 +228,19 @@
   });
   carregat.catch(function () { /* el missatge ja es mostra */ });
 
+  // «Tick»: si fa més de 15 minuts que el pessebre no s'actualitza, el servidor aplica fites, automàtiques i retencions
+  // caducades. Si l'hosting no té PHP (p. ex. la pàgina de prova de GitHub), no passa res.
+  if (!hash.s) {
+    UI.api({ a: 'tick' }).then(function (r) { if (r.fet) return carregat.then(function () { return Visor.refresca(); }); }).catch(function () {});
+  }
+
+  // Pessebre tancat (Reis): ja no s'ofereix participar
+  carregat.then(function (s) {
+    if (!s.tancat) return;
+    document.getElementById('participar').hidden = true;
+    if (mode) noPot('El pessebre d\'aquest any ja s\'ha tancat. Moltes gràcies per participar!');
+  }).catch(function () {});
+
   var boto = document.getElementById('participar');
   if (mode) {
     var avisMode = document.getElementById('avis-mode');
@@ -235,11 +248,12 @@
     avisMode.hidden = false;
     boto.hidden = true;
     Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {
+      if (r[1].tancat) return;
       if (!r[0].pot) { noPot(r[0].missatge); return; }
       pot = true;
       pasInici();
     }).catch(function (e) {
-      if (mode === 'familia' && e.codi) demanaCodi(e.message); else noPot(e.message || 'No s\'ha pogut carregar.');
+      if (mode === 'familia' && e.codi && e.codi !== 'tancat') demanaCodi(e.message); else noPot(e.message || 'No s\'ha pogut carregar.');
     });
   } else {
     boto.hidden = false;

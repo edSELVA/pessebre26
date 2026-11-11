@@ -7,6 +7,9 @@ declare(strict_types=1);
 const ADMIN_FALLADES = 5;
 const CLAUS_CALENDARI = ['classes_tanca', 'claustre_des', 'claustre_tanca', 'families_des', 'families_fins'];
 const NOM_CLASSE = '/^[\p{L}\p{N} .·\'-]{1,8}$/u';
+// Opcions numèriques editables: [mínim, màxim]
+const CONFIG_NUMERICA = ['claustre_limit' => [1, 200], 'llindar_zona' => [1, 100], 'objectiu' => [10, 5000], 'minim_dies' => [0, 10],
+                         'auto_posta' => [0, 100], 'auto_nit' => [0, 100], 'auto_neu' => [0, 100], 'auto_max_zona' => [0, 100]];
 
 /** Comprova la contrasenya i retorna el rol ('admin' o 'lectura'). */
 function admin_autentica(PDO $pdo, array $cfg, $contrasenya, string $ip, DateTimeImmutable $ara): string
@@ -60,7 +63,9 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
     $lots = $pdo->query("SELECT lot, COUNT(*) AS codis, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats, MIN(creat) AS creat FROM codis GROUP BY lot ORDER BY lot")->fetchAll();
     $config = [];
     foreach (CLAUS_CALENDARI as $k) $config[$k] = hora_local(config_llegeix($pdo, $k, DEFECTES_CALENDARI[$k] ?? '2026-12-21 22:59:00'));
-    foreach (['aturada' => '0', 'ronda' => '1', 'zones' => 'Z0', 'claustre_limit' => '50', 'llindar_zona' => '75'] as $k => $d) $config[$k] = config_llegeix($pdo, $k, $d);
+    foreach (['aturada' => '0', 'ronda' => '1', 'zones' => 'Z0', 'claustre_limit' => '50', 'llindar_zona' => '75', 'objectiu' => '600',
+              'minim_dies' => '1', 'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40', 'tancat' => '0',
+              'moment' => 'dia', 'auto_fase' => ''] as $k => $d) $config[$k] = config_llegeix($pdo, $k, $d);
     return [
         'rol' => $rol,
         'zones' => $zones,
@@ -71,6 +76,14 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
         'enllacos' => array_map(function ($e) { return ['tipus' => $e['tipus'], 'etapa' => $e['etapa'], 'creat' => hora_local($e['creat'])]; }, $enllacos),
         'lots' => $lots,
         'claustre' => claustre_estat($pdo, $ara),
+        'fites' => array_map(function ($f) {
+            return ['numero' => (int)$f['numero'], 'moment' => $f['moment'], 'base' => $f['base'], 'increment' => (int)$f['increment'],
+                    'data_limit' => hora_local($f['data_limit']), 'llindar' => $f['llindar'] === null ? null : (int)$f['llindar'],
+                    'assolida' => hora_local($f['assolida']), 'per' => $f['per']];
+        }, fites($pdo)),
+        'participacio' => participacio_real($pdo),
+        'automatiques' => (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'auto'")->fetchColumn(),
+        'pot_tancar' => bd_hora($ara) >= calendari($pdo, 'families_fins'),
         'config' => $config,
         'url_base' => $cfg['url_base'] ?? '',
     ];
@@ -180,9 +193,9 @@ function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
     } elseif ($clau === 'ronda') {
         if ($v !== '1' && $v !== '2') throw new ErrorPessebre('Valor no vàlid.', 400, 'valor');
         $desat = $v;
-    } elseif ($clau === 'claustre_limit' || $clau === 'llindar_zona') {
-        $max = $clau === 'claustre_limit' ? 200 : 100;
-        if (!preg_match('/^\d{1,3}$/', $v) || (int)$v < 1 || (int)$v > $max) throw new ErrorPessebre("Ha de ser un nombre entre 1 i $max.", 400, 'valor');
+    } elseif (isset(CONFIG_NUMERICA[$clau])) {
+        [$min, $max] = CONFIG_NUMERICA[$clau];
+        if (!preg_match('/^\d{1,4}$/', $v) || (int)$v < $min || (int)$v > $max) throw new ErrorPessebre("Ha de ser un nombre entre $min i $max.", 400, 'valor');
         $desat = (string)(int)$v;
     } elseif ($clau === 'zones') {
         // Forçar o endarrerir zones: sempre Z0 i en ordre (Z0, Z1, Z2, Z3)
@@ -197,6 +210,41 @@ function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
     config_desa($pdo, $clau, $desat);
     registre_afegeix($pdo, $ara, 'administració', 'admin.config', null, "$clau = $v");
     return ['opcio' => $clau, 'valor' => $v];
+}
+
+/** Canvia la data límit o l'increment d'una fita que encara no s'ha assolit. */
+function admin_fita(PDO $pdo, $numero, $data, $increment, DateTimeImmutable $ara): array
+{
+    $st = $pdo->prepare('SELECT * FROM fites WHERE numero = ?');
+    $st->execute([is_int($numero) ? $numero : -1]);
+    $f = $st->fetch();
+    if (!$f) throw new ErrorPessebre('Aquesta fita no existeix.', 400, 'fita');
+    if ($f['assolida'] !== null) throw new ErrorPessebre('Aquesta fita ja s\'ha assolit i no es desfà.', 409, 'assolida');
+    $t = DateTimeImmutable::createFromFormat('!Y-m-d H:i', str_replace('T', ' ', (string)$data), new DateTimeZone('Europe/Madrid'));
+    if (!$t) throw new ErrorPessebre('La data ha de tenir el format AAAA-MM-DD hh:mm.', 400, 'valor');
+    if (!is_int($increment) || $increment < 1 || $increment > 100) throw new ErrorPessebre('L\'increment és un percentatge entre 1 i 100.', 400, 'valor');
+    $pdo->prepare('UPDATE fites SET data_limit = ?, increment = ? WHERE numero = ?')->execute([bd_hora($t), $increment, $f['numero']]);
+    // La posta es mesura en cases de classe: el seu llindar es pot recalcular; les altres, quan salti l'anterior
+    if ($f['base'] === 'classes') {
+        $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
+        $pdo->prepare('UPDATE fites SET llindar = ? WHERE numero = ?')->execute([(int)ceil($poble * $increment / 100), $f['numero']]);
+    }
+    registre_afegeix($pdo, $ara, 'administració', 'admin.fita', null, "{$f['moment']}: $data, $increment %");
+    return ['numero' => (int)$f['numero']];
+}
+
+/** Tancament de Reis: s'esborren codis, enllaços, intents i registre; el pessebre queda com a pàgina estàtica. */
+function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
+{
+    if (bd_hora($ara) < calendari($pdo, 'families_fins')) {
+        throw new ErrorPessebre('Encara no s\'ha arribat a la data de tancament (' . hora_local(calendari($pdo, 'families_fins')) . ').', 409, 'aviat');
+    }
+    $pdo->exec("DELETE FROM ocupacions WHERE estat = 'retingut'");
+    foreach (['codis', 'enllacos', 'intents', 'registre'] as $t) $pdo->exec("DELETE FROM $t");
+    $pdo->exec("UPDATE ocupacions SET codi_id = NULL, hash_retencio = NULL");
+    foreach (['sal', 'sal_hora', 'global_minut', 'global_fallades', 'auto_fase', 'auto_hora'] as $k) $pdo->prepare('DELETE FROM config WHERE clau = ?')->execute([$k]);
+    config_desa($pdo, 'tancat', '1');
+    return ['tancat' => true];
 }
 
 /** Carrega la llista de classes (línies «etapa;nom»). Retorna [quantes, avisos]. */
@@ -249,6 +297,9 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
         switch ($a) {
             case 'admin.alliberar': return admin_alliberar($pdo, $p['lloc'] ?? null, $ara);
             case 'admin.reactivar': return admin_reactiva_codi($pdo, $cfg, $p['codi'] ?? null, $ara);
+            case 'admin.fita': return admin_fita($pdo, $p['numero'] ?? null, $p['data'] ?? null, $p['increment'] ?? null, $ara);
+            case 'admin.retirar_auto': return ['retirades' => auto_retira($pdo, $ara)];
+            case 'admin.tancar': return admin_tancar($pdo, $ara);
             case 'admin.canvia': return admin_ocupacio($pdo, $cfg, $p, $ara, false);
             case 'admin.casa_sense_placa': return admin_ocupacio($pdo, $cfg, $p, $ara, true);
             case 'admin.config': return admin_config($pdo, $p['opcio'] ?? null, $p['valor'] ?? null, $ara);

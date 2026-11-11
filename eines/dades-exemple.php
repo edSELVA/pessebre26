@@ -85,7 +85,7 @@ foreach ($escenaris as $nom => [$data, $moment, $zones, $classes, $claustre, $n_
         ? ['tipus' => 'classes', 'fet' => $n_classes, 'total' => 74]
         : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $moment === 'neu' ? null : (int)(ceil(($reals + 1) / 100) * 100)];
     $s = ['versio' => 1, 'generat' => $data . 'T17:00:00Z', 'data' => $data, 'moment' => $moment, 'zones' => $zones,
-          'classes' => $classes, 'claustre' => $claustre, 'claustre_alliberat' => $data >= '2026-12-22', 'comptador' => $comptador, 'o' => (object)$o, 'r' => $ret];
+          'classes' => $classes, 'claustre' => $claustre, 'claustre_alliberat' => $data >= '2026-12-22', 'tancat' => false, 'comptador' => $comptador, 'o' => (object)$o, 'r' => $ret];
     $errors = snapshot_errors(json_decode(json_encode($s), true), $mapa, $peces, $paletes);
     if ($errors) { fwrite(STDERR, "$nom: " . implode('; ', $errors) . "\n"); exit(1); }
     snapshot_escriu("$arrel/public_html/exemples/$nom.json", $s);

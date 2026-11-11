@@ -53,6 +53,10 @@ function bd_esquema(PDO $pdo): void
         "registre (id $auto, hora VARCHAR(19) NOT NULL, qui VARCHAR(60) NOT NULL, accio VARCHAR(30) NOT NULL,
                    lloc_id VARCHAR(8) NULL, detall VARCHAR(200) NULL)",
         "config (clau VARCHAR(40) NOT NULL PRIMARY KEY, valor VARCHAR(200) NOT NULL)",
+        // Fites: posta (llindar de cases de classe), nit i neu (llindar de participacions reals). increment en % (de les 74 cases
+        // o de l'objectiu); llindar es fixa quan salta l'anterior; assolida = hora UTC; per = 'llindar' o 'data'.
+        "fites (numero INTEGER NOT NULL PRIMARY KEY, moment VARCHAR(10) NOT NULL, base VARCHAR(15) NOT NULL, increment INTEGER NOT NULL,
+                data_limit VARCHAR(19) NOT NULL, llindar INTEGER NULL, assolida VARCHAR(19) NULL, per VARCHAR(10) NULL)",
         "intents (empremta CHAR(64) NOT NULL PRIMARY KEY, finestra VARCHAR(19) NOT NULL, fallades INTEGER NOT NULL)",
     ];
     foreach ($taules as $t) $pdo->exec("CREATE TABLE IF NOT EXISTS $t$fi");

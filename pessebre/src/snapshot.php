@@ -12,6 +12,7 @@
 //   "classes": true,                 període de tutories obert (les cases de classe lliures es veuen en transparent)
 //   "claustre": false,               enllaç del claustre obert (21 des fins a les 22:00)
 //   "claustre_alliberat": false,     els llocs del claustre que han quedat lliures ja són de les famílies
+//   "tancat": false,                 participació tancada (Reis): el visor ja no ofereix participar
 //   "comptador": {"tipus": "classes", "fet": 52, "total": 74}
 //             o {"tipus": "participacions", "fet": 312, "fita": 400}  (fita null després de l'última)
 //   "o": {"C001": {"p": "CASA-BAIXA-P", "c": [2, 0, 1], "n": "Nom"}, "P0001": {"p": "ANI-GOS-D", "m": 1}, …}
@@ -38,7 +39,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
     if (!in_array($s['moment'] ?? null, SNAPSHOT_MOMENTS, true)) $e[] = 'moment desconegut';
     $zones = $s['zones'] ?? null;
     if (!is_array($zones) || array_diff($zones, array_keys($mapa['franges'])) || !in_array('Z0', $zones, true)) $e[] = 'zones no vàlides (Z0 sempre oberta)';
-    foreach (['classes', 'claustre', 'claustre_alliberat'] as $k) if (!is_bool($s[$k] ?? null)) $e[] = "$k ha de ser true o false";
+    foreach (['classes', 'claustre', 'claustre_alliberat', 'tancat'] as $k) if (!is_bool($s[$k] ?? null)) $e[] = "$k ha de ser true o false";
 
     $c = $s['comptador'] ?? null;
     if (!is_array($c) || !is_int($c['fet'] ?? null)) {
@@ -89,7 +90,7 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
         if (!is_string($id) || !isset($llocs[$id])) $e[] = 'r: lloc desconegut';
         elseif (isset($o[$id])) $e[] = "r: $id ja és ocupat";
     }
-    if (array_diff(array_keys($s), ['versio', 'generat', 'data', 'moment', 'zones', 'classes', 'claustre', 'claustre_alliberat', 'comptador', 'o', 'r'])) $e[] = 'camps de primer nivell no permesos';
+    if (array_diff(array_keys($s), ['versio', 'generat', 'data', 'moment', 'zones', 'classes', 'claustre', 'claustre_alliberat', 'tancat', 'comptador', 'o', 'r'])) $e[] = 'camps de primer nivell no permesos';
     return $e;
 }
 
@@ -120,7 +121,6 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
                          WHERE o.estat = 'confirmat' OR o.caduca > ? ORDER BY o.lloc_id");
     $st->execute([bd_hora($ara)]);
     $classes_fetes = 0;
-    $reals = 0;
     foreach ($st->fetchAll() as $r) {
         if ($r['estat'] !== 'confirmat') { $ret[] = $r['lloc_id']; continue; }
         $e = ['p' => $r['peca']];
@@ -131,12 +131,13 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
         if ($r['classe'] !== null && $r['grup'] === 'poble' && substr((string)$r['peca'], -2) === '-P') $e['n'] = $r['classe'];
         $o[$r['lloc_id']] = $e;
         if ($r['grup'] === 'poble' && $r['origen'] === 'classe') $classes_fetes++;
-        if ($r['origen'] !== 'auto') $reals++;
     }
     $classes = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00');
     $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
     $zones = array_values(array_filter(explode(',', config_llegeix($pdo, 'zones', 'Z0'))));
-    $fita = config_llegeix($pdo, 'fita_seguent');
+    $reals = participacio_real($pdo)['reals'];
+    $seguent = function_exists('fita_seguent') ? fita_seguent($pdo) : null;
+    $fita = $seguent && $seguent['base'] === 'participacions' ? $seguent['llindar'] : null;
     return [
         'versio' => (int)config_llegeix($pdo, 'versio', '0') + 1,
         'generat' => $ara->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z'),
@@ -146,9 +147,10 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
         'classes' => $classes,
         'claustre' => finestra($pdo, 'claustre_des', 'claustre_tanca', $ara) === 'obert',
         'claustre_alliberat' => claustre_alliberat($pdo, $ara),
+        'tancat' => config_llegeix($pdo, 'tancat', '0') === '1' || bd_hora($ara) >= calendari($pdo, 'families_fins'),
         'comptador' => $classes
             ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => $poble]
-            : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita === null ? null : (int)$fita],
+            : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita],
         'o' => (object)$o,
         'r' => $ret,
     ];
