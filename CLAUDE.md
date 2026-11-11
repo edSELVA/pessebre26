@@ -198,3 +198,9 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Siluetes** de persona (PER-ADU-F) i d'animal (ANI-OVELLA-D) en lloc de les marques de pedra; mateix aspecte que les cases lliures (blanc translúcid amb contorn gris).
 - **Arbres:** en un lloc d'arbre es tria l'espècie (11) i en un de mata, la mata (3) (`intercanviables` a `disseny-propi/personalitzables.json`). Colors: fruit del fruiter, flor de l'ametller i de la mata florida, fruit del taronger (paleta `elements`). Parades, pous i fanals no canvien.
 - **Girar** per a totes les peces de les famílies (persones, animals, cases i elements).
+
+## 18. Decisions de la Fase D (11 nov 2026)
+- **`admin.html` (decidit):** el pessebre + un panell amb pestanyes (Lloc, Estat, Codis, Enllaços, Configuració, Registre). Es toca un lloc i es veu qui l'ocupa (classe, codi #n i lot, claustre, administració) i es pot alliberar (reactivant el codi si cal), canviar peça/colors/finestres/girar o posar-hi una casa sense placa.
+- **Contrasenyes (decidit):** administració i **només lectura** (equip de valors, direcció). `password_hash` a config.php (`php eines/gestio.php contrasenya admin|lectura`). Es demanen a cada càrrega, només a memòria; 5 fallades → 15 min.
+- **Codis i etiquetes des de l'admin (decidit):** es generen i s'imprimeixen des del navegador (A4 de 24); els codis es veuen un sol cop. També la llista de classes es pot enganxar a l'admin (per si l'hosting no té terminal).
+- **Configuració editable:** dates (hora de Barcelona), límit del claustre, llindar de zones, zones forçades (en ordre), segona ronda i aturada. Fites i participació automàtica: a la Fase E.

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Administració · Pessebre de l'escola</title>
+<link rel="stylesheet" href="app/estil.css">
+<link rel="stylesheet" href="disseny/moments.css">
+<link rel="stylesheet" href="disseny/escena.css">
+</head>
+<body data-pagina="admin" class="admin">
+<header class="capcal">
+  <h1>Administració</h1>
+  <p id="avis-mode" class="avis-mode" hidden></p>
+  <button id="sortir" type="button" class="boto-participar" hidden>Sortir</button>
+</header>
+
+<main id="escena" class="escena" aria-label="Pessebre. Toca un lloc per veure'l i gestionar-lo.">
+  <p class="missatge">Introdueix la contrasenya per començar.</p>
+</main>
+
+<div id="zoom" class="zoom" hidden>
+  <button id="zoom-mes" type="button" aria-label="Apropa">+</button>
+  <button id="zoom-menys" type="button" aria-label="Allunya">−</button>
+  <button id="zoom-tot" type="button" aria-label="Veure tot el pessebre">⤢</button>
+</div>
+
+<p id="avis" class="avis" role="status" aria-live="polite" hidden></p>
+
+<section id="entrada" class="entrada">
+  <form id="form-entrada" class="caixa-entrada">
+    <h2>Administració del pessebre</h2>
+    <label for="contrasenya">Contrasenya</label>
+    <input id="contrasenya" type="password" class="camp" autocomplete="current-password" required>
+    <button type="submit" class="boto primari">Entrar</button>
+    <p id="error-entrada" class="error" role="alert"></p>
+    <p class="suau">La contrasenya només es guarda mentre la pàgina és oberta. No es fan servir cookies.</p>
+  </form>
+</section>
+
+<aside id="panell" class="panell-admin" hidden>
+  <nav class="pestanyes" role="tablist">
+    <button type="button" role="tab" data-p="lloc">Lloc</button>
+    <button type="button" role="tab" data-p="estat">Estat</button>
+    <button type="button" role="tab" data-p="codis">Codis</button>
+    <button type="button" role="tab" data-p="enllacos">Enllaços</button>
+    <button type="button" role="tab" data-p="config">Configuració</button>
+    <button type="button" role="tab" data-p="registre">Registre</button>
+  </nav>
+  <div id="contingut" class="contingut-admin"></div>
+</aside>
+
+<section id="impressio" class="impressio" aria-hidden="true"></section>
+
+<script src="app/compon.js"></script>
+<script src="app/zoom.js"></script>
+<script src="app/visor.js"></script>
+<script src="app/ui.js"></script>
+<script src="app/admin.js"></script>
+</body>
+</html>

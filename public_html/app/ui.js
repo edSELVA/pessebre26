@@ -130,6 +130,90 @@ var UI = (function () {
     return { svg: svg, pinta: pinta, teFinestres: finestres.length > 0 };
   }
 
+  // ── Editor d'una peça (famílies, claustre i administració)
+
+  var NOMS_ROL = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors', roba: 'Roba', mocador: 'Mocador',
+                   roba2: 'Roba', pell: 'Pell', cabell: 'Cabells', palla: 'Barret i cistell', camell: 'Pelatge', blanc: 'Pelatge',
+                   bru: 'Pelatge', gris: 'Pelatge', rosa: 'Pelatge', fruit: 'Fruits', groc: 'Fruits' };
+
+  // Peces que es poden posar en un lloc: la casa és la del mapa (o la que ja hi ha); els arbres i les mates, del seu grup;
+  // persones i animals, qualsevol de la seva categoria.
+  function pecesPossibles(D, l, actual) {
+    if (l.tipus === 'casa') return [actual || l.codi];
+    if (l.tipus === 'element') return D.peces[l.codi].alternatives || [l.codi];
+    return Object.keys(D.peces).filter(function (k) { return D.peces[k].cat === l.tipus; }).sort();
+  }
+
+  function grupPaleta(D, l, codi) {
+    var cat = D.peces[codi].cat;
+    return { casa: 'cases', animal: 'animals', element: 'elements' }[cat] || (l.pastor ? 'pastors' : 'persones');
+  }
+
+  function colorsInicials(D, codi) {
+    var p = D.peces[codi];
+    return p.pers.length ? p.pers.map(function () { return 0; }) : null;
+  }
+
+  function nomPeca(codi) {
+    return codi.replace(/^(PER|ANI|ELE|CASA)-/, '').replace(/-D$/, '').toLowerCase().replace(/-/g, ' ');
+  }
+
+  // est: {peca, colors, mirall, finestres}. enCanvi() es crida a cada canvi (per actualitzar l'escena).
+  // Retorna {galeria, tria, pinta, girar, peces}: galeria (o null) i tria són elements per posar al panell.
+  function editorPeca(D, l, est, enCanvi) {
+    var peces = pecesPossibles(D, l, l.tipus === 'casa' ? est.peca : null);
+    if (!est.colors) est.colors = colorsInicials(D, est.peca);
+    var zona = h('div', { class: 'colors' });
+    var colorsAra = function () { return Compon.colors(D.peces[est.peca], est.colors, D.paletes, grupPaleta(D, l, est.peca)); };
+    // Les cases es veuen grans i amb les finestres que es poden treure; la resta, en una previsualització petita
+    var casa = l.tipus === 'casa' ? previsualitzacioCasa(D.peces[est.peca], est.peca, est, colorsAra, function () { pinta(); }) : null;
+    var prev = casa ? null : previsualitzacio(D.peces);
+
+    function pinta() {
+      if (casa) casa.pinta(); else prev.pinta(est.peca, colorsAra(), est.mirall);
+      enCanvi();
+    }
+
+    function filesColors() {
+      zona.textContent = '';
+      var grup = grupPaleta(D, l, est.peca);
+      D.peces[est.peca].pers.forEach(function (rol, i) {
+        var paleta = D.paletes[grup][rol] || D.paletes.persones[rol];
+        zona.appendChild(filaColors(NOMS_ROL[rol] || rol, paleta.opcions, est.colors[i], function (j) { est.colors[i] = j; pinta(); }));
+      });
+    }
+
+    var galeria = null;
+    if (peces.length > 1) {
+      galeria = h('div', { class: 'galeria', role: 'group', 'aria-label': { animal: 'Animals', persona: 'Persones', element: 'Arbres' }[l.tipus] });
+      peces.forEach(function (codi) {
+        var mini = previsualitzacio(D.peces);
+        mini.pinta(codi, Compon.colors(D.peces[codi], colorsInicials(D, codi), D.paletes, grupPaleta(D, l, codi)), false);
+        var b = h('button', { type: 'button', class: 'peca-mini', 'aria-pressed': String(codi === est.peca), 'aria-label': nomPeca(codi) }, [mini.svg]);
+        b.addEventListener('click', function () {
+          Array.prototype.forEach.call(galeria.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+          est.peca = codi;
+          est.colors = colorsInicials(D, codi);
+          filesColors();
+          pinta();
+        });
+        galeria.appendChild(b);
+      });
+    }
+    filesColors();
+    pinta();
+
+    var tria = h('div', { class: 'tria' }, [
+      casa ? h('div', { class: 'columna-casa' }, [
+        h('div', { class: 'previsualitzacio gran' }, [casa.svg]),
+        casa.teFinestres ? h('p', { class: 'peu-casa', text: 'Toca una finestra per treure-la (hi quedarà paret) o tornar-la a posar.' }) : null
+      ]) : h('div', { class: 'previsualitzacio' }, [prev.svg]),
+      zona
+    ]);
+    return { galeria: galeria, tria: tria, pinta: pinta, peces: peces,
+             girar: function () { est.mirall = est.mirall ? 0 : 1; pinta(); } };
+  }
+
   // Compte enrere en m:ss dins d'un element. Crida enFi() quan arriba a zero. Retorna una funció per aturar-lo.
   function compteEnrere(el, fins, enFi) {
     var tic = function () {
@@ -143,5 +227,6 @@ var UI = (function () {
   }
 
   return { h: h, mostra: mostra, avis: avis, api: api, filaColors: filaColors, previsualitzacio: previsualitzacio,
-           previsualitzacioCasa: previsualitzacioCasa, compteEnrere: compteEnrere };
+           previsualitzacioCasa: previsualitzacioCasa, editorPeca: editorPeca, pecesPossibles: pecesPossibles,
+           nomPeca: nomPeca, compteEnrere: compteEnrere };
 })();

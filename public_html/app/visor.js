@@ -60,6 +60,7 @@ var Visor = (function () {
     capes.peces = el('g', { id: 'capa-peces' }, svg);
     capes.aire = el('g', { id: 'capa-llum-aire' }, svg);
     incrusta(svgDe(t.aire), capes.aire);
+    capes.destacat = el('g', { id: 'capa-destacat' }, svg);     // requadre del lloc seleccionat (administració)
     capes.tolls = svg.querySelector('#llum-terra-tolls');
     capes.halos = svg.querySelector('#llum-halos');
     var escena = document.getElementById('escena');
@@ -146,7 +147,7 @@ var Visor = (function () {
 
   // Un lloc lliure es dibuixa (en transparent) si la seva zona és oberta, amb excepcions per grup.
   function visibleLliure(l, s, zones) {
-    if (l.grup === 'poble') return s.classes;                       // cases de classe: només durant les tutories
+    if (l.grup === 'poble') return s.classes || op.mode === 'admin';   // cases de classe: durant les tutories (i sempre a l'administració)
     if (l.grup === 'claustre') {
       if (op.mode === 'claustre' && s.claustre) return true;       // el claustre els veu encara que la zona sigui tancada
       return !!s.claustre_alliberat && !!zones[l.zona];             // després de les 22:00 del 21 des, són de les famílies
@@ -201,8 +202,10 @@ var Visor = (function () {
     if (!darrer) return;
     var candidats = D.mapa.llocs.filter(function (l) { return op.esCandidat(l, darrer); });
     var lliures = candidats.filter(function (l) { return !darrer.o[l.id] && (darrer.r || []).indexOf(l.id) < 0; });
-    // Si sota el dit hi ha un lloc lliure i un d'ocupat (figures que se superposen), mana el lliure
-    var l = Compon.toca(lliures, D.peces, sx, sy) || Compon.toca(candidats, D.peces, sx, sy);
+    var ocupats = candidats.filter(function (l) { return darrer.o[l.id]; });
+    // Si sota el dit hi ha un lloc lliure i un d'ocupat (figures que se superposen), mana el lliure (a l'administració, l'ocupat)
+    var primer = op.mode === 'admin' ? ocupats : lliures;
+    var l = Compon.toca(primer, D.peces, sx, sy) || Compon.toca(candidats, D.peces, sx, sy);
     op.enToc(l, darrer);
   }
 
@@ -256,6 +259,16 @@ var Visor = (function () {
     treu: function (id) { delete propis[id]; },
     disseny: function () { return D; },
     centra: function (x, y, amplada) { if (svg) Zoom.centra(x, y, amplada); },
+    snapshot: function () { return darrer; },
+    // Marca un lloc amb un requadre (o cap, amb null)
+    destaca: function (l) {
+      capes.destacat.textContent = '';
+      if (!l) return;
+      var o = darrer && darrer.o[l.id];
+      var p = D.peces[(o && o.p) || l.codi] || { vb: [18, 27], a: [9, 25], caixa: [0, 0, 18, 27] };
+      var c = Compon.caixa(p, l.x, l.y, !!l.mirall);
+      el('rect', { x: c.x0 - 3, y: c.y0 - 3, width: c.x1 - c.x0 + 6, height: c.y1 - c.y0 + 6, class: 'requadre-destacat' }, capes.destacat);
+    },
     hash: llegeixHash,
     error: error
   };

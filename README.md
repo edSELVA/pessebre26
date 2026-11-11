@@ -1,7 +1,7 @@
 # Pessebre col·laboratiu de l'escola
 
 Pessebre digital on cada classe, el claustre i les famílies hi afegeixen una peça. Mirar és obert; participar demana un codi.
-Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase C** (famílies amb codi i etiquetes QR, i enllaç del claustre).
+Tot el que està decidit és a [CLAUDE.md](CLAUDE.md). Estat: **Fase D** (administració mínima a `admin.html`).
 
 ## Provar-ho (cal PHP 7.4–8.3)
 
@@ -23,13 +23,15 @@ php eines/gestio.php enllac primaria                   # mostra l'enllaç classe
 
 Famílies i claustre (Fase C): `php eines/gestio.php codis 30` crea un lot de codis i el full d'etiquetes amb QR (a `pessebre/dades/`, esborra'l després d'imprimir); `enllac claustre` dona l'enllaç `#k=…`. Per provar-ho abans del 21 de desembre: `calendari families_des "2026-11-11 00:00"` (i `claustre_des`, `claustre_tanca`).
 
+Administració (Fase D): `php eines/gestio.php contrasenya admin` (i `lectura`) i després `admin.html`. Des d'allà es fa tot el que fan les ordres de terminal.
+
 Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ronda 1|2`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
 ## Instal·lació (hosting, a partir de la Fase B)
 
 1. Puja `public_html/` a l'arrel web i `pessebre/` (i `eines/`) fora de l'arrel web. Si `pessebre/` és en un altre lloc, canvia la línia `$PESSEBRE` d'`api.php`.
 2. Copia `pessebre/config.exemple.php` a `pessebre/config.php` i canvia-hi tots els `CANVIA-AIXO` i les rutes.
-3. `php eines/gestio.php installa`, després `classes classes.csv` (llista real, no es puja mai) i `enllac totes`.
+3. `php eines/gestio.php installa` i `contrasenya admin` / `contrasenya lectura`. La resta (classes, enllaços, codis) es pot fer des d'`admin.html`.
 4. Cal PHP 7.4 o superior amb PDO SQLite (o MySQL) i HTTPS.
 
 ## Estructura

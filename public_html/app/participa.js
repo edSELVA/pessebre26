@@ -46,10 +46,9 @@
     if (s.o[l.id]) { UI.avis('Aquest lloc ja és ocupat. Tria un lloc lliure.'); return; }
     if ((s.r || []).indexOf(l.id) >= 0) { UI.avis('Algú altre està triant aquest lloc ara mateix.'); return; }
     api(prefix + 'retenir', { lloc: l.id }).then(function (r) {
-      var peces = pecesPossibles(l);
+      var peces = UI.pecesPossibles(D(), l);
       var primera = peces.indexOf(l.codi) >= 0 ? l.codi : peces[0];     // als arbres, comença amb l'espècie del mapa
       tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: primera, mirall: l.mirall ? 1 : 0, colors: null, finestres: 0 };
-      tria.colors = colorsInicials(tria.peca);
       Visor.centra(l.x, l.y - 20, 240);
       pasTria();
       return Visor.refresca();
@@ -59,29 +58,9 @@
     });
   }
 
-  // Peces que es poden posar en un lloc: la casa és la del mapa; els arbres i les mates, del seu grup; persones i animals, a triar.
-  function pecesPossibles(l) {
-    if (l.tipus === 'casa') return [l.codi];
-    if (l.tipus === 'element') return D().peces[l.codi].alternatives || [l.codi];
-    return Object.keys(D().peces).filter(function (k) { return D().peces[k].cat === l.tipus; }).sort();
-  }
 
-  function grupPaleta(peca) {
-    var cat = D().peces[peca].cat;
-    if (cat === 'casa') return 'cases';
-    if (cat === 'animal') return 'animals';
-    if (cat === 'element') return 'elements';
-    return tria && tria.lloc.pastor ? 'pastors' : 'persones';
-  }
 
-  function paleta(grup, rol) {
-    return D().paletes[grup][rol] || D().paletes.persones[rol];
-  }
 
-  function colorsInicials(peca) {
-    var p = D().peces[peca];
-    return p.pers.length ? p.pers.map(function () { return 0; }) : null;
-  }
 
   function mostraALescena() {
     Visor.posa(tria.lloc.id, { p: tria.peca, c: tria.colors, m: tria.mirall, f: tria.finestres });
@@ -125,75 +104,23 @@
 
   function pasTria() {
     var l = tria.lloc;
-    var peces = pecesPossibles(l);
-    var zona = h('div', { class: 'colors' });
     var compte = h('span', { class: 'compte' });
-    var colorsAra = function () { return Compon.colors(D().peces[tria.peca], tria.colors, D().paletes, grupPaleta(tria.peca)); };
-    // Les cases es veuen grans i amb les finestres que es poden treure; la resta, en una previsualització petita
-    var casa = l.tipus === 'casa' ? UI.previsualitzacioCasa(D().peces[l.codi], l.codi, tria, colorsAra, function () { pinta(); }) : null;
-    var prev = casa ? { svg: casa.svg } : UI.previsualitzacio(D().peces);
-
-    function pinta() {
-      if (casa) casa.pinta(); else prev.pinta(tria.peca, colorsAra(), tria.mirall);
-      mostraALescena();
-    }
-
-    function filesColors() {
-      zona.textContent = '';
-      var p = D().peces[tria.peca];
-      var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors', roba: 'Roba', mocador: 'Mocador',
-                   roba2: 'Roba', pell: 'Pell', cabell: 'Cabells', palla: 'Barret i cistell',
-                   camell: 'Pelatge', blanc: 'Pelatge', bru: 'Pelatge', gris: 'Pelatge', rosa: 'Pelatge', fruit: 'Fruits', groc: 'Fruits' };
-      p.pers.forEach(function (rol, i) {
-        var opcions = paleta(grupPaleta(tria.peca), rol).opcions;
-        zona.appendChild(UI.filaColors(noms[rol], opcions, tria.colors[i], function (j) { tria.colors[i] = j; pinta(); }));
-      });
-    }
-
-    var galeria = null;
-    if (peces.length > 1) {
-      galeria = h('div', { class: 'galeria', role: 'group', 'aria-label': { animal: 'Animals', persona: 'Persones', element: 'Arbres' }[l.tipus] });
-      peces.forEach(function (codi) {
-        var mini = UI.previsualitzacio(D().peces);
-        mini.pinta(codi, Compon.colors(D().peces[codi], colorsInicials(codi), D().paletes, grupPaleta(codi)), false);
-        var b = h('button', { type: 'button', class: 'peca-mini', 'aria-pressed': String(codi === tria.peca), 'aria-label': nomPeca(codi) }, [mini.svg]);
-        b.addEventListener('click', function () {
-          Array.prototype.forEach.call(galeria.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-          tria.peca = codi;
-          tria.colors = colorsInicials(codi);
-          filesColors();
-          pinta();
-        });
-        galeria.appendChild(b);
-      });
-    }
-    filesColors();
-    pinta();
-
-    var titol = { casa: 'Pinta la teva casa', element: peces.length > 1 ? 'Tria el teu arbre' : 'Aquest lloc serà vostre',
+    var ed = UI.editorPeca(D(), l, tria, mostraALescena);
+    var titol = { casa: 'Pinta la teva casa', element: ed.peces.length > 1 ? 'Tria el teu arbre' : 'Aquest lloc serà vostre',
                   persona: 'Tria la teva figura', animal: 'Tria el teu animal' }[l.tipus];
-    var botons = [h('button', { type: 'button', class: 'boto primari', text: 'Confirmar', clic: confirma }),
-                  h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: function () { tria.mirall = tria.mirall ? 0 : 1; pinta(); } })];
-    botons.push(h('button', { type: 'button', class: 'boto suau', text: 'Un altre lloc', clic: deixa }));   // tres botons en una fila
     UI.mostra([
       h('h2', { text: titol }),
       h('p', { class: 'suau' }, ['El lloc és teu durant ', compte, '.']),
-      galeria,
-      h('div', { class: 'tria' }, [
-        casa ? h('div', { class: 'columna-casa' }, [
-          h('div', { class: 'previsualitzacio gran' }, [prev.svg]),
-          casa.teFinestres ? h('p', { class: 'peu-casa', text: 'Toca una finestra per treure-la (hi quedarà paret) o tornar-la a posar.' }) : null
-        ]) : h('div', { class: 'previsualitzacio' }, [prev.svg]),
-        zona
-      ]),
-      h('div', { class: 'botons' }, botons)
+      ed.galeria,
+      ed.tria,
+      h('div', { class: 'botons' }, [
+        h('button', { type: 'button', class: 'boto primari', text: 'Confirmar', clic: confirma }),
+        h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: ed.girar }),
+        h('button', { type: 'button', class: 'boto suau', text: 'Un altre lloc', clic: deixa })
+      ])
     ]);
     if (aturaCompte) aturaCompte();
     aturaCompte = UI.compteEnrere(compte, tria.fins, caducada);
-  }
-
-  function nomPeca(codi) {
-    return codi.replace(/^(PER|ANI|ELE)-/, '').replace(/-D$/, '').toLowerCase().replace(/-/g, ' ');
   }
 
   function neteja() {

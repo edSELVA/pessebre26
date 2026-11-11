@@ -248,12 +248,72 @@ body {
   padding: 8px 12px;
   border: 1px solid #C9B79A;
   border-radius: 12px;
+  background: #FFFFFF;
+  color: #2A2018;
+  color-scheme: light;
   font: 600 18px/1 ui-monospace, Menlo, Consolas, monospace;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 .error { color: #A3271E; font-weight: 600; }
 body.amb-full .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom: auto; }
+
+/* ── Administració (admin.html) ── */
+.requadre-destacat { fill: none; stroke: #FFD24F; stroke-width: 1.5; stroke-dasharray: 3 2; }
+.entrada { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; padding: 16px; background: #0A1040E6; }
+.entrada[hidden] { display: none; }
+.caixa-entrada { width: 100%; max-width: 360px; padding: 20px; border-radius: 16px; background: #FFF8EA; color: #2A2018; display: grid; gap: 10px; }
+.caixa-entrada h2 { margin: 0 0 4px; font-size: 19px; }
+.caixa-entrada label { font-weight: 650; font-size: 14px; }
+.caixa-entrada .camp { text-transform: none; letter-spacing: 0; font: 16px/1.2 system-ui, sans-serif; }
+.panell-admin {
+  position: fixed; z-index: 4; display: flex; flex-direction: column;
+  left: 0; right: 0; bottom: 0; height: 55vh;
+  background: #FFF8EA; color: #2A2018; border-radius: 16px 16px 0 0; box-shadow: 0 -6px 24px #0006;
+}
+.panell-admin[hidden] { display: none; }
+.pestanyes { display: flex; gap: 2px; overflow-x: auto; padding: 8px 8px 0; border-bottom: 1px solid #E2D4BC; flex: 0 0 auto; }
+.pestanyes button { padding: 8px 12px; border: 0; border-radius: 10px 10px 0 0; background: transparent; color: #6A5A48; font: 600 14px/1 system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+.pestanyes button[aria-selected="true"] { background: #FFFFFF; color: #2A2018; box-shadow: 0 -1px 0 1px #E2D4BC; }
+.contingut-admin { flex: 1; overflow: auto; padding: 12px 16px max(16px, env(safe-area-inset-bottom)); }
+.contingut-admin h2 { margin: 4px 0 8px; font-size: 18px; }
+.contingut-admin h3 { margin: 16px 0 6px; font-size: 15px; }
+.contingut-admin .botons { position: static; box-shadow: none; padding: 0; margin: 10px 0; background: none; flex-wrap: wrap; }
+.fila-dada { display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid #EFE4D0; font-size: 14px; flex-wrap: wrap; }
+.fila-dada .etiqueta { min-width: 110px; color: #6A5A48; font-weight: 600; }
+.fila-config { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.fila-config .etiqueta { min-width: 180px; font-size: 14px; font-weight: 600; color: #6A5A48; }
+.fila-config .camp { flex: 0 1 auto; font: 15px/1.2 system-ui, sans-serif; text-transform: none; letter-spacing: 0; }
+.camp.curt { width: 90px; flex: 0 0 auto; }
+.camp.area { width: 100%; font: 14px/1.4 ui-monospace, Menlo, monospace; text-transform: none; letter-spacing: 0; }
+.taula { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0; }
+.taula th, .taula td { padding: 5px 6px; border-bottom: 1px solid #EFE4D0; text-align: left; vertical-align: top; }
+.taula.registre td:first-child { white-space: nowrap; }
+.llista { margin: 4px 0; padding-left: 18px; font-size: 14px; }
+.enllac { padding: 0; border: 0; background: none; color: #1F5FA8; text-decoration: underline; font: inherit; cursor: pointer; }
+.casella { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+details summary { cursor: pointer; padding: 4px 0; font-size: 14px; }
+body.admin .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom: auto; }
+@media (min-width: 900px) {
+  body.admin .escena { right: 420px; }
+  .panell-admin { left: auto; top: 0; width: 420px; height: auto; border-radius: 0; }
+  body.admin .zoom { right: calc(420px + 12px); }
+  body.admin .capcal { right: 420px; }
+}
+.impressio { display: none; }
+@media print {
+  @page { size: A4; margin: 0; }
+  body.admin { background: #FFFFFF; overflow: visible; }
+  body.admin > *:not(#impressio) { display: none !important; }
+  .impressio { display: block; }
+  .full-etiquetes { width: 210mm; height: 297mm; padding: .5mm 0 0 0; display: grid; grid-template-columns: repeat(3, 70mm);
+    grid-template-rows: repeat(8, 37mm); break-after: page; page-break-after: always; }
+  .full-etiquetes .etiqueta { display: flex; align-items: center; gap: 2.5mm; padding: 2.5mm 3mm; overflow: hidden; color: #000; font-family: system-ui, sans-serif; }
+  .full-etiquetes svg { width: 31mm; height: 31mm; flex: 0 0 auto; }
+  .full-etiquetes .t { font-size: 8.5pt; font-weight: 700; margin: 0 0 1mm; }
+  .full-etiquetes .c { font: 700 12.5pt/1 ui-monospace, Menlo, monospace; margin: 0 0 1.2mm; white-space: nowrap; }
+  .full-etiquetes .p { font-size: 6.5pt; line-height: 1.25; margin: 0; }
+}
 
 /* Pàgina de privacitat */
 .text { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; overflow: auto; height: 100%; }

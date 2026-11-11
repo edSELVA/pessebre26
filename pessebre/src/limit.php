@@ -22,7 +22,7 @@ function limit_empremta(PDO $pdo, string $ip, DateTimeImmutable $ara): string
 }
 
 /** Llança una excepció si aquesta empremta (o el servidor sencer) ha fallat massa. */
-function limit_comprova(PDO $pdo, string $empremta, DateTimeImmutable $ara): void
+function limit_comprova(PDO $pdo, string $empremta, DateTimeImmutable $ara, int $maxim = LIMIT_FALLADES): void
 {
     $minut = $ara->format('YmdHi');
     if (config_llegeix($pdo, 'global_minut') === $minut && (int)config_llegeix($pdo, 'global_fallades', '0') >= LIMIT_GLOBAL_MINUT) {
@@ -31,7 +31,7 @@ function limit_comprova(PDO $pdo, string $empremta, DateTimeImmutable $ara): voi
     $st = $pdo->prepare('SELECT finestra, fallades FROM intents WHERE empremta = ?');
     $st->execute([$empremta]);
     $r = $st->fetch();
-    if ($r && $r['finestra'] > bd_hora($ara->modify('-' . LIMIT_FINESTRA . ' seconds')) && (int)$r['fallades'] >= LIMIT_FALLADES) {
+    if ($r && $r['finestra'] > bd_hora($ara->modify('-' . LIMIT_FINESTRA . ' seconds')) && (int)$r['fallades'] >= $maxim) {
         throw new ErrorPessebre('Massa intents fallits. Torna-ho a provar d\'aquí a 15 minuts.', 429, 'massa_intents');
     }
 }

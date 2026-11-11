@@ -10,6 +10,8 @@ require_once __DIR__ . '/codis.php';
 require_once __DIR__ . '/limit.php';
 require_once __DIR__ . '/reserva.php';
 require_once __DIR__ . '/snapshot.php';
+require_once __DIR__ . '/qr.php';
+require_once __DIR__ . '/admin.php';
 
 const SNAPSHOT_EDAT_TICK = 900;   // el «tick» públic només fa feina si el snapshot té més de 15 minuts
 
@@ -142,12 +144,14 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 return [200, ['ok' => true] + $res];
 
             default:
+                if (strncmp($a, 'admin.', 6) === 0) return [200, ['ok' => true] + admin_accio($pdo, $cfg, $a, $p, $ip, $ara)];
                 return [400, ['ok' => false, 'error' => 'Acció desconeguda.', 'codi' => 'accio']];
         }
     } catch (ErrorPessebre $e) {
         // Les fallades d'enllaç o de codi s'han de desar encara que la transacció s'hagi desfet.
         // Els errors de format o del caràcter de control (transcripció) no compten com a intents.
         if ($e->codi === 'enllac' || $e->codi === 'codi') app_apunta_fallada($pdo, $ip, $ara);
+        if ($e->codi === 'contrasenya') admin_apunta_fallada($pdo, $ip, $ara);
         return [$e->estat, ['ok' => false, 'error' => $e->getMessage(), 'codi' => $e->codi]];
     }
 }

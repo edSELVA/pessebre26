@@ -7,6 +7,7 @@
 //   php eines/gestio.php codis N                   crea un lot de N codis de família i el full d'etiquetes per imprimir
 //   php eines/gestio.php ronda 1|2                 segona ronda: cada codi permet una segona participació
 //   php eines/gestio.php calendari CLAU "AAAA-MM-DD hh:mm"   families_des, families_fins, claustre_des, claustre_tanca (hora de Barcelona)
+//   php eines/gestio.php contrasenya admin|lectura  contrasenya de la pàgina d'administració (es desa només el hash)
 //   php eines/gestio.php allibera LLOC             allibera una casa (p. ex. C014)
 //   php eines/gestio.php tanca "AAAA-MM-DD hh:mm"  hora de tancament de les classes (hora de Barcelona)
 //   php eines/gestio.php aturada si|no             atura o reprèn les reserves
@@ -17,7 +18,6 @@ declare(strict_types=1);
 require __DIR__ . '/../pessebre/src/app.php';
 require __DIR__ . '/../pessebre/src/etiquetes.php';
 
-const NOM_CLASSE = '/^[\p{L}\p{N} .·\'-]{1,8}$/u';
 
 $args = array_values(array_filter(array_slice($argv, 1), function ($a) { return strncmp($a, '--config=', 9) !== 0; }));
 $opc = array_values(array_filter($argv, function ($a) { return strncmp($a, '--config=', 9) === 0; }));
@@ -60,36 +60,41 @@ switch ($ordre) {
 
     case 'classes':
         $fitxer = $args[1] ?? surt('Falta el fitxer. Ús: php eines/gestio.php classes classes.csv');
-        $linies = @file($fitxer, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: surt("No es pot llegir $fitxer");
-        $noves = [];
-        foreach ($linies as $i => $linia) {
-            $linia = trim(preg_replace('/^\xEF\xBB\xBF/', '', $linia));
-            if ($linia === '' || $linia[0] === '#' || $linia === 'etapa;nom') continue;
-            $parts = array_map('trim', explode(';', $linia));
-            if (count($parts) !== 2 || !isset(ETAPES[$parts[0]])) surt("Línia " . ($i + 1) . ": cal «etapa;nom» amb etapa " . implode(', ', array_keys(ETAPES)));
-            if (!preg_match(NOM_CLASSE, $parts[1])) surt("Línia " . ($i + 1) . ": el nom «{$parts[1]}» ha de tenir com a molt 8 caràcters (lletres, xifres, espais, punts o guions)");
-            if (isset($noves[$parts[1]])) surt("Línia " . ($i + 1) . ": el nom «{$parts[1]}» està repetit");
-            $noves[$parts[1]] = ['etapa' => $parts[0], 'ordre' => count($noves)];
+        $text = @file_get_contents($fitxer);
+        if ($text === false) surt("No es pot llegir $fitxer");
+        try {
+            $pdo->beginTransaction();
+            [$n, $avisos] = classes_carrega($pdo, $text);
+            $pdo->commit();
+        } catch (ErrorPessebre $e) {
+            $pdo->rollBack();
+            surt($e->getMessage());
         }
-        $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
-        if (count($noves) > $poble) surt('Hi ha ' . count($noves) . " classes i només $poble cases de classe.");
-        $pdo->beginTransaction();
-        foreach ($noves as $nom => $c) {
-            $st = $pdo->prepare('UPDATE classes SET etapa = ?, ordre = ? WHERE nom = ?');
-            $st->execute([$c['etapa'], $c['ordre'], $nom]);
-            $existeix = $pdo->prepare('SELECT COUNT(*) FROM classes WHERE nom = ?');
-            $existeix->execute([$nom]);
-            if (!(int)$existeix->fetchColumn()) $pdo->prepare('INSERT INTO classes (etapa, nom, ordre) VALUES (?, ?, ?)')->execute([$c['etapa'], $nom, $c['ordre']]);
-        }
-        $mantingudes = 0;
-        foreach ($pdo->query('SELECT c.id, c.nom, o.lloc_id FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id')->fetchAll() as $c) {
-            if (isset($noves[$c['nom']])) continue;
-            if ($c['lloc_id']) { $mantingudes++; echo "Avís: «{$c['nom']}» no és al fitxer però ja té casa ({$c['lloc_id']}); es manté.\n"; continue; }
-            $pdo->prepare('DELETE FROM classes WHERE id = ?')->execute([$c['id']]);
-        }
-        $pdo->commit();
+        foreach ($avisos as $a) echo "Avís: $a\n";
         $per = $pdo->query('SELECT etapa, COUNT(*) AS n FROM classes GROUP BY etapa')->fetchAll(PDO::FETCH_KEY_PAIR);
-        echo "Classes carregades: " . count($noves) . " (" . implode(', ', array_map(function ($e, $n) { return "$e $n"; }, array_keys($per), $per)) . ").\n";
+        echo "Classes carregades: $n (" . implode(', ', array_map(function ($e, $n) { return "$e $n"; }, array_keys($per), $per)) . ").\n";
+        break;
+
+    case 'contrasenya':
+        // Desa a config.php el hash d'una contrasenya nova (la contrasenya no es desa enlloc)
+        $rol = $args[1] ?? '';
+        if ($rol !== 'admin' && $rol !== 'lectura') surt('Ús: php eines/gestio.php contrasenya admin|lectura');
+        fwrite(STDOUT, "Contrasenya nova per a «{$rol}» (no es veurà en escriure-la): ");
+        if (function_exists('shell_exec')) @shell_exec('stty -echo 2>/dev/null');
+        $c1 = trim((string)fgets(STDIN));
+        fwrite(STDOUT, "\nTorna-la a escriure: ");
+        $c2 = trim((string)fgets(STDIN));
+        if (function_exists('shell_exec')) @shell_exec('stty echo 2>/dev/null');
+        fwrite(STDOUT, "\n");
+        if ($c1 !== $c2) surt('No coincideixen.');
+        if (mb_strlen($c1) < 10) surt('Ha de tenir com a mínim 10 caràcters.');
+        $clau = $rol === 'admin' ? 'hash_admin' : 'hash_lectura';
+        $text = (string)file_get_contents($cami_config);
+        $hash = password_hash($c1, PASSWORD_DEFAULT);
+        $nou = preg_replace_callback("/('$clau'\s*=>\s*)'[^']*'/", function ($m) use ($hash) { return $m[1] . var_export($hash, true); }, $text, 1, $fet);
+        if (!$fet) surt("No trobo '$clau' a $cami_config");
+        file_put_contents($cami_config, $nou);
+        echo "Contrasenya de «{$rol}» desada (a config.php només hi ha el hash).\n";
         break;
 
     case 'enllac':
@@ -181,5 +186,5 @@ switch ($ordre) {
         break;
 
     default:
-        surt("Ordres: installa, classes, enllac, codis, ronda, calendari, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
+        surt("Ordres: installa, classes, enllac, codis, ronda, calendari, contrasenya, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
 }
