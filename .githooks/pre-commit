@@ -1,0 +1,3 @@
+#!/bin/sh
+# S'activa amb:  git config core.hooksPath .githooks
+exec sh eines/comprova-secrets.sh

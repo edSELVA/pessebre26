@@ -1,0 +1,25 @@
+# ── Secrets i dades reals: MAI al repositori (vegeu CLAUDE.md §9) ──
+pessebre/config.php
+config.php
+pessebre/dades/
+dades/
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.bak
+*.csv
+.env
+*.pem
+*.key
+
+# Generat pel servidor (a l'hosting) o per eines/dades-exemple.php (en local)
+public_html/snapshot.json
+public_html/snapshot.json.tmp
+*.tmp
+
+# Sistema i editors
+.DS_Store
+.claude/
+.idea/
+.vscode/

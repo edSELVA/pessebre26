@@ -1,0 +1,9 @@
+{
+ "nota": "Camí de primer terme per als Reis. Els punts de control són els de CAMI a eines/terreny.py del paquet v2 (el camí no és al paquet com a dada). final_x és la x on s'atura el primer rei el darrer dia (PROPOSTA, pendent de validar).",
+ "primer_dia": "2026-12-21",
+ "passos": 15,
+ "final_x": 1596,
+ "control": [[-10, 708], [120, 716], [260, 712], [400, 698], [520, 672], [620, 648], [690, 634], [810, 634], [900, 648], [1010, 664],
+             [1130, 672], [1260, 664], [1380, 646], [1480, 628], [1560, 618], [1640, 616], [1730, 620], [1850, 632], [1980, 654],
+             [2110, 664], [2250, 652], [2410, 640]]
+}

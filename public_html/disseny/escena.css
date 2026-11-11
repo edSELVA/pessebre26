@@ -1,0 +1,87 @@
+/* Generat per eines/converteix.php. No l'editis a mà. */
+/* Estils de les capes (al paquet eren atributs style, que la CSP no permet) */
+#llum-boira { opacity: var(--op-boira,1); }
+#llum-estel { opacity: var(--op-estel,1); }
+#llum-halos { opacity: var(--op-estel,1); }
+#llum-neu { opacity: var(--op-neu,0); }
+#llum-terra-gran { opacity: var(--op-terra,1); }
+#llum-terra-tolls { opacity: var(--op-terra,1); }
+#llum-tint { mix-blend-mode: multiply; opacity: var(--op-tint,0); }
+#llum-vinyeta { opacity: var(--op-vinyeta,1); }
+#sol { opacity: var(--sol-op,0); transform: translate(var(--sol-x,0px),var(--sol-y,0px)); }
+/* Llocs lliures: silueta fantasma (cases opacitat .62, elements .5) */
+.fantasma {
+  --aigua: #FFF3DA;
+  --aigua-clar: #FFFDF4;
+  --aigua-ombra: #EBDCC0;
+  --blanc: #FFF3DA;
+  --blanc-ombra: #EBDCC0;
+  --contorn: #FFFFFF;
+  --escuma: #FFF3DA;
+  --facana: #FFF3DA;
+  --facana-clar: #FFFDF4;
+  --facana-fosc: #D8C6A6;
+  --facana-ombra: #EBDCC0;
+  --flor: #FFF3DA;
+  --flor-clar: #FFFDF4;
+  --flor-ombra: #EBDCC0;
+  --fruit: #FFF3DA;
+  --fruit-clar: #FFFDF4;
+  --fulla: #FFF3DA;
+  --fulla-clar: #FFFDF4;
+  --fulla-fosc: #D8C6A6;
+  --fulla-llum: #FFFDF4;
+  --fulla-ombra: #EBDCC0;
+  --fusta: #FFF3DA;
+  --fusta-clar: #FFFDF4;
+  --fusta-ombra: #EBDCC0;
+  --gris-ombra: #EBDCC0;
+  --groc: #FFF3DA;
+  --groc-clar: #FFFDF4;
+  --herba-ombra: #EBDCC0;
+  --lila: #FFF3DA;
+  --lila-ombra: #EBDCC0;
+  --llum: #FFF3DA;
+  --llum-clar: #FFFDF4;
+  --llum-ombra: #EBDCC0;
+  --nit: #FFF3DA;
+  --oliva: #FFF3DA;
+  --oliva-clar: #FFFDF4;
+  --oliva-fosc: #D8C6A6;
+  --oliva-llum: #FFFDF4;
+  --oliva-ombra: #EBDCC0;
+  --ombra-terra: #FFFFFF;
+  --or: #FFF3DA;
+  --palla: #FFF3DA;
+  --palla-clar: #FFFDF4;
+  --palla-fosc: #D8C6A6;
+  --palla-ombra: #EBDCC0;
+  --pedra: #FFF3DA;
+  --pedra-clar: #FFFDF4;
+  --pedra-fosc: #D8C6A6;
+  --pedra-ombra: #EBDCC0;
+  --placa: #FFF3DA;
+  --placa-ombra: #EBDCC0;
+  --porta: #FFF3DA;
+  --porta-clar: #FFFDF4;
+  --porta-ombra: #EBDCC0;
+  --roba: #FFF3DA;
+  --roba-ombra: #EBDCC0;
+  --roba2: #FFF3DA;
+  --taronja: #FFF3DA;
+  --teulada: #FFF3DA;
+  --teulada-clar: #FFFDF4;
+  --teulada-fosc: #D8C6A6;
+  --teulada-ombra: #EBDCC0;
+  --tronc: #FFF3DA;
+  --tronc-clar: #FFFDF4;
+  --tronc-ombra: #EBDCC0;
+  --vermell: #FFF3DA;
+  --vermell-ombra: #EBDCC0;
+  --xiprer: #FFF3DA;
+  --xiprer-clar: #FFFDF4;
+  --xiprer-fosc: #D8C6A6;
+  --xiprer-ombra: #EBDCC0;
+}
+.fantasma.casa { opacity: .62; }
+.fantasma.element { opacity: .5; }

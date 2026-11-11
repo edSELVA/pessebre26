@@ -1,0 +1,5 @@
+#!/bin/sh
+# Executa totes les proves automàtiques:  ./prova   (o: sh prova)
+cd "$(dirname "$0")" || exit 1
+PHP=$(sh eines/php.sh) || exit 1
+exec "$PHP" proves/executa.php "$@"

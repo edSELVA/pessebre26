@@ -1,0 +1,26 @@
+# Pessebre · configuració d'Apache (també serveix com a referència per a altres servidors)
+Options -Indexes
+AddDefaultCharset utf-8
+AddType application/json .json
+AddType image/svg+xml .svg
+
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+  # HTTPS obligatori (activar quan el subdomini tingui certificat)
+  # Header always set Strict-Transport-Security "max-age=31536000"
+  <FilesMatch "^snapshot\.json$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+# Res de fitxers ocults ni temporals
+<FilesMatch "^\.|\.tmp$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/json image/svg+xml text/css application/javascript text/html
+</IfModule>

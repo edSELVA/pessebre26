@@ -1,0 +1,113 @@
+/* Visor del pessebre. Sense tipografies ni recursos externs. */
+:root {
+  --fons: #0A1040;
+  --text: #FFF6E0;
+  --text-suau: #C9C6DA;
+  --or: #FFD24F;
+  --vidre: rgba(10, 16, 64, .72);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--fons);
+  color: var(--text);
+  font: 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.escena {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;            /* el zoom i el desplaçament els gestiona zoom.js */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  background: var(--fons);
+}
+.escena:active { cursor: grabbing; }
+.escena svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  background: var(--cel-alt, #0A1247);
+}
+.missatge { margin: 40vh 16px 0; text-align: center; color: var(--text-suau); }
+
+.placa-text {
+  font: bold 5px/1 system-ui, sans-serif;
+  fill: #3A2820;
+  pointer-events: none;
+}
+
+/* Barres superior i inferior, damunt de l'escena */
+.capcal, .peu {
+  position: fixed;
+  left: 0;
+  right: 0;
+  padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+  pointer-events: none;
+  z-index: 2;
+}
+.capcal {
+  top: 0;
+  padding-top: max(8px, env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: linear-gradient(var(--vidre), transparent);
+}
+.capcal h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em; text-shadow: 0 1px 2px #0008; }
+.avis-mode {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: var(--or);
+  color: #3A2820;
+  font-size: 13px;
+  font-weight: 650;
+}
+.peu {
+  bottom: 0;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--vidre) 40%);
+}
+.peu a { color: var(--text); pointer-events: auto; }
+.privacitat { margin: 4px 0 0; font-size: 12px; color: var(--text-suau); }
+
+.comptador { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 14px; font-weight: 600; }
+.comptador .barra { flex: 1; min-width: 80px; max-width: 220px; height: 6px; border-radius: 3px; background: #FFFFFF30; overflow: hidden; }
+#comptador-barra { display: block; height: 100%; width: 0; background: var(--or); transition: width .6s; }
+
+.zoom {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(max(8px, env(safe-area-inset-bottom)) + 64px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 3;
+}
+.zoom[hidden] { display: none; }
+.zoom button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #FFFFFF40;
+  border-radius: 12px;
+  background: var(--vidre);
+  color: var(--text);
+  font: 600 22px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.zoom button:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+
+/* Pàgina de privacitat */
+.text { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; overflow: auto; height: 100%; }
+.text h1 { font-size: 22px; }
+.text a { color: var(--or); }
+body.pagina { overflow: auto; }

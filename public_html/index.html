@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0A1040">
+<title>Pessebre de l'escola</title>
+<link rel="stylesheet" href="app/estil.css">
+<link rel="stylesheet" href="disseny/moments.css">
+<link rel="stylesheet" href="disseny/escena.css">
+</head>
+<body>
+<header class="capcal">
+  <h1>Pessebre de l'escola</h1>
+  <p id="avis-mode" class="avis-mode" hidden></p>
+</header>
+
+<main id="escena" class="escena" aria-label="Pessebre. Arrossega per moure't i pessiga per apropar-te.">
+  <p class="missatge">Carregant el pessebre…</p>
+</main>
+
+<div id="zoom" class="zoom" hidden>
+  <button id="zoom-mes" type="button" aria-label="Apropa">+</button>
+  <button id="zoom-menys" type="button" aria-label="Allunya">−</button>
+  <button id="zoom-tot" type="button" aria-label="Veure tot el pessebre">⤢</button>
+</div>
+
+<footer class="peu">
+  <div id="comptador" class="comptador" hidden>
+    <span id="comptador-text"></span>
+    <span class="barra"><span id="comptador-barra"></span></span>
+  </div>
+  <p class="privacitat">Aquest pessebre no fa servir cookies ni demana noms ni dades personals. <a href="privacitat.html">Privacitat</a></p>
+</footer>
+
+<script src="app/compon.js"></script>
+<script src="app/zoom.js"></script>
+<script src="app/visor.js"></script>
+</body>
+</html>

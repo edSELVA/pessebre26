@@ -1,0 +1,41 @@
+# Proves + publicació del visor amb dades d'EXEMPLE a GitHub Pages (només estàtic).
+# Cal activar-ho un cop: Settings → Pages → Source: GitHub Actions.
+name: Proves i visor de prova
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  proves:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Proves
+        run: php proves/executa.php
+
+  publica:
+    needs: proves
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.desplega.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Snapshot d'exemple
+        run: cp public_html/exemples/nit.json public_html/snapshot.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public_html
+      - id: desplega
+        uses: actions/deploy-pages@v4
