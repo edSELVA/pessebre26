@@ -1,0 +1,37 @@
+etapa;nom
+# Llista de classes INVENTADA per a proves (la real va a classes.csv, que no es puja mai).
+# Format: etapa;nom   ·  etapes: llar, infantil, primaria, secundaria, cicles  ·  nom de 8 caràcters com a màxim
+llar;Nadons
+llar;Gatets
+infantil;Lluna
+infantil;Estels
+infantil;Pins
+infantil;Roure
+infantil;Riu
+infantil;Cabres
+primaria;Mussols
+primaria;Guineus
+primaria;Esquirol
+primaria;Cargols
+primaria;Abelles
+primaria;Grills
+primaria;Pomes
+primaria;Nespres
+primaria;Codonys
+primaria;Figues
+primaria;Glans
+primaria;Bolets
+secundaria;3r ESO B
+secundaria;Molses
+secundaria;Falguera
+secundaria;Ginesta
+secundaria;Romaní
+secundaria;Farigola
+secundaria;Espígol
+secundaria;Óssos
+secundaria;Llops
+secundaria;Daines
+cicles;Isards
+cicles;Senglars
+cicles;Teixons
+cicles;Llúdriga

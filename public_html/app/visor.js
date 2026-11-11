@@ -1,20 +1,17 @@
-// Visor públic del pessebre: carrega el disseny i snapshot.json, dibuixa l'escena i gestiona el zoom tàctil.
-// Mode participar: #c=CODI (famílies) o #k=ENLLAÇ (claustre). El que va després del # no arriba mai al servidor.
+// Visor del pessebre: carrega el disseny i el snapshot, dibuixa l'escena i gestiona el zoom tàctil.
+// El fan servir index.html (visor públic) i classes.html (tutors).
+// Visor públic: mode participar amb #c=CODI (famílies) o #k=ENLLAÇ (claustre); el que va després del # no arriba mai al servidor.
 // Només per a proves: #s=nom carrega exemples/nom.json en lloc de snapshot.json.
 'use strict';
 
-(function () {
+var Visor = (function () {
   var NS = 'http://www.w3.org/2000/svg';
   var AMPLE = 2400, ALT = 800;
-  var REFRESC_MS = 60000;
 
-  var hash = llegeixHash();
-  var mode = hash.c ? 'familia' : (hash.k ? 'claustre' : null);
-  var fontSnapshot = /^[a-z0-9-]{1,30}$/.test(hash.s || '') ? 'exemples/' + hash.s + '.json' : 'snapshot.json';
-
-  var D = {};          // disseny: mapa, peces, paletes, fixa, reis
-  var capes = {};      // grups SVG on es dibuixa
-  var svg;
+  var D = {};            // disseny: mapa, peces, paletes, fixa, reis
+  var capes = {};        // grups SVG on es dibuixa
+  var svg, op = {}, darrer = null;
+  var propis = {};       // ocupacions locals encara no confirmades (la tria del tutor): id → {p, c}
 
   function llegeixHash() {
     var out = {};
@@ -69,7 +66,7 @@
     var escena = document.getElementById('escena');
     escena.textContent = '';
     escena.appendChild(svg);
-    Zoom.inicia(escena, svg);
+    Zoom.inicia(escena, svg, { vista: op.vista, enToc: op.enToc ? toc : null });
     Zoom.botons(document.getElementById('zoom-mes'), document.getElementById('zoom-menys'), document.getElementById('zoom-tot'));
     document.getElementById('zoom').hidden = false;
   }
@@ -85,9 +82,10 @@
     return u;
   }
 
-  // ── dibuix de l'estat (es refà quan canvia el snapshot)
+  // ── dibuix de l'estat (es refà quan canvia el snapshot o la tria local)
 
   function dibuixa(s) {
+    darrer = s;
     svg.setAttribute('class', 'moment-' + s.moment);
     [capes.peces, capes.tolls, capes.halos].forEach(function (g) { g.textContent = ''; });
     var zones = {};
@@ -106,14 +104,16 @@
       llista.push({ y: y, ordre: f.ordre, node: usa(f.codi, x, y, !!f.mirall, vars) });
     });
 
+    var poble = 0, ocupades = 0;
     D.mapa.llocs.forEach(function (l) {
-      var o = s.o[l.id];
+      var o = propis[l.id] || s.o[l.id];
+      if (l.grup === 'poble') { poble++; if (o) ocupades++; }
       if (o) {
         var peca = D.peces[o.p];
         var mirall = o.m !== undefined ? !!o.m : !!l.mirall;
         var vars = Compon.colors(peca, o.c, D.paletes);
         if (s.moment === 'neu' && peca.cat === 'casa') Compon.neuTeulada(vars);
-        llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars) });
+        llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, propis[l.id] ? 'propia' : null) });
         if (peca.cat === 'casa') capes.tolls.appendChild(usa('LLUM-TOLL', l.x, l.y + 5));
         if (o.p === 'ELE-FANAL') capes.halos.appendChild(usa('LLUM-HALO', l.x, l.y - 22));
         if (o.n) llista.push({ y: l.y, node: textPlaca(peca, l, mirall, o.n) });
@@ -121,16 +121,15 @@
       }
       if (!visibleLliure(l, s, zones)) return;
       if (l.tipus === 'casa' || l.tipus === 'element') {
-        llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus) });
-        if (l.tipus === 'casa') llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
-      } else if (mode && !retinguts[l.id] && l.grup === (mode === 'claustre' ? 'claustre' : 'general')) {
+        var ret = retinguts[l.id];
+        llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
+        if (l.tipus === 'casa' && !ret) llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
+      } else if ((op.mode === 'familia' || op.mode === 'claustre') && !retinguts[l.id] && l.grup === (op.mode === 'claustre' ? 'claustre' : 'general')) {
         llista.push({ y: l.y, node: usa(l.tipus === 'animal' ? 'MARCA-ANI' : 'MARCA-PER', l.x, l.y) });
       }
     });
 
     // El paviment del casc antic «es construeix» amb les cases de classe: del 35 % (cap) al 100 % (totes)
-    var poble = 0, ocupades = 0;
-    D.mapa.llocs.forEach(function (l) { if (l.grup === 'poble') { poble++; if (s.o[l.id]) ocupades++; } });
     svg.style.setProperty('--casc-op', (0.35 + 0.65 * ocupades / poble).toFixed(2));
 
     var frag = document.createDocumentFragment();
@@ -142,7 +141,7 @@
   // Un lloc lliure es dibuixa (en transparent) si la seva zona és oberta, amb excepcions per grup.
   function visibleLliure(l, s, zones) {
     if (l.grup === 'poble') return s.classes;                       // cases de classe: només durant les tutories
-    if (l.grup === 'claustre' && mode === 'claustre' && s.claustre) return true;   // el claustre els veu encara que la zona sigui tancada
+    if (l.grup === 'claustre' && op.mode === 'claustre' && s.claustre) return true;   // el claustre els veu encara que la zona sigui tancada
     return !!zones[l.zona];
   }
 
@@ -164,6 +163,7 @@
   function mostraComptador(c) {
     var t = Compon.textComptador(c);
     var caixa = document.getElementById('comptador');
+    if (!caixa) return;
     caixa.hidden = !t;
     if (!t) return;
     document.getElementById('comptador-text').textContent = t.text;
@@ -179,32 +179,72 @@
     e.appendChild(p);
   }
 
-  // ── inici
-
-  if (mode) {
-    var avis = document.getElementById('avis-mode');
-    avis.textContent = mode === 'claustre' ? 'Mode participar · claustre' : 'Mode participar';
-    avis.hidden = false;
+  // Toc sobre l'escena: busca el lloc que hi ha a sota entre els candidats que decideix la pàgina.
+  function toc(sx, sy) {
+    if (!darrer) return;
+    var candidats = D.mapa.llocs.filter(function (l) { return op.esCandidat(l, darrer); });
+    var l = Compon.toca(candidats, D.peces, sx, sy);
+    op.enToc(l, darrer);
   }
 
-  var d = 'disseny/';
-  Promise.all([
-    carrega(d + 'peces.svg'), carrega(d + 'terreny.svg'), carrega(d + 'llum-terra.svg'), carrega(d + 'llum-aire.svg'),
-    carrega(d + 'mapa.json', 'json'), carrega(d + 'peces.json', 'json'), carrega(d + 'paletes.json', 'json'),
-    carrega(d + 'escena-fixa.json', 'json'), carrega(d + 'reis-cami.json', 'json'), carrega(fontSnapshot, 'json')
-  ]).then(function (r) {
-    D = { mapa: r[4], peces: r[5].peces, paletes: r[6], fixa: r[7].peces, reis: r[8] };
-    construeix({ peces: r[0], terreny: r[1], terra: r[2], aire: r[3] });
-    dibuixa(r[9]);
-    var versio = r[9].versio;
-    if (mode) {
-      setInterval(function () {
-        carrega(fontSnapshot, 'json').then(function (s) {
-          if (s.versio !== versio) { versio = s.versio; dibuixa(s); }
-        }).catch(function () { /* es torna a provar al minut següent */ });
-      }, REFRESC_MS);
-    }
-  }).catch(function () {
-    error('No s\'ha pogut carregar el pessebre. Torna-ho a provar d\'aquí a una estona.');
-  });
+  // ── API
+
+  // op: { font, mode: null|'familia'|'claustre'|'classes', vista: {x, y, amplada}, refresc: ms,
+  //       esCandidat(lloc, s) i enToc(lloc|null, s) per als tocs, enSnapshot(s) }
+  function inicia(opcions) {
+    op = opcions || {};
+    var d = 'disseny/';
+    return Promise.all([
+      carrega(d + 'peces.svg'), carrega(d + 'terreny.svg'), carrega(d + 'llum-terra.svg'), carrega(d + 'llum-aire.svg'),
+      carrega(d + 'mapa.json', 'json'), carrega(d + 'peces.json', 'json'), carrega(d + 'paletes.json', 'json'),
+      carrega(d + 'escena-fixa.json', 'json'), carrega(d + 'reis-cami.json', 'json'), carrega(op.font, 'json')
+    ]).then(function (r) {
+      D = { mapa: r[4], peces: r[5].peces, paletes: r[6], fixa: r[7].peces, reis: r[8] };
+      construeix({ peces: r[0], terreny: r[1], terra: r[2], aire: r[3] });
+      dibuixa(r[9]);
+      if (op.enSnapshot) op.enSnapshot(r[9]);
+      if (op.refresc) setInterval(function () { refresca().catch(function () { /* es torna a provar més tard */ }); }, op.refresc);
+      return r[9];
+    }).catch(function (e) {
+      error('No s\'ha pogut carregar el pessebre. Torna-ho a provar d\'aquí a una estona.');
+      throw e;
+    });
+  }
+
+  function refresca() {
+    return carrega(op.font, 'json').then(function (s) {
+      if (!darrer || s.versio !== darrer.versio) { dibuixa(s); if (op.enSnapshot) op.enSnapshot(s); }
+      return s;
+    });
+  }
+
+  return {
+    inicia: inicia,
+    refresca: refresca,
+    redibuixa: function () { if (darrer) dibuixa(darrer); },
+    posa: function (id, o) { propis[id] = o; },
+    treu: function (id) { delete propis[id]; },
+    disseny: function () { return D; },
+    centra: function (x, y, amplada) { if (svg) Zoom.centra(x, y, amplada); },
+    hash: llegeixHash,
+    error: error
+  };
 })();
+
+// Visor públic (index.html)
+if (document.body.getAttribute('data-pagina') === 'visor') {
+  (function () {
+    var hash = Visor.hash();
+    var mode = hash.c ? 'familia' : (hash.k ? 'claustre' : null);
+    if (mode) {
+      var avis = document.getElementById('avis-mode');
+      avis.textContent = mode === 'claustre' ? 'Mode participar · claustre' : 'Mode participar';
+      avis.hidden = false;
+    }
+    Visor.inicia({
+      font: /^[a-z0-9-]{1,30}$/.test(hash.s || '') ? 'exemples/' + hash.s + '.json' : 'snapshot.json',
+      mode: mode,
+      refresc: mode ? 60000 : 0
+    }).catch(function () { /* el missatge ja es mostra */ });
+  })();
+}

@@ -38,6 +38,9 @@ body {
 }
 .missatge { margin: 40vh 16px 0; text-align: center; color: var(--text-suau); }
 
+/* Llocs retinguts per una altra persona: més apagats i sense contorn */
+.fantasma.retingut.casa, .fantasma.retingut.element { opacity: .14; }
+
 .placa-text {
   font: bold 5px/1 system-ui, sans-serif;
   fill: #3A2820;
@@ -105,6 +108,75 @@ body {
   cursor: pointer;
 }
 .zoom button:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+
+/* ── Pàgina dels tutors (classes.html) ── */
+.full {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  max-height: 62vh;
+  overflow: auto;
+  padding: 14px max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: #FFF8EA;
+  color: #2A2018;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -6px 24px #0006;
+}
+.full h2 { margin: 0 0 6px; font-size: 18px; }
+.full p { margin: 4px 0 10px; }
+.full .suau { color: #6A5A48; font-size: 14px; }
+.llista-classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin: 8px 0; }
+.boto {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #C9B79A;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #2A2018;
+  font: 600 15px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+.boto:disabled { opacity: .5; cursor: default; }
+.boto.primari { background: #2F7A3E; border-color: #2F7A3E; color: #FFFFFF; }
+.boto.suau { background: transparent; }
+.boto:focus-visible, .mostra:focus-visible { outline: 3px solid #E39A2E; outline-offset: 2px; }
+.botons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tria { display: flex; gap: 14px; align-items: flex-start; }
+.previsualitzacio { flex: 0 0 auto; width: 96px; height: 117px; border-radius: 12px; background: #EDE3CF; }
+.previsualitzacio svg { width: 100%; height: 100%; }
+.colors { flex: 1; min-width: 0; }
+.fila { margin-bottom: 8px; }
+.fila .etiqueta { display: block; font-size: 13px; font-weight: 650; color: #6A5A48; margin-bottom: 4px; }
+.mostres { display: flex; flex-wrap: wrap; gap: 6px; }
+.mostra {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 1px #C9B79A;
+  cursor: pointer;
+  padding: 0;
+}
+.mostra[aria-pressed="true"] { box-shadow: 0 0 0 3px #2A2018; }
+.compte { font-variant-numeric: tabular-nums; font-weight: 650; color: #A0521E; }
+.avis {
+  position: fixed;
+  left: 50%;
+  top: calc(max(8px, env(safe-area-inset-top)) + 48px);
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #2A2018;
+  color: #FFF6E0;
+  font-size: 14px;
+  box-shadow: 0 4px 16px #0006;
+}
+.avis[hidden] { display: none; }
+body.amb-full .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom: auto; }
 
 /* Pàgina de privacitat */
 .text { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; overflow: auto; height: 100%; }

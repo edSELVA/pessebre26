@@ -164,3 +164,10 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Noms de placa (decidit):** fins a **8 caràcters** (p. ex. «3r ESO B»).
 - **Peces i canvis propis:** van a `disseny-propi/` (el zip no s'edita) i passen per la mateixa llista blanca.
 - **Discrepàncies del paquet v2** (mana el zip, corregides a la conversió): no hi ha camp `grup`; els pastors porten `zona: Z0` però són a x 263–427; el camí dels Reis només és a `terreny.py`; el rectangle de `placa` del registre és el mateix per a tots els models i no coincideix amb el dibuix (es pren del dibuix); `CASA-BAIXA-P` no porta placa dibuixada (la dibuixa el visor); els 9 atributs `style` de les capes passen a `disseny/escena.css` per la CSP.
+
+## 13. Decisions de la Fase B (11 nov 2026)
+- **Gestió sense pàgina d'administració (decidit):** fins a la Fase D, ordres de terminal a `eines/gestio.php` (installa, classes, enllac, allibera, tanca, aturada, estat).
+- **Flux del tutor (decidit):** primer tria la classe, després toca una casa transparent del casc antic (retinguda 10 min), tria façana, teulada i porta amb llum neutra i confirma.
+- **Etapes (decidit):** 5, amb llar d'infants (`llar`, `infantil`, `primaria`, `secundaria`, `cicles`).
+- **Hosting (pendent):** cal demanar-lo a informàtica. Mentrestant es prova en local (SQLite; MySQL amb MAMP si s'engega).
+- **Llista de classes:** fitxer `classes.csv` (`etapa;nom`, noms de 8 caràcters com a molt), que no es puja mai. Exemple inventat a `eines/classes-exemple.txt`.

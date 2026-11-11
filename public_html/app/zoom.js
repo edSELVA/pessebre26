@@ -9,6 +9,7 @@ var Zoom = (function () {
   var v = { k: 1, x: 0, y: 0 };    // escala (px per unitat) i posició de l'origen de l'escena (px)
   var kDibuix = 1;                 // escala a què està dibuixat l'SVG
   var dits = {}, gest = null, temps = null;
+  var opc = {}, toc = null;        // toc: on i quan ha començat un toc d'un sol dit
 
   function mida() { return { w: cont.clientWidth, h: cont.clientHeight }; }
   function kMin() { var m = mida(); return Math.min(m.w / AMPLE, m.h / ALT); }
@@ -47,9 +48,20 @@ var Zoom = (function () {
 
   function vistaInicial() {
     var m = mida();
+    if (opc.vista) { centra(opc.vista.x, opc.vista.y, opc.vista.amplada); return; }
     v.k = Math.max(m.w / AMPLE, m.h / ALT);         // omple la pantalla
     v.x = m.w / 2 - CENTRE_INICIAL * v.k;
     v.y = (m.h - ALT * v.k) / 2;
+    aplica();
+    fixa();
+  }
+
+  // Centra la vista al punt (x, y) de l'escena, amb una amplada visible d'«amplada» unitats (opcional).
+  function centra(x, y, amplada) {
+    var m = mida();
+    if (amplada) v.k = Math.max(m.h / ALT, m.w / amplada);
+    v.x = m.w / 2 - x * v.k;
+    v.y = m.h / 2 - y * v.k;
     aplica();
     fixa();
   }
@@ -71,14 +83,17 @@ var Zoom = (function () {
     }
   }
 
-  function inicia(contenidor, element) {
+  // opcions: { vista: {x, y, amplada}, enToc(sx, sy) en coordenades de l'escena }
+  function inicia(contenidor, element, opcions) {
     cont = contenidor;
     svg = element;
+    opc = opcions || {};
     vistaInicial();
 
     cont.addEventListener('pointerdown', function (e) {
       cont.setPointerCapture(e.pointerId);
       dits[e.pointerId] = punt(e);
+      toc = Object.keys(dits).length === 1 ? { p: punt(e), t: Date.now(), id: e.pointerId } : null;
       iniciGest();
     });
     cont.addEventListener('pointermove', function (e) {
@@ -99,7 +114,17 @@ var Zoom = (function () {
       aplica();
     });
     ['pointerup', 'pointercancel'].forEach(function (nom) {
-      cont.addEventListener(nom, function (e) { delete dits[e.pointerId]; iniciGest(); });
+      cont.addEventListener(nom, function (e) {
+        var p = punt(e);
+        // Toc curt sense moure's: es passa a la pàgina en coordenades de l'escena
+        if (nom === 'pointerup' && toc && toc.id === e.pointerId && opc.enToc && Date.now() - toc.t < 600
+            && Math.hypot(p.x - toc.p.x, p.y - toc.p.y) < 8) {
+          opc.enToc((p.x - v.x) / v.k, (p.y - v.y) / v.k);
+        }
+        toc = null;
+        delete dits[e.pointerId];
+        iniciGest();
+      });
     });
     cont.addEventListener('wheel', function (e) {
       e.preventDefault();
@@ -117,5 +142,5 @@ var Zoom = (function () {
     tot.addEventListener('click', function () { v.k = kMin(); aplica(); });
   }
 
-  return { inicia: inicia, botons: botons };
+  return { inicia: inicia, botons: botons, centra: centra };
 })();

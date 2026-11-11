@@ -1,6 +1,7 @@
 <?php
 // Configuració d'EXEMPLE (valors falsos). Copia-la a config.php i canvia-ho tot.
 // config.php NO es puja mai al repositori (és a .gitignore).
+// En local, «php eines/gestio.php installa» crea un config.php de proves amb valors aleatoris.
 // Genera valors aleatoris amb:  php -r 'echo bin2hex(random_bytes(32)), "\n";'
 // Hash d'una contrasenya:       php -r 'echo password_hash("la-contrasenya", PASSWORD_DEFAULT), "\n";'
 
@@ -16,10 +17,12 @@ return [
     'hash_admin' => 'CANVIA-AIXO',          // password_hash de la contrasenya d'administració
     'hash_lectura' => 'CANVIA-AIXO',        // password_hash de la contrasenya de només lectura
 
-    // Rutes
+    // Rutes i adreça pública
+    'web'        => __DIR__ . '/../public_html',             // carpeta pública (on hi ha disseny/ i snapshot.json)
     'snapshot'   => __DIR__ . '/../public_html/snapshot.json',
     'bloqueig'   => __DIR__ . '/dades/escriptura.lock',
+    'url_base'   => 'https://pessebre.exemple.cat/',        // per escriure els enllaços d'etapa
 
-    // Només a l'entorn de proves: data simulada (AAAA-MM-DD) o null
+    // Només a l'entorn de proves: data simulada (AAAA-MM-DD) per als Reis, o null
     'data_simulada' => null,
 ];

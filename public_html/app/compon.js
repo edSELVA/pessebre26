@@ -53,6 +53,25 @@ var Compon = (function () {
     return { x: esq, y: y - peca.a[1] + p[1], w: p[2], h: p[3] };
   }
 
+  // Rectangle opac (caixa del registre) d'una peça col·locada, en coordenades de l'escena.
+  function caixa(peca, x, y, mirall) {
+    var c = peca.caixa, x0 = x - peca.a[0], y0 = y - peca.a[1];
+    var esq = mirall ? x + peca.a[0] - c[2] : x0 + c[0];
+    return { x0: esq, y0: y0 + c[1], x1: esq + (c[2] - c[0]), y1: y0 + c[3] };
+  }
+
+  // Quin lloc hi ha al punt (sx, sy) de l'escena? Si n'hi ha diversos, el de davant (y més gran). Marge de 2 unitats.
+  function toca(llocs, peces, sx, sy) {
+    var millor = null;
+    llocs.forEach(function (l) {
+      var p = peces[l.codi];
+      if (!p) return;
+      var c = caixa(p, l.x, l.y, !!l.mirall);
+      if (sx >= c.x0 - 2 && sx <= c.x1 + 2 && sy >= c.y0 - 2 && sy <= c.y1 + 2 && (!millor || l.y > millor.y)) millor = l;
+    });
+    return millor;
+  }
+
   // Dies entre dues dates AAAA-MM-DD.
   function dies(desde, fins) {
     var a = desde.split('-'), b = fins.split('-');
@@ -103,7 +122,7 @@ var Compon = (function () {
   }
 
   return {
-    colloca: colloca, colors: colors, barreja: barreja, neuTeulada: neuTeulada, placa: placa,
+    colloca: colloca, colors: colors, caixa: caixa, toca: toca, barreja: barreja, neuTeulada: neuTeulada, placa: placa,
     dies: dies, puntCami: puntCami, reis: reis, ordena: ordena, textComptador: textComptador
   };
 })();

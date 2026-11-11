@@ -98,3 +98,62 @@ function snapshot_escriu(string $cami, array $s): void
         throw new RuntimeException("No es pot escriure $cami");
     }
 }
+
+/** Data del servidor (dia d'Europe/Madrid), o la data simulada de config.php a l'entorn de proves. */
+function snapshot_data(array $cfg, DateTimeImmutable $ara): string
+{
+    $sim = $cfg['data_simulada'] ?? null;
+    if (is_string($sim) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $sim)) return $sim;
+    return $ara->setTimezone(new DateTimeZone('Europe/Madrid'))->format('Y-m-d');
+}
+
+/** Construeix el snapshot a partir de la base de dades. */
+function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
+{
+    $o = [];
+    $ret = [];
+    $st = $pdo->prepare("SELECT o.*, l.tipus, l.grup, l.mirall AS mirall_mapa, c.nom AS classe
+                         FROM ocupacions o JOIN llocs l ON l.id = o.lloc_id LEFT JOIN classes c ON c.id = o.classe_id
+                         WHERE o.estat = 'confirmat' OR o.caduca > ? ORDER BY o.lloc_id");
+    $st->execute([bd_hora($ara)]);
+    $classes_fetes = 0;
+    $reals = 0;
+    foreach ($st->fetchAll() as $r) {
+        if ($r['estat'] !== 'confirmat') { $ret[] = $r['lloc_id']; continue; }
+        $e = ['p' => $r['peca']];
+        if (in_array($r['tipus'], ['persona', 'animal'], true)) $e['m'] = (int)$r['mirall'];
+        $c = json_decode((string)$r['colors'], true);
+        if (is_array($c) && $c) $e['c'] = $c;
+        if ($r['classe'] !== null && $r['grup'] === 'poble' && substr((string)$r['peca'], -2) === '-P') $e['n'] = $r['classe'];
+        $o[$r['lloc_id']] = $e;
+        if ($r['grup'] === 'poble' && $r['origen'] === 'classe') $classes_fetes++;
+        if ($r['origen'] !== 'auto') $reals++;
+    }
+    $classes = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00');
+    $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
+    $zones = array_values(array_filter(explode(',', config_llegeix($pdo, 'zones', 'Z0'))));
+    $fita = config_llegeix($pdo, 'fita_seguent');
+    return [
+        'versio' => (int)config_llegeix($pdo, 'versio', '0') + 1,
+        'generat' => $ara->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z'),
+        'data' => snapshot_data($cfg, $ara),
+        'moment' => config_llegeix($pdo, 'moment', 'dia'),
+        'zones' => $zones,
+        'classes' => $classes,
+        'claustre' => false,      // Fase C
+        'comptador' => $classes
+            ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => $poble]
+            : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita === null ? null : (int)$fita],
+        'o' => (object)$o,
+        'r' => $ret,
+    ];
+}
+
+/** Regenera snapshot.json (augmenta la versió). */
+function snapshot_regenera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
+{
+    $s = snapshot_genera($pdo, $cfg, $ara);
+    config_desa($pdo, 'versio', (string)$s['versio']);
+    snapshot_escriu($cfg['snapshot'], $s);
+    return $s;
+}
