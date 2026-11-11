@@ -14,7 +14,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const JSON_F = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 const ELEMENTS_SVG = ['svg', 'g', 'defs', 'symbol', 'path', 'use', 'rect', 'ellipse', 'circle',
                       'pattern', 'linearGradient', 'radialGradient', 'stop'];
-const ROLS_PERSONALITZABLES = ['facana' => 4, 'teulada' => 4, 'porta' => 3, 'roba' => 3, 'mocador' => 3, 'roba2' => 3];
+const ROLS_PERSONALITZABLES = ['facana' => 4, 'teulada' => 4, 'porta' => 3, 'flor' => 3, 'roba' => 3, 'mocador' => 3, 'roba2' => 3];
 const CATEGORIES = ['casa', 'element', 'persona', 'animal', 'escena', 'decoracio', 'marca'];
 const MOMENTS = ['dia', 'posta', 'nit', 'neu'];
 // Colors de la silueta fantasma (compon.FANTASMA de la guia v2)
@@ -288,8 +288,13 @@ function converteix(string $zip, string $arrel): array
     }
     ksort($registre);
     $paletes = valida_paletes(llegeix_json($f, 'paletes.json'), ['cases' => ['facana', 'teulada', 'porta'], 'persones' => ['roba', 'mocador', 'roba2']]);
-    // Paleta pròpia dels pastors (disseny-propi/paletes.json)
-    $paletes += valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true), ['pastors' => ['roba', 'mocador', 'roba2']]);
+    // Paletes pròpies (disseny-propi/paletes.json): flors de les cases i roba dels pastors
+    $propies = valida_paletes((array)json_decode((string)file_get_contents("$arrel/disseny-propi/paletes.json"), true), ['cases' => ['flor'], 'pastors' => ['roba', 'mocador', 'roba2']]);
+    foreach ($propies as $grup => $rols) foreach ($rols as $rol => $v) $paletes[$grup][$rol] = $v;
+    // Les cases amb jardineres també tenen el color de les flors personalitzable (després de façana, teulada i porta)
+    foreach ($registre as $codi => $p) {
+        if ($p['cat'] === 'casa' && in_array('flor', $p['rols'], true) && !in_array('flor', $p['pers'], true)) $registre[$codi]['pers'][] = 'flor';
+    }
 
     // Capes 2400×800 i estils de capa
     $css = [];
@@ -446,9 +451,136 @@ function sprite_peces(array $f, array $registre, array $defs_terra): array
             $s->appendChild($nou);
         }
         $defs->appendChild($s);
+        // Cases: finestres que el tutor pot treure. Per a cada una, una «tapa» (pc-CODI-F0, F1…) que hi dibuixa paret.
+        if (!$es_llum && $peces[$codi]['cat'] === 'casa') {
+            // Rectangle de la part dibuixada (per ampliar la casa a la previsualització dels tutors)
+            [$gr] = graella_rols($p, (int)$vb[2], (int)$vb[3]);
+            $vx = []; $vy = [];
+            foreach ($gr as $y => $fila) foreach ($fila as $x => $rol) if ($rol !== null) { $vx[] = $x; $vy[] = $y; }
+            $peces[$codi]['dibuix'] = [min($vx), min($vy), max($vx) - min($vx) + 1, max($vy) - min($vy) + 1];
+            $peces[$codi]['finestres'] = [];
+            foreach (finestres_casa($p, (int)$vb[2], (int)$vb[3]) as $i => [$rect, $camins]) {
+                $peces[$codi]['finestres'][] = $rect;
+                $t = $doc->createElementNS(SVG_NS, 'symbol');
+                $t->setAttribute('id', 'pc-' . $codi . '-F' . $i);
+                $t->setAttribute('viewBox', $r->getAttribute('viewBox'));
+                foreach ($camins as $fill => $d) {
+                    $cami = $doc->createElementNS(SVG_NS, 'path');
+                    $cami->setAttribute('fill', $fill);
+                    $cami->setAttribute('d', $d);
+                    $t->appendChild($cami);
+                }
+                $defs->appendChild($t);
+            }
+        }
     }
     ksort($peces);
     return [$doc, $peces];
+}
+
+/** Graella de rols d'una peça (a partir dels camins de rectangles) i color de cada rol. */
+function graella_rols(DOMDocument $doc, int $w, int $h): array
+{
+    $g = array_fill(0, $h, array_fill(0, $w, null));
+    $fills = [];
+    foreach ($doc->getElementsByTagNameNS(SVG_NS, 'path') as $el) {
+        $rol = $el->getAttribute('class');
+        if ($rol === '' || $el->hasAttribute('fill-opacity')) continue;          // l'ombra a terra no compta
+        $fills[$rol] = $el->getAttribute('fill');
+        preg_match_all('/M(\d+) (\d+)h(\d+)v(\d+)/', $el->getAttribute('d'), $m, PREG_SET_ORDER);
+        foreach ($m as [, $x, $y, $rw, $rh]) {
+            for ($yy = (int)$y; $yy < $y + $rh && $yy < $h; $yy++) for ($xx = (int)$x; $xx < $x + $rw && $xx < $w; $xx++) $g[$yy][$xx] = $rol;
+        }
+    }
+    return [$g, $fills];
+}
+
+/**
+ * Finestres d'una casa: grups de vidres (rol llum*) separats com a molt per 1 píxel de marc.
+ * Per a cada finestra retorna [rectangle [x, y, w, h], camins de la tapa per color]. La tapa cobreix vidres, marc i
+ * llinda de fusta i hi continua la paret del costat (pedra o façana, fila a fila).
+ */
+function finestres_casa(DOMDocument $doc, int $w, int $h): array
+{
+    [$g, $fills] = graella_rols($doc, $w, $h);
+    $vidre = function ($x, $y) use ($g, $w, $h) { return $x >= 0 && $y >= 0 && $x < $w && $y < $h && strncmp((string)$g[$y][$x], 'llum', 4) === 0; };
+    // 1. Components de vidre
+    $vist = [];
+    $caixes = [];
+    for ($y = 0; $y < $h; $y++) for ($x = 0; $x < $w; $x++) {
+        if (!$vidre($x, $y) || isset($vist["$x,$y"])) continue;
+        $pila = [[$x, $y]];
+        $vist["$x,$y"] = true;
+        $c = [$x, $y, $x, $y];
+        while ($pila) {
+            [$a, $b] = array_pop($pila);
+            $c = [min($c[0], $a), min($c[1], $b), max($c[2], $a), max($c[3], $b)];
+            foreach ([[1, 0], [-1, 0], [0, 1], [0, -1]] as [$dx, $dy]) {
+                $nx = $a + $dx; $ny = $b + $dy;
+                if ($vidre($nx, $ny) && !isset($vist["$nx,$ny"])) { $vist["$nx,$ny"] = true; $pila[] = [$nx, $ny]; }
+            }
+        }
+        $caixes[] = $c;
+    }
+    // 2. Ajunta els vidres d'una mateixa finestra (separats per un muntant d'1 píxel)
+    do {
+        $fet = false;
+        for ($i = 0; $i < count($caixes) && !$fet; $i++) for ($j = $i + 1; $j < count($caixes) && !$fet; $j++) {
+            [$a, $b] = [$caixes[$i], $caixes[$j]];
+            if ($b[0] <= $a[2] + 2 && $a[0] <= $b[2] + 2 && $b[1] <= $a[3] + 2 && $a[1] <= $b[3] + 2) {
+                $caixes[$i] = [min($a[0], $b[0]), min($a[1], $b[1]), max($a[2], $b[2]), max($a[3], $b[3])];
+                array_splice($caixes, $j, 1);
+                $fet = true;
+            }
+        }
+    } while ($fet);
+    usort($caixes, function ($a, $b) { return [$a[1], $a[0]] <=> [$b[1], $b[0]]; });
+
+    $out = [];
+    $paret = function ($rol) { return preg_match('/^(facana|pedra)(-clar|-ombra|-fosc)?$/', (string)$rol) === 1; };
+    foreach ($caixes as [$x0, $y0, $x1, $y1]) {
+        // 3. Píxels a tapar: vidres, marc (contorn) i fusta dins el rectangle ampliat 1 px, i la llinda de fusta de sobre
+        $tapa = [];
+        for ($y = $y0 - 1; $y <= $y1 + 1; $y++) for ($x = $x0 - 1; $x <= $x1 + 1; $x++) {
+            $r = $g[$y][$x] ?? null;
+            if ($r !== null && (strncmp($r, 'llum', 4) === 0 || $r === 'contorn' || strncmp($r, 'fusta', 5) === 0)) $tapa["$x,$y"] = [$x, $y];
+        }
+        $y = $y0 - 2;
+        $fusta = [];
+        for ($x = $x0 - 2; $x <= $x1 + 2; $x++) if (strncmp((string)($g[$y][$x] ?? ''), 'fusta', 5) === 0) $fusta[] = [$x, $y];
+        if (count($fusta) >= $x1 - $x0 + 1) foreach ($fusta as $p) $tapa["{$p[0]},{$p[1]}"] = $p;
+        if (!$tapa) continue;
+        // 4. Cada píxel agafa la paret més propera de la mateixa fila (esquerra o dreta)
+        $xs = array_column($tapa, 0); $ys = array_column($tapa, 1);
+        [$tx0, $tx1] = [min($xs), max($xs)];
+        $files = [];
+        foreach ($tapa as [$x, $y]) {
+            $esq = null; $dre = null;
+            for ($d = 1; $d <= 8 && $esq === null; $d++) if ($paret($g[$y][$tx0 - $d] ?? null) && !isset($tapa[($tx0 - $d) . ",$y"])) $esq = $g[$y][$tx0 - $d];
+            for ($d = 1; $d <= 8 && $dre === null; $d++) if ($paret($g[$y][$tx1 + $d] ?? null) && !isset($tapa[($tx1 + $d) . ",$y"])) $dre = $g[$y][$tx1 + $d];
+            $rol = ($x - $tx0 <= $tx1 - $x) ? ($esq ?? $dre) : ($dre ?? $esq);
+            $rol = $rol ?? 'facana';
+            $files[$fills[$rol] ?? 'var(--facana, #F5D9A8)'][$y][] = $x;
+        }
+        $camins = [];
+        foreach ($files as $fill => $per_fila) {
+            ksort($per_fila);
+            $d = '';
+            foreach ($per_fila as $y => $cols) {
+                sort($cols);
+                for ($i = 0; $i < count($cols); $i++) {
+                    $ini = $cols[$i];
+                    while ($i + 1 < count($cols) && $cols[$i + 1] === $cols[$i] + 1) $i++;
+                    $l = $cols[$i] - $ini + 1;
+                    $d .= "M$ini {$y}h{$l}v1h-{$l}z";
+                }
+            }
+            $camins[$fill] = $d;
+        }
+        ksort($camins);
+        $out[] = [[$tx0, min($ys), $tx1 - $tx0 + 1, max($ys) - min($ys) + 1], $camins];
+    }
+    return $out;
 }
 
 function normalitza_mapa(array $m, array $registre, array &$avisos): array

@@ -105,7 +105,7 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
                     $etapa = app_etapa($pdo, $cfg, $p, $ip, $ara);
                     if ($a === 'classes.retenir') return classes_retenir($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $ara);
-                    if ($a === 'classes.confirmar') return classes_confirmar($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['colors'] ?? null, $ara);
+                    if ($a === 'classes.confirmar') return classes_confirmar($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['colors'] ?? null, $ara, $p['mirall'] ?? null, $p['finestres'] ?? 0);
                     return classes_deixar($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
                 });
                 return [200, ['ok' => true] + $res];

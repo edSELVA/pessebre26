@@ -5,10 +5,9 @@
 
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
-  var ROLS = [['facana', 'Façana'], ['teulada', 'Teulada'], ['porta', 'Porta i fusta']];
   var enllac = Visor.hash().e || '';
   var full = document.getElementById('full');
-  var estat = { etapa: '', classes: [], classe: null, lloc: null, retencio: null, caduca: 0, colors: [0, 0, 0], snapshot: null };
+  var estat = { etapa: '', classes: [], classe: null, lloc: null, retencio: null, caduca: 0, colors: [], mirall: 0, finestres: 0 };
   var rellotge = null, temporitzadorAvis = null;
 
   // ── utilitats
@@ -94,12 +93,14 @@
     if (!estat.classe || estat.retencio) return;          // primer cal triar la classe; durant la tria de colors no
     if (!l) return;
     if (s.o[l.id]) { avis('Aquesta casa ja és d\'una altra classe.'); return; }
-    if ((s.r || []).indexOf(l.id) >= 0) { avis('Una altra classe està triant aquesta casa ara mateix.'); return; }
+    // Si la casa és retinguda, ho decideix el servidor: pot ser la mateixa classe que torna (p. ex. després de recarregar).
     api('classes.retenir', { classe: estat.classe.id, lloc: l.id }).then(function (r) {
       estat.lloc = l;
       estat.retencio = r.retencio;
       estat.caduca = Date.now() + r.segons * 1000;
-      estat.colors = [0, 0, 0];
+      estat.colors = Visor.disseny().peces[l.codi].pers.map(function () { return 0; });
+      estat.mirall = l.mirall ? 1 : 0;
+      estat.finestres = 0;
       Visor.centra(l.x, l.y - 30, 260);
       pasColors();
       return Visor.refresca();
@@ -115,49 +116,74 @@
     var l = estat.lloc;
     var D = Visor.disseny();
     var peca = D.peces[l.codi];
+    var finestres = peca.finestres || [];
     actualitzaLocal();
 
-    // Previsualització amb llum neutra (fora de l'escena, sense moment del dia)
+    // Previsualització gran amb llum neutra (fora de l'escena, sense moment del dia).
+    // Cada finestra té una zona que es pot tocar per treure-la (hi queda paret) o tornar-la a posar.
     var prev = document.createElementNS(NS, 'svg');
-    prev.setAttribute('viewBox', '0 0 ' + peca.vb[0] + ' ' + peca.vb[1]);
+    var dib = peca.dibuix || [0, 0, peca.vb[0], peca.vb[1]];       // només la part dibuixada, amb 1 px de marge
+    var dx = estat.mirall ? peca.vb[0] - dib[0] - dib[2] : dib[0];
+    prev.setAttribute('viewBox', (dx - 1) + ' ' + (dib[1] - 1) + ' ' + (dib[2] + 2) + ' ' + (dib[3] + 2));
     prev.setAttribute('shape-rendering', 'crispEdges');
-    prev.setAttribute('aria-hidden', 'true');
-    var u = document.createElementNS(NS, 'use');
-    u.setAttribute('href', '#pc-' + l.codi);
-    u.setAttribute('width', peca.vb[0]);
-    u.setAttribute('height', peca.vb[1]);
-    if (l.mirall) u.setAttribute('transform', 'matrix(-1 0 0 1 ' + peca.vb[0] + ' 0)');
-    prev.appendChild(u);
-    var pinta = function () {
+    var g = document.createElementNS(NS, 'g');
+    prev.appendChild(g);
+    var zones = document.createElementNS(NS, 'g');
+    prev.appendChild(zones);
+    function useDe(simbol) {
+      var u = document.createElementNS(NS, 'use');
+      u.setAttribute('href', '#pc-' + simbol);
+      u.setAttribute('width', peca.vb[0]);
+      u.setAttribute('height', peca.vb[1]);
+      return u;
+    }
+    function pinta() {
       var vars = Compon.colors(peca, estat.colors, D.paletes);
-      Object.keys(vars).forEach(function (k) { u.style.setProperty(k, vars[k]); });
-    };
+      var x0 = estat.mirall ? peca.vb[0] - dib[0] - dib[2] : dib[0];
+      prev.setAttribute('viewBox', (x0 - 1) + ' ' + (dib[1] - 1) + ' ' + (dib[2] + 2) + ' ' + (dib[3] + 2));
+      g.setAttribute('transform', estat.mirall ? 'matrix(-1 0 0 1 ' + peca.vb[0] + ' 0)' : '');
+      g.textContent = '';
+      [l.codi].concat(Compon.finestresTapades(estat.finestres).map(function (i) { return l.codi + '-F' + i; })).forEach(function (sim) {
+        var u = useDe(sim);
+        Object.keys(vars).forEach(function (k) { u.style.setProperty(k, vars[k]); });
+        g.appendChild(u);
+      });
+      zones.textContent = '';
+      finestres.forEach(function (f, i) {
+        var x = estat.mirall ? peca.vb[0] - f[0] - f[2] : f[0];
+        var r = document.createElementNS(NS, 'rect');
+        r.setAttribute('x', x - 0.5); r.setAttribute('y', f[1] - 0.5);
+        r.setAttribute('width', f[2] + 1); r.setAttribute('height', f[3] + 1);
+        r.setAttribute('class', 'zona-finestra' + (estat.finestres & (1 << i) ? ' treta' : ''));
+        r.setAttribute('role', 'button');
+        r.setAttribute('aria-label', 'Finestra ' + (i + 1) + (estat.finestres & (1 << i) ? ', treta' : ''));
+        r.addEventListener('click', function () { estat.finestres ^= (1 << i); pinta(); });
+        zones.appendChild(r);
+      });
+      actualitzaLocal();
+    }
     pinta();
 
-    var files = ROLS.map(function (rol, i) {
-      var opcions = D.paletes.cases[rol[0]].opcions;
-      var botons = opcions.map(function (tons, j) {
-        var b = h('button', { type: 'button', class: 'mostra', 'aria-label': rol[1] + ', opció ' + (j + 1), 'aria-pressed': String(estat.colors[i] === j) });
-        b.style.setProperty('background', tons[1]);
-        b.addEventListener('click', function () {
-          estat.colors[i] = j;
-          Array.prototype.forEach.call(b.parentNode.children, function (x, k) { x.setAttribute('aria-pressed', String(k === j)); });
-          pinta();
-          actualitzaLocal();
-        });
-        return b;
-      });
-      return h('div', { class: 'fila' }, [h('span', { class: 'etiqueta', text: rol[1] }), h('div', { class: 'mostres' }, botons)]);
+    var noms = { facana: 'Façana', teulada: 'Teulada', porta: 'Porta i fusta', flor: 'Flors' };
+    var files = peca.pers.map(function (rol, i) {
+      return UI.filaColors(noms[rol] || rol, D.paletes.cases[rol].opcions, estat.colors[i], function (j) { estat.colors[i] = j; pinta(); });
     });
 
     var compte = h('span', { class: 'compte' });
     mostra([
       h('h2', { text: 'La casa de ' + estat.classe.nom }),
-      h('p', { class: 'suau' }, [document.createTextNode('Tria els colors. La casa és vostra durant '), compte, document.createTextNode('.')]),
-      h('div', { class: 'tria' }, [h('div', { class: 'previsualitzacio' }, [prev]), h('div', { class: 'colors' }, files)]),
+      h('p', { class: 'suau' }, [document.createTextNode('Tria-la al vostre gust. La casa és vostra durant '), compte, document.createTextNode('.')]),
+      h('div', { class: 'tria' }, [
+        h('div', { class: 'columna-casa' }, [
+          h('div', { class: 'previsualitzacio gran' }, [prev]),
+          finestres.length ? h('p', { class: 'peu-casa', text: 'Toca una finestra per treure-la (hi quedarà paret) o tornar-la a posar.' }) : null
+        ]),
+        h('div', { class: 'colors' }, files)
+      ]),
       h('div', { class: 'botons' }, [
-        h('button', { type: 'button', class: 'boto primari', text: 'Confirmar la casa', clic: confirma }),
-        h('button', { type: 'button', class: 'boto suau', text: 'Triar una altra casa', clic: deixa })
+        h('button', { type: 'button', class: 'boto primari', text: 'Confirmar', clic: confirma }),
+        h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: function () { estat.mirall = estat.mirall ? 0 : 1; pinta(); } }),
+        h('button', { type: 'button', class: 'boto suau', text: 'Una altra casa', clic: deixa })
       ])
     ]);
     clearInterval(rellotge);
@@ -170,10 +196,10 @@
     rellotge = setInterval(tic, 1000);
   }
 
-  // Mostra la casa triada a l'escena amb els colors actuals (encara no està confirmada)
+  // Mostra la casa triada a l'escena tal com va quedant (encara no està confirmada)
   function actualitzaLocal() {
     if (!estat.lloc) return;
-    Visor.posa(estat.lloc.id, { p: estat.lloc.codi, c: estat.colors.slice(), n: estat.classe.nom });
+    Visor.posa(estat.lloc.id, { p: estat.lloc.codi, c: estat.colors.slice(), n: estat.classe.nom, m: estat.mirall, f: estat.finestres });
     Visor.redibuixa();
   }
 
@@ -202,7 +228,8 @@
 
   function confirma() {
     if (!window.confirm('Confirmes la casa de ' + estat.classe.nom + '? Després només la coordinació la pot canviar.')) return;
-    api('classes.confirmar', { classe: estat.classe.id, lloc: estat.lloc.id, retencio: estat.retencio, colors: estat.colors })
+    api('classes.confirmar', { classe: estat.classe.id, lloc: estat.lloc.id, retencio: estat.retencio, colors: estat.colors,
+                               mirall: estat.mirall, finestres: estat.finestres })
       .then(function () {
         var nom = estat.classe.nom;
         clearInterval(rellotge);

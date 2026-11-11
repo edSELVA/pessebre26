@@ -76,6 +76,13 @@ var Compon = (function () {
     return millor;
   }
 
+  // Índexs de les finestres tapades a partir de la màscara de bits «f» del snapshot.
+  function finestresTapades(f) {
+    var out = [];
+    for (var i = 0; f && i < 16; i++) if (f & (1 << i)) out.push(i);
+    return out;
+  }
+
   // Dies entre dues dates AAAA-MM-DD.
   function dies(desde, fins) {
     var a = desde.split('-'), b = fins.split('-');
@@ -126,7 +133,7 @@ var Compon = (function () {
   }
 
   return {
-    colloca: colloca, colors: colors, caixa: caixa, toca: toca, barreja: barreja, neuTeulada: neuTeulada, placa: placa,
+    colloca: colloca, colors: colors, caixa: caixa, toca: toca, finestresTapades: finestresTapades, barreja: barreja, neuTeulada: neuTeulada, placa: placa,
     dies: dies, puntCami: puntCami, reis: reis, ordena: ordena, textComptador: textComptador
   };
 })();

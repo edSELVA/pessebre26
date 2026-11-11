@@ -1,29 +1,106 @@
 {
- "nota": "Paletes pròpies que s'afegeixen a paletes.json del paquet v2. «pastors» s'aplica als 18 llocs de pastor de la clariana: tons de terra com a les vistes de referència (compon.py). Mocadors: les dues primeres opcions de persones.",
+ "nota": "Paletes pròpies que s'afegeixen a paletes.json del paquet v2. «pastors» s'aplica als 18 llocs de pastor de la clariana: tons de terra com a les vistes de referència (compon.py). Mocadors: les dues primeres opcions de persones. «cases.flor»: color de les flors de les jardineres (3 tons, clar → ombra).",
  "pastors": {
   "roba": {
    "nom": "Roba de pastor",
    "opcions": [
-    ["#C89A62", "#A6763E", "#7C5428"],
-    ["#B8866A", "#96644A", "#6E4632"],
-    ["#9AA06A", "#787E48", "#565C30"],
-    ["#D9B078", "#BC8E52", "#8E6836"]
+    [
+     "#C89A62",
+     "#A6763E",
+     "#7C5428"
+    ],
+    [
+     "#B8866A",
+     "#96644A",
+     "#6E4632"
+    ],
+    [
+     "#9AA06A",
+     "#787E48",
+     "#565C30"
+    ],
+    [
+     "#D9B078",
+     "#BC8E52",
+     "#8E6836"
+    ]
    ]
   },
   "mocador": {
    "nom": "Mocador",
    "opcions": [
-    ["#FFFFFF", "#F3EBDD", "#CBBBA4"],
-    ["#FFE9A8", "#F2CC6A", "#C89A3A"]
+    [
+     "#FFFFFF",
+     "#F3EBDD",
+     "#CBBBA4"
+    ],
+    [
+     "#FFE9A8",
+     "#F2CC6A",
+     "#C89A3A"
+    ]
    ]
   },
   "roba2": {
    "nom": "Roba de pastoret",
    "opcions": [
-    ["#C89A62", "#A6763E", "#7C5428"],
-    ["#B8866A", "#96644A", "#6E4632"],
-    ["#9AA06A", "#787E48", "#565C30"],
-    ["#D9B078", "#BC8E52", "#8E6836"]
+    [
+     "#C89A62",
+     "#A6763E",
+     "#7C5428"
+    ],
+    [
+     "#B8866A",
+     "#96644A",
+     "#6E4632"
+    ],
+    [
+     "#9AA06A",
+     "#787E48",
+     "#565C30"
+    ],
+    [
+     "#D9B078",
+     "#BC8E52",
+     "#8E6836"
+    ]
+   ]
+  }
+ },
+ "cases": {
+  "flor": {
+   "nom": "Flors",
+   "opcions": [
+    [
+     "#FFA6CE",
+     "#F0649E",
+     "#B93C78"
+    ],
+    [
+     "#FF8A7A",
+     "#E5443A",
+     "#A82A22"
+    ],
+    [
+     "#FFF0A0",
+     "#FFD23F",
+     "#E0A020"
+    ],
+    [
+     "#FFFFFF",
+     "#F2EEE6",
+     "#CFC8BA"
+    ],
+    [
+     "#D8B4F0",
+     "#A97BD8",
+     "#7650A8"
+    ],
+    [
+     "#FFC07A",
+     "#F39A2E",
+     "#C06A1A"
+    ]
    ]
   }
  }

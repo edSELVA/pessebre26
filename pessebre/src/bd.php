@@ -48,7 +48,7 @@ function bd_esquema(PDO $pdo): void
         // classe_id és únic: una classe no pot tenir dues cases (ni retingudes ni confirmades).
         "ocupacions (lloc_id VARCHAR(8) NOT NULL PRIMARY KEY, estat VARCHAR(10) NOT NULL, origen VARCHAR(10) NOT NULL,
                      classe_id INTEGER NULL UNIQUE, codi_id INTEGER NULL, peca VARCHAR(30) NULL, mirall INTEGER NULL,
-                     colors VARCHAR(40) NULL, hash_retencio CHAR(64) NULL, caduca VARCHAR(19) NULL, hora VARCHAR(19) NOT NULL)",
+                     colors VARCHAR(40) NULL, finestres INTEGER NULL, hash_retencio CHAR(64) NULL, caduca VARCHAR(19) NULL, hora VARCHAR(19) NOT NULL)",
         "codis (id $auto, hash CHAR(64) NOT NULL UNIQUE, lot INTEGER NOT NULL, usos INTEGER NOT NULL DEFAULT 0, creat VARCHAR(19) NOT NULL)",
         "registre (id $auto, hora VARCHAR(19) NOT NULL, qui VARCHAR(60) NOT NULL, accio VARCHAR(30) NOT NULL,
                    lloc_id VARCHAR(8) NULL, detall VARCHAR(200) NULL)",
@@ -56,6 +56,9 @@ function bd_esquema(PDO $pdo): void
         "intents (empremta CHAR(64) NOT NULL PRIMARY KEY, finestra VARCHAR(19) NOT NULL, fallades INTEGER NOT NULL)",
     ];
     foreach ($taules as $t) $pdo->exec("CREATE TABLE IF NOT EXISTS $t$fi");
+    // Bases de dades creades abans d'afegir les finestres (11 nov)
+    try { $pdo->query('SELECT finestres FROM ocupacions LIMIT 1'); }
+    catch (PDOException $e) { $pdo->exec('ALTER TABLE ocupacions ADD COLUMN finestres INTEGER NULL'); }
 }
 
 /** Hora UTC en format de base de dades. */

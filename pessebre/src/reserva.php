@@ -93,15 +93,24 @@ function retencio_valida(PDO $pdo, array $cfg, array $classe, $lloc_id, $t, Date
     return $o;
 }
 
-/** Confirma la casa amb els colors triats (índexs de façana, teulada i porta). */
-function classes_confirmar(PDO $pdo, array $cfg, string $etapa, $classe_id, $lloc_id, $t, $colors, DateTimeImmutable $ara): array
+/** Finestres tapades: màscara de bits vàlida per a la peça (0 = totes les finestres hi són). */
+function finestres_valides(array $cfg, string $peca, $finestres): bool
+{
+    $n = count(disseny($cfg, 'peces.json')['peces'][$peca]['finestres'] ?? []);
+    return is_int($finestres) && $finestres >= 0 && $finestres < (1 << $n);
+}
+
+/** Confirma la casa amb els colors triats (façana, teulada, porta i flors), les finestres tapades i si va girada. */
+function classes_confirmar(PDO $pdo, array $cfg, string $etapa, $classe_id, $lloc_id, $t, $colors, DateTimeImmutable $ara, $mirall = null, $finestres = 0): array
 {
     classes_obertes($pdo, $ara);
     $c = classe_de_etapa($pdo, $classe_id, $etapa);
     $o = retencio_valida($pdo, $cfg, $c, $lloc_id, $t, $ara);
     if (!colors_valids($cfg, $o['peca'], $colors)) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
-    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', colors = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
-        ->execute([json_encode($colors), bd_hora($ara), $o['lloc_id']]);
+    if (!finestres_valides($cfg, $o['peca'], $finestres)) throw new ErrorPessebre('Les finestres triades no són vàlides.', 400, 'finestres');
+    $m = $mirall === null ? (int)$o['mirall'] : ($mirall === 1 || $mirall === true ? 1 : 0);
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', colors = ?, mirall = ?, finestres = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+        ->execute([json_encode($colors), $m, $finestres ?: null, bd_hora($ara), $o['lloc_id']]);
     registre_afegeix($pdo, $ara, 'classe: ' . $c['nom'], 'classes.confirmar', $o['lloc_id'], json_encode($colors));
     return ['lloc' => $o['lloc_id'], 'classe' => $c['nom']];
 }

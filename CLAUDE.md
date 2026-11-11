@@ -182,3 +182,8 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Zones:** s'obren automàticament (Z0 → Z1 → Z2 → Z3) quan les obertes arriben al **75 %** d'ocupació real (`llindar_zona`; no compten les automàtiques).
 - **QR propi** (`pessebre/src/qr.php`, versions 1–9, nivell M) generat al servidor; comprovat amb un lector real. No hi ha `app/qr.js`.
 - **Visor públic:** botó «Participar» per escriure el codi si no es pot escanejar el QR.
+
+## 15. Cases de classe més personalitzables (11 nov 2026, decidit)
+- A més de façana, teulada i porta: **flors** de les jardineres (paleta `cases.flor` a `disseny-propi/paletes.json`; només als models que en tenen), **girar** la casa i **treure finestres** (hi queda paret).
+- Les finestres es detecten automàticament del dibuix (grups de vidres `llum*`); el conversor genera per a cada una una tapa `pc-CODI-F<n>` que continua la paret del costat. Snapshot: `m` (mirall) i `f` (màscara de bits de finestres tretes).
+- A la pàgina dels tutors, les finestres es toquen a la previsualització gran (retallada a la part dibuixada).

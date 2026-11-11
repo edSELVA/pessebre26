@@ -15,7 +15,8 @@
 //   "comptador": {"tipus": "classes", "fet": 52, "total": 74}
 //             o {"tipus": "participacions", "fet": 312, "fita": 400}  (fita null després de l'última)
 //   "o": {"C001": {"p": "CASA-BAIXA-P", "c": [2, 0, 1], "n": "Nom"}, "P0001": {"p": "ANI-GOS-D", "m": 1}, …}
-//        p = peça, m = mirall (0/1), c = índexs de paleta en l'ordre de "pers" de la peça, n = nom de placa (fins a 8 caràcters)
+//        p = peça, m = mirall (0/1), c = índexs de paleta en l'ordre de "pers" de la peça, n = nom de placa (fins a 8 caràcters),
+//        f = finestres tapades (màscara de bits sobre «finestres» de la peça; només cases)
 //   "r": ["P0012", …]                llocs retinguts (només l'id)
 // }
 // Mai s'hi posen colors en cru ni dates de les fites.
@@ -57,12 +58,13 @@ function snapshot_errors(array $s, array $mapa, array $peces, array $paletes): a
     foreach ($o as $id => $oc) {
         $l = $llocs[$id] ?? null;
         if (!$l) { $e[] = "$id: lloc desconegut"; continue; }
-        if (!is_array($oc) || array_diff(array_keys($oc), ['p', 'm', 'c', 'n'])) { $e[] = "$id: camps no permesos"; continue; }
+        if (!is_array($oc) || array_diff(array_keys($oc), ['p', 'm', 'c', 'n', 'f'])) { $e[] = "$id: camps no permesos"; continue; }
         $p = $peces[$oc['p'] ?? ''] ?? null;
         if (!$p || $p['cat'] !== $l['tipus']) { $e[] = "$id: la peça no és de la categoria del lloc"; continue; }
         if ($l['tipus'] === 'casa' && preg_replace('/-S?P$/', '', $oc['p']) !== preg_replace('/-S?P$/', '', $l['codi'])) $e[] = "$id: la casa ha de ser la del mapa (amb placa o sense)";
         if ($l['tipus'] === 'element' && $oc['p'] !== $l['codi']) $e[] = "$id: l'element ha de ser el del mapa";
         if (isset($oc['m']) && $oc['m'] !== 0 && $oc['m'] !== 1) $e[] = "$id: m ha de ser 0 o 1";
+        if (isset($oc['f']) && (!is_int($oc['f']) || $oc['f'] < 1 || $oc['f'] >= (1 << count($p['finestres'] ?? [])))) $e[] = "$id: finestres no vàlides";
         $pers = $p['pers'];
         $idx = $oc['c'] ?? [];
         if (!is_array($idx) || count($idx) !== count($pers)) {
@@ -122,7 +124,8 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
     foreach ($st->fetchAll() as $r) {
         if ($r['estat'] !== 'confirmat') { $ret[] = $r['lloc_id']; continue; }
         $e = ['p' => $r['peca']];
-        if (in_array($r['tipus'], ['persona', 'animal'], true)) $e['m'] = (int)$r['mirall'];
+        if (in_array($r['tipus'], ['persona', 'animal'], true) || (int)$r['mirall'] !== (int)$r['mirall_mapa']) $e['m'] = (int)$r['mirall'];
+        if ((int)$r['finestres'] > 0) $e['f'] = (int)$r['finestres'];
         $c = json_decode((string)$r['colors'], true);
         if (is_array($c) && $c) $e['c'] = $c;
         if ($r['classe'] !== null && $r['grup'] === 'poble' && substr((string)$r['peca'], -2) === '-P') $e['n'] = $r['classe'];

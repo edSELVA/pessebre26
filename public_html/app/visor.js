@@ -69,11 +69,11 @@ var Visor = (function () {
     document.getElementById('zoom').hidden = false;
   }
 
-  // Un <use> d'una peça del sprite, col·locada per l'ancoratge.
-  function usa(codi, x, y, mirall, vars, classe) {
+  // Un <use> d'una peça del sprite, col·locada per l'ancoratge. «simbol»: un altre símbol amb la mateixa mida (tapes de finestra).
+  function usa(codi, x, y, mirall, vars, classe, simbol) {
     var peca = D.peces[codi];
     var c = Compon.colloca(peca, x, y, mirall);
-    var u = el('use', { href: '#pc-' + codi, x: c.x, y: c.y, width: c.w, height: c.h });
+    var u = el('use', { href: '#pc-' + (simbol || codi), x: c.x, y: c.y, width: c.w, height: c.h });
     if (c.transform) u.setAttribute('transform', c.transform);
     if (classe) u.setAttribute('class', classe);
     Object.keys(vars || {}).forEach(function (k) { u.style.setProperty(k, vars[k]); });
@@ -112,6 +112,9 @@ var Visor = (function () {
         var vars = Compon.colors(peca, o.c, D.paletes, l.pastor ? 'pastors' : null);
         if (s.moment === 'neu' && peca.cat === 'casa') Compon.neuTeulada(vars);
         llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, propis[l.id] ? 'propia' : null) });
+        Compon.finestresTapades(o.f).forEach(function (i) {       // finestres que la classe ha tret: hi va paret
+          if (i < (peca.finestres || []).length) llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, null, o.p + '-F' + i) });
+        });
         if (peca.cat === 'casa') capes.tolls.appendChild(usa('LLUM-TOLL', l.x, l.y + 5));
         if (o.p === 'ELE-FANAL') capes.halos.appendChild(usa('LLUM-HALO', l.x, l.y - 22));
         if (o.n) llista.push({ y: l.y, node: textPlaca(peca, l, mirall, o.n) });

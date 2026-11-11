@@ -56,6 +56,8 @@ foreach ($escenaris as $nom => [$data, $moment, $zones, $classes, $claustre, $n_
     shuffle($poble);
     foreach (array_slice($poble, 0, $n_classes) as $i => $l) {
         $o[$l['id']] = ocupacio($l, $peces, $paletes, $persones, $animals, 'classe') + ['n' => NOMS_INVENTATS[$i]];
+        $nf = count($peces[$l['codi']]['finestres']);
+        if ($nf && mt_rand(0, 2) === 0) $o[$l['id']]['f'] = mt_rand(1, (1 << $nf) - 1);   // algunes classes treuen finestres
     }
     foreach (array_slice($poble, $n_classes, $n_admin) as $l) $o[$l['id']] = ocupacio($l, $peces, $paletes, $persones, $animals, 'admin');
     $claus = array_values(array_filter($mapa['llocs'], function ($l) { return $l['grup'] === 'claustre'; }));

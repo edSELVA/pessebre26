@@ -133,7 +133,7 @@
     if (l.tipus === 'persona' || l.tipus === 'animal') {
       botons.push(h('button', { type: 'button', class: 'boto', text: 'Girar ↔', clic: function () { tria.mirall = tria.mirall ? 0 : 1; pinta(); } }));
     }
-    botons.push(h('button', { type: 'button', class: 'boto suau', text: 'Un altre lloc', clic: deixa }));
+    botons.push(h('button', { type: 'button', class: 'boto suau', text: 'Un altre lloc', clic: deixa }));   // tres botons en una fila
     UI.mostra([
       h('h2', { text: titol }),
       h('p', { class: 'suau' }, ['El lloc és teu durant ', compte, '.']),

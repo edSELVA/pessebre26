@@ -62,11 +62,21 @@ $prova_reserva = function (array $cfg, string $nom) use ($ARREL) {
     igual([400, 'colors'], [$e, $r['codi'] ?? ''], 'colors fora de la paleta → error');
     [$e, $r] = $crida(['a' => 'classes.confirmar', 'e' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C002', 'retencio' => $ret2, 'colors' => ['#FF0000', 0, 0]], $min(2));
     igual([400, 'colors'], [$e, $r['codi'] ?? ''], 'colors en cru → error');
-    [$e, $r] = $crida(['a' => 'classes.confirmar', 'e' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C002', 'retencio' => $ret2, 'colors' => [1, 2, 3]], $min(3));
-    igual(200, $e, 'confirmar amb la retenció bona');
-    $s = $snap();
     $l = lloc($pdo, 'C002');
-    igual(['p' => $l['codi'], 'c' => [1, 2, 3], 'n' => 'Mussols'], $s['o']['C002'] ?? null, 'el snapshot porta la casa, els índexs i el nom');
+    $pc = disseny($cfg, 'peces.json')['peces'][$l['codi']];
+    $colors = array_slice([1, 2, 3, 4], 0, count($pc['pers']));
+    $nf = count($pc['finestres']);
+    [$e, $r] = $crida(['a' => 'classes.confirmar', 'e' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C002', 'retencio' => $ret2, 'colors' => $colors, 'finestres' => 1 << $nf], $min(3));
+    igual([400, 'finestres'], [$e, $r['codi'] ?? ''], 'no es poden treure finestres que no existeixen');
+    [$e, $r] = $crida(['a' => 'classes.confirmar', 'e' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C002', 'retencio' => $ret2, 'colors' => $colors,
+                       'mirall' => $l['mirall'] ? 0 : 1, 'finestres' => $nf ? 1 : 0], $min(3));
+    igual(200, $e, 'confirmar amb la retenció bona, girada i amb una finestra treta');
+    $s = $snap();
+    $esperat = ['p' => $l['codi'], 'm' => $l['mirall'] ? 0 : 1, 'c' => $colors, 'n' => 'Mussols'] + ($nf ? ['f' => 1] : []);
+    $real = $s['o']['C002'] ?? [];
+    ksort($esperat);
+    ksort($real);
+    igual($esperat, $real, 'el snapshot porta la casa, si va girada, els colors (amb flors), el nom i les finestres');
     igual(['tipus' => 'classes', 'fet' => 1, 'total' => 74], $s['comptador'], 'comptador: 1 de 74');
     igual([], snapshot_errors($s, disseny($cfg, 'mapa.json'), disseny($cfg, 'peces.json')['peces'], disseny($cfg, 'paletes.json')), 'el snapshot generat és vàlid');
     [$e, $r] = $crida(['a' => 'classes.retenir', 'e' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C004'], $min(4));
