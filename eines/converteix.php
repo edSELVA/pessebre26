@@ -10,7 +10,7 @@ $zip = $argv[1] ?? "$arrel/disseny-origen/pessebre-disseny-v2.zip";
 $desti = $argv[2] ?? "$arrel/public_html/disseny";
 
 try {
-    [$fitxers, $avisos] = converteix($zip, "$arrel/eines/reis-cami-font.json");
+    [$fitxers, $avisos] = converteix($zip, $arrel);
 } catch (ErrorPaquet $e) {
     fwrite(STDERR, "ERROR: " . $e->getMessage() . "\nNo s'ha escrit res.\n");
     exit(1);

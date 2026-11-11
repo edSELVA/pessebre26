@@ -2,14 +2,14 @@
 // El paquet v2 es converteix sense errors, de forma determinista, i el resultat és el que hi ha a public_html/disseny/.
 require_once $ARREL . '/eines/conversio.php';
 
-[$fitxers, $avisos] = converteix("$ARREL/disseny-origen/pessebre-disseny-v2.zip", "$ARREL/eines/reis-cami-font.json");
+[$fitxers, $avisos] = converteix("$ARREL/disseny-origen/pessebre-disseny-v2.zip", $ARREL);
 igual(['escena-fixa.json', 'escena.css', 'llum-aire.svg', 'llum-terra.svg', 'mapa.json', 'moments.css', 'paletes.json',
        'peces.json', 'peces.svg', 'reis-cami.json', 'terreny.svg'], array_keys($fitxers), 'fitxers generats');
 foreach ($fitxers as $nom => $contingut) {
     $disc = @file_get_contents("$ARREL/public_html/disseny/$nom");
     comprova($disc === $contingut, "public_html/disseny/$nom està al dia (torna a executar php eines/converteix.php)");
 }
-[$dues] = converteix("$ARREL/disseny-origen/pessebre-disseny-v2.zip", "$ARREL/eines/reis-cami-font.json");
+[$dues] = converteix("$ARREL/disseny-origen/pessebre-disseny-v2.zip", $ARREL);
 comprova($dues === $fitxers, 'la conversió és determinista');
 igual(1, count($avisos), 'només hi ha l\'avís conegut (pastors amb zona Z0)');
 
@@ -18,7 +18,7 @@ foreach (['terreny.svg', 'llum-terra.svg', 'llum-aire.svg', 'peces.svg'] as $nom
     comprova(!preg_match('/<script|\son[a-z]+=|javascript:|href="(?!#)|style=|<foreignObject|url\((?!#)/i', $fitxers[$nom]), "$nom no té contingut actiu ni estils en línia");
 }
 $peces = json_decode($fitxers['peces.json'], true)['peces'];
-igual(104, count($peces), '102 peces + 2 de llum');
+igual(105, count($peces), '102 peces + 2 de llum + 1 pròpia (rei amb turbant)');
 foreach ($peces as $codi => $p) {
     comprova(strpos($fitxers['peces.svg'], 'id="pc-' . $codi . '"') !== false, "el sprite té $codi");
 }

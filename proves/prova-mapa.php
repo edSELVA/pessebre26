@@ -39,3 +39,9 @@ comprova(abs($r['final'] - $mapa['naixement'][0]) < 120, 'el darrer dia arriben 
 // Escena fixa
 $fixa = json_de("$d/escena-fixa.json")['peces'];
 foreach ($fixa as $f) comprova(isset($peces[$f['codi']]), "escena fixa: {$f['codi']} existeix");
+$reis = array_values(array_filter($fixa, function ($f) { return strncmp($f['codi'], 'ESC-REI-', 8) === 0; }));
+usort($reis, function ($a, $b) { return $b['x'] <=> $a['x']; });   // el primer és el de més a la dreta
+igual('#F4F1EA', $reis[0]['colors']['cabell'] ?? null, 'el rei del davant és el blanc (barba i cabells blancs)');
+igual('#E8BC52', $reis[1]['colors']['cabell'] ?? null, 'el rei del mig és el ros');
+igual('ESC-REI-TURBANT', $reis[2]['codi'], 'el darrer rei porta turbant i no té barba');
+igual('#7A4A2C', $reis[2]['colors']['pell'] ?? null, 'el darrer rei és el negre');

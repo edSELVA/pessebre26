@@ -100,7 +100,7 @@
     var reis = Compon.reis(D.reis, s.data), r = 0;
     D.fixa.forEach(function (f) {
       var x = f.x, y = f.y;
-      if (f.codi === 'ESC-REI-CAMELL') { x = reis[r].x; y = reis[r].y; r++; }
+      if (f.codi.indexOf('ESC-REI-') === 0) { x = reis[r].x; y = reis[r].y; r++; }
       var vars = {};
       Object.keys(f.colors || {}).forEach(function (k) { vars['--' + k] = f.colors[k]; });
       llista.push({ y: y, ordre: f.ordre, node: usa(f.codi, x, y, !!f.mirall, vars) });

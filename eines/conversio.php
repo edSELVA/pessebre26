@@ -19,6 +19,8 @@ const CATEGORIES = ['casa', 'element', 'persona', 'animal', 'escena', 'decoracio
 const MOMENTS = ['dia', 'posta', 'nit', 'neu'];
 // Colors de la silueta fantasma (compon.FANTASMA de la guia v2)
 const FANTASMA = ['-clar' => '#FFFDF4', '' => '#FFF3DA', '-ombra' => '#EBDCC0', '-fosc' => '#D8C6A6'];
+// Opacitat de la silueta fantasma dels llocs lliures (la guia v2 diu cases .62 i elements .5)
+const OPACITAT_FANTASMA = ['casa' => '.62', 'element' => '.5'];
 
 class ErrorPaquet extends Exception {}
 
@@ -220,16 +222,27 @@ function svg_text(DOMDocument $doc): string
 // ───────────────────────────── conversió
 
 /**
- * Converteix el paquet. Retorna [nom de fitxer de sortida => contingut] i una llista d'avisos.
+ * Converteix el paquet. $arrel és l'arrel del repositori (on hi ha eines/ i disseny-propi/).
+ * Retorna [nom de fitxer de sortida => contingut] i una llista d'avisos.
  * @return array{0: array<string,string>, 1: string[]}
  */
-function converteix(string $zip, string $font_reis): array
+function converteix(string $zip, string $arrel): array
 {
     $f = llegeix_zip($zip);
     $avisos = [];
     $sortida = [];
 
     $registre = valida_registre(llegeix_json($f, 'registre.json'));
+    if (count($registre) !== 102) falla('registre.json: s\'esperaven 102 peces i n\'hi ha ' . count($registre));
+    // Peces pròpies (disseny-propi/): s'afegeixen al paquet sense tocar-lo
+    $propi = json_decode((string)file_get_contents("$arrel/disseny-propi/registre.json"), true);
+    if (!is_array($propi)) falla('disseny-propi/registre.json no és JSON vàlid');
+    foreach (valida_registre($propi) as $codi => $p) {
+        if (isset($registre[$codi])) falla("disseny-propi: la peça $codi ja és al paquet");
+        $registre[$codi] = $p;
+        $f["peces/$codi.svg"] = (string)file_get_contents("$arrel/disseny-propi/peces/$codi.svg");
+    }
+    ksort($registre);
     $paletes = valida_paletes(llegeix_json($f, 'paletes.json'));
 
     // Capes 2400×800 i estils de capa
@@ -258,7 +271,8 @@ function converteix(string $zip, string $font_reis): array
 
     $mapa = normalitza_mapa(llegeix_json($f, 'mapa.json'), $registre, $avisos);
     $fixa = valida_escena_fixa(llegeix_json($f, 'escena-fixa.json'), $registre);
-    $reis = cami_reis($font_reis, $fixa);
+    $fixa = canvis_escena_fixa($fixa, "$arrel/disseny-propi/escena-fixa-canvis.json", $registre);
+    $reis = cami_reis("$arrel/eines/reis-cami-font.json", $fixa);
     [$moments, $avisos_m] = moments_css($f);
     $avisos = array_merge($avisos, $avisos_m);
 
@@ -304,7 +318,6 @@ function valida_registre(array $r): array
             'rols' => array_values($rols),
         ];
     }
-    if (count($out) !== 102) falla('registre.json: s\'esperaven 102 peces i n\'hi ha ' . count($out));
     ksort($out);
     return $out;
 }
@@ -505,6 +518,32 @@ function valida_escena_fixa(array $e, array $registre): array
     return $out;
 }
 
+/** Aplica disseny-propi/escena-fixa-canvis.json: troba cada peça per codi i x i n'hi canvia el codi o hi afegeix colors. */
+function canvis_escena_fixa(array $fixa, string $font, array $registre): array
+{
+    $d = json_decode((string)file_get_contents($font), true);
+    if (!is_array($d) || !is_array($d['canvis'] ?? null)) falla("$font: format no vàlid");
+    foreach ($d['canvis'] as $i => $c) {
+        $on = "escena-fixa-canvis.json canvis[$i]";
+        $trobades = array_keys(array_filter($fixa, function ($p) use ($c) { return $p['codi'] === ($c['codi'] ?? '') && $p['x'] === ($c['x'] ?? null); }));
+        if (count($trobades) !== 1) falla("$on: no es troba una sola peça {$c['codi']} a x={$c['x']}");
+        $p = &$fixa[$trobades[0]];
+        if (isset($c['nou_codi'])) {
+            if (!isset($registre[$c['nou_codi']])) falla("$on: peça desconeguda");
+            $p['codi'] = $c['nou_codi'];
+        }
+        foreach ($c['colors'] ?? [] as $rol => $color) {
+            if (!in_array($rol, $registre[$p['codi']]['rols'], true) || !es_hex($color)) falla("$on: color $rol no vàlid");
+            $p['colors'][$rol] = $color;
+        }
+        foreach (array_keys($p['colors'] ?? []) as $rol) {
+            if (!in_array($rol, $registre[$p['codi']]['rols'], true)) falla("$on: la peça {$p['codi']} no té el rol $rol");
+        }
+        unset($p);
+    }
+    return $fixa;
+}
+
 /** Catmull-Rom (mateixa funció que suau() de terreny.py). */
 function suau(array $pts, int $n): array
 {
@@ -551,8 +590,8 @@ function cami_reis(string $font, array $fixa): array
         return round(end($s), 1);
     };
     $inici = [];
-    foreach ($fixa as $p) if ($p['codi'] === 'ESC-REI-CAMELL') $inici[] = $s_a_x((float)$p['x']);
-    if (count($inici) !== 3) falla('escena-fixa.json: s\'esperaven 3 ESC-REI-CAMELL');
+    foreach ($fixa as $p) if (strncmp($p['codi'], 'ESC-REI-', 8) === 0) $inici[] = $s_a_x((float)$p['x']);
+    if (count($inici) !== 3) falla('escena-fixa.json: s\'esperaven 3 Reis (ESC-REI-*)');
     return ['nota' => 'Generat per eines/converteix.php des de eines/reis-cami-font.json. inici = distància al llarg del camí de cada rei (ordre d\'escena-fixa) el primer dia; final = la del primer rei el darrer pas.',
             'primer_dia' => $d['primer_dia'], 'passos' => (int)$d['passos'], 'inici' => $inici, 'final' => $s_a_x((float)$d['final_x']), 'cami' => $cami];
 }
@@ -599,7 +638,9 @@ function escena_css(array $css, array $registre): string
         }
         $o .= "  --$r: $c;\n";
     }
-    return $o . "}\n.fantasma.casa { opacity: .62; }\n.fantasma.element { opacity: .5; }\n";
+    $o .= "}\n";
+    foreach (OPACITAT_FANTASMA as $cat => $op) $o .= ".fantasma.$cat { opacity: $op; }\n";
+    return $o;
 }
 
 // ───────────────────────────── sortida JSON llegible (una entrada per línia)
