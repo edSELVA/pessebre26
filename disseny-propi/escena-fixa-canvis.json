@@ -1,11 +1,12 @@
 {
- "nota": "Canvis sobre escena-fixa.json del paquet v2. Cada canvi troba la peça per codi i x originals i n'hi canvia el codi i/o hi afegeix colors. Reis (d'esquerra a dreta = de l'últim al primer): negre amb turbant, ros, blanc.",
+ "nota": "Canvis sobre escena-fixa.json del paquet v2. Cada canvi troba la peça per codi i x originals i n'hi canvia el codi i/o hi afegeix colors. Reis (d'esquerra a dreta = de l'últim al primer): negre amb turbant, ros, blanc. Estel: peça pròpia amb les cinc puntes i una cua que s'eixampla i acaba en tres punxes.",
  "canvis": [
   {"codi": "ESC-REI-CAMELL", "x": 118, "nou_codi": "ESC-REI-TURBANT",
    "colors": {"pell": "#7A4A2C", "pell-ombra": "#5A3420", "cabell": "#2A1C16"}},
   {"codi": "ESC-REI-CAMELL", "x": 182,
    "colors": {"cabell": "#E8BC52", "cabell-ombra": "#B88A2E"}},
   {"codi": "ESC-REI-CAMELL", "x": 246,
-   "colors": {"cabell": "#F4F1EA", "cabell-ombra": "#C9C2B6"}}
+   "colors": {"cabell": "#F4F1EA", "cabell-ombra": "#C9C2B6"}},
+  {"codi": "ESC-ESTEL", "x": 1646, "nou_codi": "ESC-ESTEL-CUA"}
  ]
 }

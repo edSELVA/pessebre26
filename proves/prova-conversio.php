@@ -23,7 +23,7 @@ foreach (['terreny.svg', 'llum-terra.svg', 'llum-aire.svg', 'peces.svg'] as $nom
     comprova(!preg_match('/<script|\son[a-z]+=|javascript:|href="(?!#)|style=|<foreignObject|url\((?!#)/i', $fitxers[$nom]), "$nom no té contingut actiu ni estils en línia");
 }
 $peces = json_decode($fitxers['peces.json'], true)['peces'];
-igual(105, count($peces), '102 peces + 2 de llum + 1 pròpia (rei amb turbant)');
+igual(106, count($peces), '102 peces + 2 de llum + 2 pròpies (rei amb turbant i estel amb cua)');
 foreach ($peces as $codi => $p) {
     comprova(strpos($fitxers['peces.svg'], 'id="pc-' . $codi . '"') !== false, "el sprite té $codi");
 }

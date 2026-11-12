@@ -15,7 +15,7 @@ imagefilledrectangle($im, 120, 0, 159, 39, imagecolorallocate($im, 125, 20, 50))
 imagepng($im, "$tmp/prova.png");
 
 $php = PHP_BINARY;
-$sortida = shell_exec(escapeshellarg($php) . ' ' . escapeshellarg("$ARREL/eines/logo.php") . ' --cel=20 --bloc=3 --x=100 --y=50 --png='
+$sortida = shell_exec(escapeshellarg($php) . ' ' . escapeshellarg("$ARREL/eines/logo.php") . ' --cel=20 --bloc=3 --fi=1 --x=100 --y=50 --png='
     . escapeshellarg("$tmp/prova.png") . ' --sortida=' . escapeshellarg("$tmp/logo.svg") . ' 2>&1');
 comprova(is_file("$tmp/logo.svg"), 'l\'eina escriu el logo en SVG (' . trim((string)$sortida) . ')');
 $svg = (string)@file_get_contents("$tmp/logo.svg");
@@ -32,6 +32,13 @@ igual(['logo-cor-clar', 'logo-cor-fosc', 'logo-text'], $parts, 'tres parts: text
 comprova(strpos($svg, 'class="logo-text" d="M0 6h20v1h-20z') !== false, 'el text és una tira sencera de 20 cel·les a la fila 6');
 comprova(strpos($svg, 'class="logo-cor-clar" d="M4 0h4v1h-4z') !== false, 'el lòbul clar va de la columna 4 a la 7');
 comprova(strpos($svg, 'class="logo-cor-fosc" d="M12 0h4v1h-4z') !== false, 'el traç fosc va de la columna 12 a la 15');
+// Gra doble: el cor amb cel·les grosses (2 × 2 unitats fines) i el text amb cel·les fines
+shell_exec(escapeshellarg($php) . ' ' . escapeshellarg("$ARREL/eines/logo.php") . ' --cel=20 --bloc=4 --fi=2 --x=0 --y=0 --png='
+    . escapeshellarg("$tmp/prova.png") . ' --sortida=' . escapeshellarg("$tmp/logo2.svg") . ' 2>&1');
+$svg2 = (string)@file_get_contents("$tmp/logo2.svg");
+comprova(strpos($svg2, 'scale(2)') !== false, 'amb --bloc=4 --fi=2, cada unitat fina fa 2 unitats de l\'escena');
+comprova(strpos($svg2, 'class="logo-cor-clar" d="M8 0h8v1h-8zM8 1h8v1h-8z') !== false, 'el cor conserva el gra gros (cel·les de 2 × 2)');
+comprova(strpos($svg2, 'class="logo-text" d="M0 12h40v1h-40z') !== false, 'el text va amb el gra fi (40 cel·les d\'ample)');
 comprova(strpos($svg, '<script') === false && strpos($svg, 'href') === false, 'l\'SVG només porta camins (res executable ni enllaços)');
 
 // El logo real i el que en surt no es poden pujar mai (repositori públic)

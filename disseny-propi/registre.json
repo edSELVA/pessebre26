@@ -4,10 +4,70 @@
   "ESC-REI-TURBANT": {
    "fitxer": "peces/ESC-REI-TURBANT.svg",
    "categoria": "escena",
-   "viewBox": [0, 0, 44, 50],
-   "ancoratge": [22, 48],
-   "caixa": [6, 0, 42, 47],
-   "rols": ["cabell", "camell", "camell-clar", "camell-ombra", "contorn", "fusta-ombra", "mocador", "mocador-clar", "mocador-ombra", "or", "pell", "pell-ombra", "roba", "roba-clar", "roba-ombra", "vermell", "vermell-ombra", "ombra-terra"],
+   "viewBox": [
+    0,
+    0,
+    44,
+    50
+   ],
+   "ancoratge": [
+    22,
+    48
+   ],
+   "caixa": [
+    6,
+    0,
+    42,
+    47
+   ],
+   "rols": [
+    "cabell",
+    "camell",
+    "camell-clar",
+    "camell-ombra",
+    "contorn",
+    "fusta-ombra",
+    "mocador",
+    "mocador-clar",
+    "mocador-ombra",
+    "or",
+    "pell",
+    "pell-ombra",
+    "roba",
+    "roba-clar",
+    "roba-ombra",
+    "vermell",
+    "vermell-ombra",
+    "ombra-terra"
+   ],
+   "personalitzables": [],
+   "placa": null
+  },
+  "ESC-ESTEL-CUA": {
+   "fitxer": "peces/ESC-ESTEL-CUA.svg",
+   "categoria": "escena",
+   "viewBox": [
+    0,
+    0,
+    112,
+    44
+   ],
+   "ancoratge": [
+    20,
+    24
+   ],
+   "caixa": [
+    8,
+    7,
+    110,
+    33
+   ],
+   "rols": [
+    "groc-clar",
+    "groc",
+    "groc-ombra",
+    "or-ombra"
+   ],
    "personalitzables": [],
    "placa": null
   }
