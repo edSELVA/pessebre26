@@ -24,6 +24,7 @@ var Zoom = (function () {
 
   function aplica() {
     limita();
+    svg.style.setProperty('--marca', String(1 / v.k));     // els punts dels llocs lliures fan la mateixa mida a qualsevol zoom
     svg.style.transform = 'translate(' + v.x + 'px,' + v.y + 'px) scale(' + (v.k / kDibuix) + ')';
     clearTimeout(temps);
     temps = setTimeout(fixa, 150);
@@ -144,5 +145,5 @@ var Zoom = (function () {
     tot.addEventListener('click', function () { v.k = kMin(); aplica(); });
   }
 
-  return { inicia: inicia, botons: botons, centra: centra };
+  return { inicia: inicia, botons: botons, centra: centra, escala: function () { return v.k; } };
 })();

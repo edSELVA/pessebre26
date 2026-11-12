@@ -61,6 +61,7 @@ var Visor = (function () {
     capes.peces = el('g', { id: 'capa-peces' }, svg);
     capes.aire = el('g', { id: 'capa-llum-aire' }, svg);
     incrusta(svgDe(t.aire), capes.aire);
+    capes.marques = el('g', { id: 'capa-marques' }, svg);       // punts dels llocs lliures en mode participar
     capes.destacat = el('g', { id: 'capa-destacat' }, svg);     // requadre del lloc seleccionat (administració)
     capes.tolls = svg.querySelector('#llum-terra-tolls');
     capes.halos = svg.querySelector('#llum-halos');
@@ -97,7 +98,7 @@ var Visor = (function () {
   function dibuixa(s) {
     darrer = s;
     svg.setAttribute('class', 'moment-' + s.moment);
-    [capes.peces, capes.tolls, capes.halos].forEach(function (g) { g.textContent = ''; });
+    [capes.peces, capes.tolls, capes.halos, capes.marques].forEach(function (g) { g.textContent = ''; });
     var zones = {};
     s.zones.forEach(function (z) { zones[z] = true; });
     var retinguts = {};
@@ -140,6 +141,7 @@ var Visor = (function () {
         var codi = l.codi || SILUETA[l.tipus];
         llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
         if (!ret) llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
+        if (!ret && l.tipus !== 'casa') marca(l);          // les cases ja es veuen bé
       } else if (l.tipus === 'casa' || l.tipus === 'element') {
         llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
         if (l.tipus === 'casa' && !ret) llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
@@ -153,6 +155,13 @@ var Visor = (function () {
     Compon.ordena(llista).forEach(function (e) { frag.appendChild(e.node); });
     capes.peces.appendChild(frag);
     mostraComptador(s.comptador);
+  }
+
+  // Punt lluminós al peu d'un lloc lliure (persones, animals i elements). Fa la mateixa mida a la pantalla a qualsevol
+  // zoom (escala --marca, que posa zoom.js), perquè es vegi encara que la figura sigui petita.
+  function marca(l) {
+    el('circle', { cx: l.x, cy: l.y, r: 10, class: 'marca-ona' }, capes.marques);
+    el('circle', { cx: l.x, cy: l.y, r: 5.5, class: 'marca-punt' }, capes.marques);
   }
 
   // Un lloc lliure es dibuixa (en transparent) si la seva zona és oberta, amb excepcions per grup.
@@ -217,6 +226,14 @@ var Visor = (function () {
     // Si sota el dit hi ha un lloc lliure i un d'ocupat (figures que se superposen), mana el lliure (a l'administració, l'ocupat)
     var primer = op.mode === 'admin' && !op.filtre ? ocupats : lliures;    // afegint figures a l'administració, també el lliure
     var l = Compon.toca(primer, D.peces, sx, sy) || Compon.toca(candidats, D.peces, sx, sy);
+    // Si no hi ha cap figura sota el dit, val tocar el punt d'un lloc lliure (el punt pot ser més gran que la figura)
+    if (!l && op.filtre && op.filtre !== 'casa') {
+      var radi = 16 / Zoom.escala(), millor = radi;
+      lliures.forEach(function (c) {
+        var d = Math.hypot(c.x - sx, c.y - sy);
+        if (c.tipus === op.filtre && d < millor) { millor = d; l = c; }
+      });
+    }
     op.enToc(l, darrer);
   }
 

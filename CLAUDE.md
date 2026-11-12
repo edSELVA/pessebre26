@@ -249,3 +249,8 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 
 ## 26. Estel amb cua (12 nov 2026, decidit)
 - L'estel del paquet tenia les dues puntes de baix fosses en un bloc. Ara és una peça pròpia, `ESC-ESTEL-CUA` (`disseny-propi/`, canvi a `escena-fixa-canvis.json`): cinc puntes ben marcades i una cua de cometa que és prima tocant l'estel, s'eixampla i acaba en tres punxes (la del mig més llarga). Mateixos colors i mateix lloc. Entre l'estel i el feix de llum queda un petit espai.
+
+## 27. Punts als llocs lliures (12 nov 2026, decidit)
+- En mode participar (famílies i claustre) i a «Afegir figures» de l'administració, quan es tria persona, animal o arbre/element, cada lloc lliure d'aquell tipus porta **un punt groc lluminós al peu**, amb un pols suau (sense pols si l'usuari té activada la reducció de moviment). **Les cases no en porten** (ja es veuen bé).
+- **Mida fixa a la pantalla** (uns 11 px, amb un halo de 20), a qualsevol zoom: amb el pessebre sencer es veu d'un cop d'ull on hi ha lloc. `zoom.js` posa `--marca` (1 / escala) i `estil.css` hi escala els cercles.
+- **Tocar el punt tria el lloc**, encara que la figura sigui més petita que el punt (si no hi ha cap figura sota el dit, es pren el lloc lliure més proper a menys de 16 px).

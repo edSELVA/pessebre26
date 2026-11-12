@@ -348,3 +348,13 @@ body.pagina { overflow: auto; }
 .moment-posta { --logo: #FFC07A; --logo-op: .55; }
 .moment-nit { --logo: #FFF1C2; --logo-op: .4; }
 .moment-neu { --logo: #F2F6FC; --logo-op: .5; }
+
+/* Punts dels llocs lliures (mode participar i «Afegir figures»): mida fixa a la pantalla i un pols suau */
+#capa-marques circle {
+  transform: scale(var(--marca, 1)); transform-box: fill-box; transform-origin: center;
+  shape-rendering: geometricPrecision; pointer-events: none;
+}
+.marca-punt { fill: #FFE14D; stroke: #2A2018; stroke-width: 2; }
+.marca-ona { fill: #FFE14D; fill-opacity: .25; stroke: #FFF6C8; stroke-width: 2; animation: marca-pols 1.6s ease-in-out infinite; }
+@keyframes marca-pols { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .marca-ona { animation: none; opacity: .6; } }
