@@ -23,3 +23,7 @@ public_html/snapshot.json.tmp
 .claude/
 .idea/
 .vscode/
+
+# Logo de l escola: només en local i a l hosting, mai al repositori públic (CLAUDE.md §9)
+disseny-propi/logo/
+public_html/disseny/logo.svg

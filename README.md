@@ -35,6 +35,8 @@ sh eines/demo.sh
 
 Obre `http://localhost:8027/demo` (o, des del mòbil a la mateixa wifi, l'adreça que escriu). Pestanya **DEMO** a l'esquerra: fase (inici, tutories, torronada, famílies, fites per data, tancat), «Veure com» (públic, tutor, claustre, família, administració; contrasenya `demo`), deixar passar el temps i reiniciar (fase, famílies o tot). Té la seva pròpia base de dades a `demo/dades/` (no es puja mai). **La carpeta `demo/` no va mai a l'hosting.**
 
+Logo de l'escola al cel (no es puja mai al repositori): posa el PNG a `disseny-propi/logo/` i `php eines/logo.php` (genera `public_html/disseny/logo.svg`).
+
 ## Instal·lació (hosting, a partir de la Fase B)
 
 1. Puja `public_html/` a l'arrel web i `pessebre/` (i `eines/`) fora de l'arrel web. Si `pessebre/` és en un altre lloc, canvia la línia `$PESSEBRE` d'`api.php`.

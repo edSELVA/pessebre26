@@ -335,3 +335,14 @@ body.pagina { overflow: auto; }
 .destacat { margin: 6px 0; font-weight: 650; color: #A3271E; }
 .afegir { margin-top: 14px; }
 .afegir .boto[disabled] { opacity: .45; cursor: default; }
+
+/* Logo de l'escola al cel (disseny/logo.svg, opcional, no és al repositori): un sol color que canvia amb el moment
+   del dia; el cor amb dos nivells de transparència perquè no quedi pla */
+#pessebre .logo { opacity: var(--logo-op, .5); }
+#pessebre .logo path { fill: var(--logo, #DDEEFF); }
+#pessebre .logo .logo-cor-clar { fill-opacity: .55; }
+#pessebre .logo .logo-cor-fosc { fill-opacity: .85; }
+.moment-dia { --logo: #DDEEFF; --logo-op: .55; }
+.moment-posta { --logo: #FFC07A; --logo-op: .55; }
+.moment-nit { --logo: #FFF1C2; --logo-op: .4; }
+.moment-neu { --logo: #F2F6FC; --logo-op: .5; }

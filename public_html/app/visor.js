@@ -55,6 +55,7 @@ var Visor = (function () {
     incrusta(svgDe(t.peces).querySelector('defs'), defs);
     capes.terreny = el('g', { id: 'capa-terreny' }, svg);
     incrusta(svgDe(t.terreny), capes.terreny);
+    posaLogo(t.logo);
     capes.terra = el('g', { id: 'capa-llum-terra' }, svg);
     incrusta(svgDe(t.terra), capes.terra);
     capes.peces = el('g', { id: 'capa-peces' }, svg);
@@ -69,6 +70,15 @@ var Visor = (function () {
     Zoom.inicia(escena, svg, { vista: op.vista, enToc: op.enToc ? toc : null });
     Zoom.botons(document.getElementById('zoom-mes'), document.getElementById('zoom-menys'), document.getElementById('zoom-tot'));
     document.getElementById('zoom').hidden = false;
+  }
+
+  // Logo de l'escola al cel (disseny/logo.svg, generat per eines/logo.php; no és al repositori públic, pot no existir).
+  // Va just després del sol i abans de les muntanyes, que el tapen per baix.
+  function posaLogo(text) {
+    var logo = text && svgDe(text).querySelector('.logo');
+    var sol = capes.terreny.querySelector('#sol');
+    if (!logo || !sol) return;
+    sol.parentNode.insertBefore(document.importNode(logo, true), sol.nextSibling);
   }
 
   // Un <use> d'una peça del sprite, col·locada per l'ancoratge. «simbol»: un altre símbol amb la mateixa mida (tapes de finestra).
@@ -220,10 +230,11 @@ var Visor = (function () {
     return Promise.all([
       carrega(d + 'peces.svg'), carrega(d + 'terreny.svg'), carrega(d + 'llum-terra.svg'), carrega(d + 'llum-aire.svg'),
       carrega(d + 'mapa.json', 'json'), carrega(d + 'peces.json', 'json'), carrega(d + 'paletes.json', 'json'),
-      carrega(d + 'escena-fixa.json', 'json'), carrega(d + 'reis-cami.json', 'json'), carrega(op.font, 'json')
+      carrega(d + 'escena-fixa.json', 'json'), carrega(d + 'reis-cami.json', 'json'), carrega(op.font, 'json'),
+      carrega(d + 'logo.svg').catch(function () { return null; })          // opcional
     ]).then(function (r) {
       D = { mapa: r[4], peces: r[5].peces, paletes: r[6], fixa: r[7].peces, reis: r[8] };
-      construeix({ peces: r[0], terreny: r[1], terra: r[2], aire: r[3] });
+      construeix({ peces: r[0], terreny: r[1], terra: r[2], aire: r[3], logo: r[10] });
       dibuixa(r[9]);
       if (op.enSnapshot) op.enSnapshot(r[9]);
       if (op.refresc) setInterval(function () { refresca().catch(function () { /* es torna a provar més tard */ }); }, op.refresc);

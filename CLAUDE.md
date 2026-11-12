@@ -142,7 +142,7 @@ proves/    proves automàtiques PHP
 - Dades d'exemple i de proves **sempre inventades**. La llista real de classes es carrega a l'hosting des d'un fitxer local (`classes.csv`, ignorat).
 - La seguretat **no pot dependre que el codi sigui secret** (ja és així: HMAC, hashes, `password_hash`).
 - Si un secret s'ha pujat per error: **canviar-lo immediatament** (esborrar-lo en un commit posterior no n'hi ha prou). Deixa-ho escrit al `README`.
-- No hi posis els logotips de l'escola ni res amb dades de l'alumnat.
+- No hi posis els logotips de l'escola ni res amb dades de l'alumnat. (El logo del cel, §25, és només en local i a l'hosting: `disseny-propi/logo/` i `public_html/disseny/logo.svg` són a `.gitignore`.)
 - **(pendent)** Llicència (MIT o cap).
 - Proves visuals: el visor amb dades d'exemple es pot publicar a GitHub Pages (només estàtic). El flux complet (tutors, famílies, administració) cal PHP: servidor integrat (`php -S`) per desenvolupar i, més endavant, un subdomini de prova a l'hosting de l'escola.
 
@@ -241,3 +241,8 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Un codi per classe** (identifica la classe: el tutor ja no la tria d'una llista; un cop confirmada la casa, queda gastat i només es pot mirar; també pot anar en un enllaç `#c=CODI`; l'administració el pot regenerar). **Claustre:** codi comú (proposta; pendent de confirmar si comú o un per persona).
 - **Administració:** pàgina pròpia amb **comptes personals** (usuari i contrasenya, nivell administrador o només lectura) en lloc de contrasenyes compartides, perquè el registre digui qui ha fet cada canvi i es pugui donar de baixa una persona. No cal perfil de moderador (no hi ha text lliure).
 - La demo s'haurà d'adaptar. Quan es faci, actualitzar el §7 i el §13.
+
+## 25. Logo de l'escola al cel (12 nov 2026, decidit)
+- **Pixelat, estil arcade, d'un sol color** que canvia amb el moment del dia (dia blau pàl·lid, posta càlid, nit clar, neu blanc; `estil.css`), sense cercle de sol. El cor manté dos nivells de transparència (lòbul clar i traç fosc) i el text distingeix «Vedruna» en negreta d'«Escorial Vic» prim.
+- **Darrere les muntanyes:** va just després del sol (`#sol`) i abans de la primera serralada, que en tapa una mica la part de baix. Posició: x 1232, y 97, 200 × 50 unitats (100 cel·les de 2 unitats), dins de la vista inicial del mòbil (x 1215–1585) i a l'esquerra del centre a l'ordinador (l'estrella queda a la dreta). Evita el sol de dia (x 430).
+- **No és al repositori públic:** el PNG és a `disseny-propi/logo/` i `php eines/logo.php` en fa `public_html/disseny/logo.svg`; tots dos ignorats pel git. El visor el carrega només si hi és (a GitHub Pages no surt). **A l'hosting cal copiar-hi `logo.svg`.** Opcions de l'eina: `--cel`, `--bloc`, `--x`, `--y`.
