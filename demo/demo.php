@@ -31,9 +31,12 @@ const DEMO_FETS = [
     6 => [['2026-12-27 12:00', 'familia', 25, 480]],
 ];
 
-// Classes inventades (66, noms de 8 caràcters com a molt)
-function demo_classes(): string
+// Classes de la demo: les reals del fitxer local classes.csv (ignorat pel git) si hi és i la configuració ho indica
+// ('demo_classes'); si no, unes d'inventades (66, noms de 8 caràcters com a molt), que són les que fan servir les proves.
+function demo_classes(array $cfg = []): string
 {
+    $fitxer = $cfg['demo_classes'] ?? null;
+    if (is_string($fitxer) && is_file($fitxer)) return (string)file_get_contents($fitxer);
     $l = ['llar;P0 A', 'llar;P0 B', 'llar;P1 A', 'llar;P1 B', 'llar;P2 A', 'llar;P2 B'];
     foreach (['P3', 'P4', 'P5'] as $c) foreach (['A', 'B', 'C'] as $g) $l[] = "infantil;$c $g";
     foreach (['1r', '2n', '3r', '4t', '5è', '6è'] as $c) foreach (['A', 'B', 'C'] as $g) $l[] = "primaria;$c $g";
@@ -182,7 +185,7 @@ function demo_munta_fase(PDO $pdo, array $cfg, int $fase): array
     $e = ['fase' => $fase, 'hores' => 0, 'desfasament' => 0, 'enllacos' => [], 'codis' => []];
 
     $pdo->beginTransaction();
-    classes_carrega($pdo, demo_classes());
+    classes_carrega($pdo, demo_classes($cfg));
     foreach (array_keys(ETAPES) as $etapa) $e['enllacos'][$etapa] = enllac_crea($pdo, $cfg['pebre'], 'etapa', $etapa, $inici);
     $e['enllacos']['claustre'] = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $inici);
     $e['codis'] = codis_genera($pdo, $cfg['pebre'], 150, $inici)['codis'];

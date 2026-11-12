@@ -26,6 +26,7 @@ if (!is_array($p)) respon(400, ['ok' => false, 'error' => 'JSON no vàlid.', 'co
 require __DIR__ . '/demo.php';
 try {
     $cfg = app_config(getenv('PESSEBRE_CONFIG') ?: __DIR__ . '/dades/config.php');
+    $cfg['demo_classes'] = __DIR__ . '/../classes.csv';          // les classes reals, si hi són (fitxer local, mai al repositori)
     if (($cfg['demo'] ?? false) !== true) respon(403, ['ok' => false, 'error' => 'Aquesta configuració no és de demostració.', 'codi' => 'demo']);
     $pdo = bd_connecta($cfg);
     $a = is_string($p['a'] ?? null) ? $p['a'] : '';

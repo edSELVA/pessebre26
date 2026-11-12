@@ -29,6 +29,7 @@ if (!is_file($cami)) {
     echo "Creada la configuració de la demo.\n";
 }
 $cfg = app_config($cami);
+$cfg['demo_classes'] = __DIR__ . '/../classes.csv';
 $pdo = bd_connecta($cfg);
 $e = demo_estat($cfg);
 if ($e === null || !is_file($cfg['snapshot'])) {
