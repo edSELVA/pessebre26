@@ -234,3 +234,10 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Llar d'infants (provisional):** tres etiquetes per edat, «Llar 0», «Llar 1» i «Llar 2». Pendent de decidir si la llar tindrà només una casa per a tota l'etapa.
 - **Infantil:** codis tipus «I3A». **Batxibac:** «1r BB» i «2n BB», sense lletra de grup. **Cicles:** sigla del cicle precedida del curs («1r TAPSD»). Són 64 grups en total, dels 74 llocs de classe: en queden 10 de lliures per a cases sense placa.
 - **La llista real és a `classes.csv`** (ignorat pel git, no es puja mai). Es carrega a l'hosting enganxant-la a l'administració o amb `php eines/gestio.php classes classes.csv`.
+
+## 24. Pendent abans de l'hosting: codis en lloc d'enllaços i comptes d'administració (12 nov 2026, acordat; NO implementat)
+- **Es farà quan es faci el pas cap a l'hosting**, no abans (primer s'ensenya la versió actual a la direcció i a l'equip de valors).
+- **Un sol enllaç públic** per a tothom (mirar i, amb codi, participar). Desapareixen els enllaços d'etapa dels tutors i l'enllaç del claustre.
+- **Un codi per classe** (identifica la classe: el tutor ja no la tria d'una llista; un cop confirmada la casa, queda gastat i només es pot mirar; també pot anar en un enllaç `#c=CODI`; l'administració el pot regenerar). **Claustre:** codi comú (proposta; pendent de confirmar si comú o un per persona).
+- **Administració:** pàgina pròpia amb **comptes personals** (usuari i contrasenya, nivell administrador o només lectura) en lloc de contrasenyes compartides, perquè el registre digui qui ha fet cada canvi i es pugui donar de baixa una persona. No cal perfil de moderador (no hi ha text lliure).
+- La demo s'haurà d'adaptar. Quan es faci, actualitzar el §7 i el §13.
