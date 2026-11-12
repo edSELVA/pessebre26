@@ -79,6 +79,28 @@ function auto_aplica(PDO $pdo, array $cfg, DateTimeImmutable $ara): int
     return $afegides;
 }
 
+/** Quantes automàtiques s'afegirien (en total, a poc a poc) si la fita d'aquest moment salta per data ara. Aproximat. */
+function auto_previsio(PDO $pdo, string $moment): int
+{
+    $objectiu = (int)config_llegeix($pdo, "auto_$moment", (string)(AUTO_OBJECTIU_DEFECTE[$moment] ?? 0));
+    $max_zona = (int)config_llegeix($pdo, 'auto_max_zona', '40');
+    $zones = zones_obertes($pdo);
+    $marques = implode(',', array_fill(0, count($zones), '?'));
+    $st = $pdo->prepare("SELECT l.zona, COUNT(*) AS total, SUM(CASE WHEN o.lloc_id IS NULL THEN 0 ELSE 1 END) AS ocupats,
+                                SUM(CASE WHEN o.origen = 'auto' THEN 1 ELSE 0 END) AS auto,
+                                SUM(CASE WHEN o.lloc_id IS NULL AND l.grup = 'general' THEN 1 ELSE 0 END) AS lliures
+                         FROM llocs l LEFT JOIN ocupacions o ON o.lloc_id = l.id
+                         WHERE l.grup <> 'poble' AND l.zona IN ($marques) GROUP BY l.zona");
+    $st->execute($zones);
+    $total = $ocupats = $cabuda = 0;
+    foreach ($st->fetchAll() as $z) {
+        $total += (int)$z['total'];
+        $ocupats += (int)$z['ocupats'];
+        $cabuda += min((int)$z['lliures'], max(0, (int)floor($z['total'] * $max_zona / 100) - (int)$z['auto']));
+    }
+    return max(0, min((int)ceil($total * $objectiu / 100) - $ocupats, $cabuda));
+}
+
 /** Retira totes les automàtiques. Retorna quantes. */
 function auto_retira(PDO $pdo, DateTimeImmutable $ara): int
 {

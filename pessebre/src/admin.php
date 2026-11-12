@@ -82,6 +82,7 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
                     'assolida' => hora_local($f['assolida']), 'per' => $f['per']];
         }, fites($pdo)),
         'participacio' => participacio_real($pdo),
+        'ritme' => fites_ritme($pdo, $cfg, $ara),
         'automatiques' => (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'auto'")->fetchColumn(),
         'pot_tancar' => bd_hora($ara) >= calendari($pdo, 'families_fins'),
         'config' => $config,
@@ -233,6 +234,23 @@ function admin_fita(PDO $pdo, $numero, $data, $increment, DateTimeImmutable $ara
     return ['numero' => (int)$f['numero']];
 }
 
+/** L'administració afegeix una figura en un lloc lliure de les famílies d'una zona oberta (§22). Compta com a participació real. */
+function admin_afegeix(PDO $pdo, array $cfg, array $p, DateTimeImmutable $ara): array
+{
+    if (bd_hora($ara) >= calendari($pdo, 'families_fins')) throw new ErrorPessebre('La participació ja s\'ha tancat.', 403, 'tancat');
+    $l = lloc_lliure($pdo, $p['lloc'] ?? null);
+    $permes = $l['grup'] === 'general' || ($l['grup'] === 'claustre' && claustre_alliberat($pdo, $ara));
+    if (!$permes) throw new ErrorPessebre($l['grup'] === 'poble'
+        ? 'És una casa de classe: s\'hi pot posar una casa sense placa.'
+        : 'Aquest lloc no és de les famílies (encara és del claustre o és dels Reis).', 400, 'lloc');
+    if (!in_array($l['zona'], zones_obertes($pdo), true)) throw new ErrorPessebre('Aquesta zona encara no és oberta.', 400, 'zona');
+    $peca = participacio_peca($cfg, $l, $p['peca'] ?? null, $p['mirall'] ?? 0, $p['colors'] ?? null, $p['finestres'] ?? 0);
+    $pdo->prepare("INSERT INTO ocupacions (lloc_id, estat, origen, peca, mirall, colors, finestres, hora) VALUES (?, 'confirmat', 'admin', ?, ?, ?, ?, ?)")
+        ->execute([$l['id'], $peca[0], $peca[1], $peca[2], $peca[3], bd_hora($ara)]);
+    registre_afegeix($pdo, $ara, 'administració', 'admin.afegeix', $l['id'], $peca[0]);
+    return ['lloc' => $l['id'], 'zona_nova' => zones_actualitza($pdo, $ara)];
+}
+
 /** Tancament de Reis: s'esborren codis, enllaços, intents i registre; el pessebre queda com a pàgina estàtica. */
 function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
 {
@@ -302,6 +320,7 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
             case 'admin.tancar': return admin_tancar($pdo, $ara);
             case 'admin.canvia': return admin_ocupacio($pdo, $cfg, $p, $ara, false);
             case 'admin.casa_sense_placa': return admin_ocupacio($pdo, $cfg, $p, $ara, true);
+            case 'admin.afegir': return admin_afegeix($pdo, $cfg, $p, $ara);
             case 'admin.config': return admin_config($pdo, $p['opcio'] ?? null, $p['valor'] ?? null, $ara);
             case 'admin.enllac':
                 $tipus = ($p['tipus'] ?? '') === 'claustre' ? 'claustre' : 'etapa';

@@ -159,7 +159,8 @@ var Visor = (function () {
   // El lloc és dels que pot triar el grup que participa (famílies o claustre)?
   function llocDelGrup(l, s) {
     if (op.mode === 'claustre') return l.grup === 'claustre' && s.claustre;
-    if (op.mode === 'familia') return l.grup === 'general' || (l.grup === 'claustre' && !!s.claustre_alliberat);
+    // L'administració pot afegir figures als mateixos llocs que les famílies
+    if (op.mode === 'familia' || op.mode === 'admin') return l.grup === 'general' || (l.grup === 'claustre' && !!s.claustre_alliberat);
     return false;
   }
 
@@ -204,7 +205,7 @@ var Visor = (function () {
     var lliures = candidats.filter(function (l) { return !darrer.o[l.id] && (darrer.r || []).indexOf(l.id) < 0; });
     var ocupats = candidats.filter(function (l) { return darrer.o[l.id]; });
     // Si sota el dit hi ha un lloc lliure i un d'ocupat (figures que se superposen), mana el lliure (a l'administració, l'ocupat)
-    var primer = op.mode === 'admin' ? ocupats : lliures;
+    var primer = op.mode === 'admin' && !op.filtre ? ocupats : lliures;    // afegint figures a l'administració, també el lliure
     var l = Compon.toca(primer, D.peces, sx, sy) || Compon.toca(candidats, D.peces, sx, sy);
     op.enToc(l, darrer);
   }

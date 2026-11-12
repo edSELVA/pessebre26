@@ -6,7 +6,7 @@ require_once $ARREL . '/pessebre/src/app.php';
 $prova_admin = function (array $cfg, string $nom) {
     echo "    ($nom)\n";
     $pdo = bd_connecta($cfg);
-    foreach (['intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
+    foreach (['fites', 'intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
     bd_esquema($pdo);
     $mapa = disseny($cfg, 'mapa.json');
     llocs_carrega($pdo, $mapa);

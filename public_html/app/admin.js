@@ -9,6 +9,8 @@
   var pestanya = 'lloc';
   var sel = null;                // lloc seleccionat i la seva informació
   var visorCarregat = null;
+  var afegint = null;            // tipus de figura que l'administració està afegint (persona, animal, casa, element) o null
+  var TIPUS = [{ t: 'persona', nom: 'Persones' }, { t: 'animal', nom: 'Animals' }, { t: 'casa', nom: 'Cases' }, { t: 'element', nom: 'Arbres i elements' }];
   var cont = document.getElementById('contingut');
 
   function admin() { return estat && estat.rol === 'admin'; }
@@ -70,7 +72,11 @@
       if (!visorCarregat) {
         visorCarregat = Visor.inicia({ font: 'snapshot.json', mode: 'admin', refresc: 60000,
           // Es poden tocar els llocs ocupats o retinguts i les cases i els elements (també els lliures, que es veuen transparents)
-          esCandidat: function (l, s) { return !!s.o[l.id] || (s.r || []).indexOf(l.id) >= 0 || l.tipus === 'casa' || l.tipus === 'element'; },
+          // Afegint figures, només els llocs del tipus triat (els lliures dels altres tipus no es dibuixen)
+          esCandidat: function (l, s) {
+            if (afegint) return l.tipus === afegint;
+            return !!s.o[l.id] || (s.r || []).indexOf(l.id) >= 0 || l.tipus === 'casa' || l.tipus === 'element';
+          },
           enToc: function (l) { if (l) tria(l); } });
       }
       obre('estat');
@@ -99,8 +105,48 @@
     api('admin.lloc', { lloc: l.id }).then(function (r) {
       sel = r;
       Visor.destaca(l);
+      // Afegint figures: en tocar una silueta lliure del tipus triat, s'obre directament l'editor
+      if (afegint && !r.ocupacio && l.tipus === afegint && afegible(l)) { pestanya = 'lloc'; edita(l, null, true); return; }
       obre('lloc');
     }).catch(function (e) { UI.avis(e.message); });
+  }
+
+  // Un lloc lliure on l'administració pot afegir una figura: el que podria triar una família
+  function afegible(l) {
+    var s = Visor.snapshot();
+    return !!s && !s.tancat && s.zones.indexOf(l.zona) >= 0 && (l.grup === 'general' || (l.grup === 'claustre' && s.claustre_alliberat));
+  }
+
+  function afegeix(tipus) {
+    afegint = tipus;
+    Visor.filtre(tipus);
+    sel = null;
+    Visor.destaca(null);
+    obre('lloc');
+  }
+
+  // Afegir figures (compten com a participació): primer el tipus, després es toca una silueta
+  function blocAfegir() {
+    var s = Visor.snapshot();
+    if (!admin() || !s || s.tancat) return null;
+    if (afegint) {
+      var nom = TIPUS.filter(function (t) { return t.t === afegint; })[0].nom.toLowerCase();
+      return h('div', { class: 'afegir' }, [
+        h('h3', { text: 'Afegint ' + nom }),
+        h('p', { text: 'Toca una silueta lliure del pessebre per posar-hi una figura. Compta com a participació.' }),
+        h('div', { class: 'botons' }, [boto('Deixar d\'afegir', function () { afegint = null; Visor.filtre(null); pLloc(); }, 'suau')])
+      ]);
+    }
+    return h('div', { class: 'afegir' }, [
+      h('h3', { text: 'Afegir figures' }),
+      h('p', { class: 'suau', text: 'Per si hi ha poca participació: les figures que afegeix l\'administració compten com a participació (les automàtiques no).' }),
+      h('div', { class: 'botons' }, TIPUS.map(function (t) {
+        var n = Visor.lliures(t.t).length;
+        var b = boto(t.nom + ' (' + n + ')', function () { afegeix(t.t); });
+        if (!n) b.disabled = true;
+        return b;
+      }))
+    ]);
   }
 
   function triaPerId(id) {
@@ -115,13 +161,14 @@
   }
 
   function pLloc() {
-    if (!sel) { mostra([h('h2', { text: 'Lloc' }), h('p', { text: 'Toca un lloc del pessebre per veure qui l\'ocupa i gestionar-lo.' })]); return; }
+    if (!sel) { mostra([h('h2', { text: 'Lloc' }), h('p', { text: 'Toca un lloc del pessebre per veure qui l\'ocupa i gestionar-lo.' }), blocAfegir()]); return; }
     var l = sel.lloc, o = sel.ocupacio;
     var lm = D().mapa.llocs.filter(function (x) { return x.id === l.id; })[0];
     var fills = [h('h2', { text: 'Lloc ' + l.id }), h('p', { class: 'suau', text: descriuLloc(lm) })];
     if (!o) {
       fills.push(h('p', { text: 'Lliure.' }));
       if (admin() && l.grup === 'poble') fills.push(h('div', { class: 'botons' }, [boto('Posar-hi una casa sense placa', function () { edita(lm, null); }, 'primari')]));
+      else if (admin() && afegible(lm)) fills.push(h('div', { class: 'botons' }, [boto('Afegir-hi una figura', function () { edita(lm, null, true); }, 'primari')]));
     } else {
       // Participació anònima: d'una família no se sap el codi
       var qui = o.classe ? 'Classe «' + o.classe + '»' : ({ familia: 'Una família', claustre: 'Claustre', admin: 'Administració', auto: 'Automàtica' }[o.origen] || o.origen);
@@ -147,14 +194,16 @@
       fills.push(h('h3', { text: 'Registre d\'aquest lloc' }));
       fills.push(taulaRegistre(sel.registre, false));
     }
+    if (afegint) fills.push(blocAfegir());
     mostra(fills);
   }
 
-  // Editor de peça i colors (canviar una ocupació o posar una casa sense placa)
-  function edita(l, o) {
-    var sensePlaca = !o;
-    var est = sensePlaca
-      ? { peca: l.codi.replace(/-P$/, '-SP'), colors: null, mirall: l.mirall ? 1 : 0, finestres: 0 }
+  // Editor de peça i colors (canviar una ocupació, posar una casa sense placa o afegir una figura en un lloc lliure)
+  function edita(l, o, nova) {
+    var sensePlaca = !o && !nova;
+    var possibles = UI.pecesPossibles(D(), l);
+    var est = nova ? { peca: possibles.indexOf(l.codi) >= 0 ? l.codi : possibles[0], colors: null, mirall: l.mirall ? 1 : 0, finestres: 0 }
+      : sensePlaca ? { peca: l.codi.replace(/-P$/, '-SP'), colors: null, mirall: l.mirall ? 1 : 0, finestres: 0 }
       : { peca: o.peca, colors: o.colors ? o.colors.slice() : null, mirall: o.mirall, finestres: o.finestres || 0 };
     // Ocupacions antigues poden tenir menys colors que parts personalitzables té ara la peça: es completen amb 0
     var n = D().peces[est.peca].pers.length;
@@ -163,17 +212,19 @@
       Visor.posa(l.id, { p: est.peca, c: est.colors, m: est.mirall, f: est.finestres, n: o && o.classe && /-P$/.test(est.peca) ? o.classe : undefined });
       Visor.redibuixa();
     });
-    var tanca = function () { Visor.treu(l.id); Visor.redibuixa(); pLloc(); };
+    var tanca = function () { Visor.treu(l.id); Visor.redibuixa(); if (nova && afegint) sel = null; pLloc(); };
+    if (nova) Visor.centra(l.x, l.y - 20, 240);
     mostra([
-      h('h2', { text: sensePlaca ? 'Casa sense placa · ' + l.id : 'Canviar · ' + l.id }),
+      h('h2', { text: nova ? 'Afegir una figura · ' + l.id : sensePlaca ? 'Casa sense placa · ' + l.id : 'Canviar · ' + l.id }),
       ed.galeria, ed.tria,
       h('div', { class: 'botons' }, [
         boto('Desar', function () {
-          api(sensePlaca ? 'admin.casa_sense_placa' : 'admin.canvia',
-              { lloc: l.id, peca: est.peca, colors: est.colors, mirall: est.mirall, finestres: est.finestres }).then(function () {
+          api(nova ? 'admin.afegir' : sensePlaca ? 'admin.casa_sense_placa' : 'admin.canvia',
+              { lloc: l.id, peca: est.peca, colors: est.colors, mirall: est.mirall, finestres: est.finestres }).then(function (r) {
             Visor.treu(l.id);
-            UI.avis('Desat.');
-            return refresca().then(function () { tria(l); });
+            UI.avis(nova ? (r.zona_nova ? 'Afegida! S\'ha obert una zona nova.' : 'Afegida! Compta com a participació.') : 'Desat.');
+            // Afegint figures, es torna a la llista per posar-ne una altra
+            return refresca().then(function () { if (nova && afegint) { sel = null; Visor.destaca(null); pLloc(); } else tria(l); });
           }).catch(function (e) { UI.avis(e.message); });
         }, 'primari'),
         boto('Girar ↔', ed.girar),
@@ -200,6 +251,7 @@
     var fills = [
       h('h2', { text: 'Estat' }),
       aturada ? h('p', { class: 'error', text: 'La participació està ATURADA.' }) : null,
+      blocRitme(),
       admin() ? h('div', { class: 'botons' }, [boto(aturada ? 'Reprendre la participació' : 'Aturar la participació', function () {
         if (!aturada && !window.confirm('Aturar totes les reserves (tutors, claustre i famílies)?')) return;
         desaConfig('aturada', aturada ? '0' : '1');
@@ -392,6 +444,34 @@
 
   var NOM_MOMENT = { dia: 'Dia', posta: 'Posta de sol', nit: 'Nit', neu: 'Neu' };
 
+  // Ritme de participació cap a la propera fita: el que tocaria tenir si es repartís igual cada dia, el que hi ha i la previsió
+  function blocRitme() {
+    var r = estat.ritme;
+    if (!r || estat.config.tancat === '1') return null;
+    var unitat = r.base === 'classes' ? ' cases de classe' : ' participacions';
+    var fills = [h('h3', { text: 'Ritme cap a la fita «' + NOM_MOMENT[r.moment] + '»' }),
+      fila('Llindar', r.llindar + unitat + ' · data límit ' + r.data_limit)];
+    if (r.abans) {
+      fills.push(h('p', { class: 'suau', text: 'Aquest tram comença el ' + r.inici + '.' }));
+      return h('div', { class: 'ritme' }, fills);
+    }
+    var barra = h('div', { class: 'ritme-barra', role: 'img', 'aria-label': r.fet + ' de ' + r.llindar + '; avui en tocarien ' + r.esperat }, [h('span'), h('i')]);
+    barra.firstChild.style.setProperty('width', Math.min(100, 100 * r.fet / r.llindar) + '%');
+    barra.lastChild.style.setProperty('left', Math.min(100, 100 * r.esperat / r.llindar) + '%');
+    fills.push(barra);
+    fills.push(fila('Ara', r.fet + unitat + ' · avui en tocarien ' + r.esperat + (r.percent !== null ? ' (' + r.percent + ' % del previst des del ' + r.inici.slice(0, 10) + ')' : '')));
+    if (r.falten_fita > 0) fills.push(fila('Per arribar-hi', 'en falten ' + r.falten_fita + (r.necessari_dia ? ', unes ' + r.necessari_dia + ' al dia' : '')));
+    fills.push(fila('Ritme', (r.per_dia !== null ? r.per_dia + ' al dia de mitjana · ' : '') + r.darreres_24h + ' les darreres 24 hores'));
+    fills.push(h('p', { class: 'previsio', text: r.falten_fita === 0 ? 'Ja s\'ha arribat al llindar: la fita saltarà aviat.'
+      : r.previsio === 'llindar' ? 'Al ritme d\'ara, saltarà per participació cap al ' + r.data_prevista + '.'
+      : 'Al ritme d\'ara, saltarà per data el ' + r.data_limit + '. Aleshores s\'hi afegiran a poc a poc unes ' + r.automatiques + ' figures automàtiques (que no compten com a participació).' }));
+    if (r.falten_ritme > 0 && r.base !== 'classes') {
+      fills.push(h('p', { class: 'destacat', text: 'Per anar al ritme previst falten ' + r.falten_ritme + ' figures.' }));
+      if (admin()) fills.push(h('div', { class: 'botons' }, [boto('Afegir figures', function () { sel = null; Visor.destaca(null); obre('lloc'); }, 'primari')]));
+    }
+    return h('div', { class: 'ritme' }, fills);
+  }
+
   function campNumeric(k, nom, min, max) {
     var camp = h('input', { type: 'number', class: 'camp curt', min: String(min), max: String(max), value: estat.config[k], 'aria-label': nom });
     if (!admin()) camp.disabled = true;
@@ -434,6 +514,7 @@
       h('h2', { text: 'Fites i moments del dia' }),
       fila('Moment actual', NOM_MOMENT[c.moment] || c.moment),
       fila('Participació real', e.participacio.reals + ' (cases de classe: ' + e.participacio.classes + ')'),
+      blocRitme(),
       h('h3', { text: 'Fites' }),
       h('p', { class: 'suau', text: 'Cada fita salta amb el primer que arribi: el llindar o la data límit. No es desfà mai.' })
     ].concat(files).concat([

@@ -49,7 +49,7 @@ comprova(strpos($html, '<script') === false, 'el full d\'etiquetes no té script
 $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     echo "    ($nom)\n";
     $pdo = bd_connecta($cfg);
-    foreach (['intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
+    foreach (['fites', 'intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
     bd_esquema($pdo);
     $mapa = disseny($cfg, 'mapa.json');
     llocs_carrega($pdo, $mapa);

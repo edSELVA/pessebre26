@@ -324,3 +324,14 @@ body.admin .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom:
 .text h1 { font-size: 22px; }
 .text a { color: var(--or); }
 body.pagina { overflow: auto; }
+
+/* Administració: ritme de participació i afegir figures */
+.ritme { margin: 8px 0 14px; padding: 10px 12px; border-radius: 12px; background: #F4E9D4; }
+.ritme h3 { margin-top: 0; }
+.ritme-barra { position: relative; height: 10px; margin: 8px 0; border-radius: 5px; background: #E2D4BC; overflow: hidden; }
+.ritme-barra span { display: block; height: 100%; width: 0; background: #A0521E; }
+.ritme-barra i { position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: #2A2018; }
+.previsio { margin: 8px 0 4px; }
+.destacat { margin: 6px 0; font-weight: 650; color: #A3271E; }
+.afegir { margin-top: 14px; }
+.afegir .boto[disabled] { opacity: .45; cursor: default; }

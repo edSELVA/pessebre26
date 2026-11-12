@@ -23,7 +23,7 @@ php eines/gestio.php enllac primaria                   # mostra l'enllaç classe
 
 Famílies i claustre (Fase C): `php eines/gestio.php codis 30` crea un lot de codis i el full d'etiquetes amb QR (a `pessebre/dades/`, esborra'l després d'imprimir); `enllac claustre` dona l'enllaç `#k=…`. Per provar-ho abans del 21 de desembre: `calendari families_des "2026-11-11 00:00"` (i `claustre_des`, `claustre_tanca`).
 
-Administració (Fase D): `php eines/gestio.php contrasenya admin` (i `lectura`) i després `admin.html`. Des d'allà es fa tot el que fan les ordres de terminal.
+Administració (Fase D): `php eines/gestio.php contrasenya admin` (i `lectura`) i després `admin.html`. Des d'allà es fa tot el que fan les ordres de terminal, es veu el ritme de participació i, si cal, s'hi afegeixen figures (compten com a participació).
 
 Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ronda 1|2`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
