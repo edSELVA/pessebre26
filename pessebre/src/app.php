@@ -27,6 +27,21 @@ function app_config(string $cami): array
     return $cfg;
 }
 
+/** Valors inicials de la configuració (els que ja hi són no es toquen). */
+const CONFIG_INICIAL = DEFECTES_CALENDARI + ['classes_tanca' => '2026-12-21 22:59:00', 'moment' => 'dia', 'zones' => 'Z0', 'aturada' => '0',
+    'claustre_limit' => '50', 'ronda' => '1', 'llindar_zona' => '75', 'objectiu' => '600', 'minim_dies' => '1',
+    'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40'];
+
+/** Crea les taules, carrega els llocs del mapa, les fites i la configuració inicial. Retorna quants llocs hi ha. */
+function app_installa(PDO $pdo, array $cfg): int
+{
+    bd_esquema($pdo);
+    $n = llocs_carrega($pdo, disseny($cfg, 'mapa.json'));
+    fites_inicialitza($pdo);
+    foreach (CONFIG_INICIAL as $k => $v) if (config_llegeix($pdo, $k) === null) config_desa($pdo, $k, $v);
+    return $n;
+}
+
 /** Executa $feina amb el bloqueig d'escriptura i dins d'una transacció; després regenera el snapshot. */
 function app_escriu(PDO $pdo, array $cfg, DateTimeImmutable $ara, callable $feina)
 {

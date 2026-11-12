@@ -27,6 +27,14 @@ Administració (Fase D): `php eines/gestio.php contrasenya admin` (i `lectura`) 
 
 Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ronda 1|2`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
+## Demostració (per ensenyar-lo)
+
+```
+sh eines/demo.sh
+```
+
+Obre `http://localhost:8027/demo` (o, des del mòbil a la mateixa wifi, l'adreça que escriu). Pestanya **DEMO** a l'esquerra: fase (inici, tutories, torronada, famílies, fites per data, tancat), «Veure com» (públic, tutor, claustre, família, administració; contrasenya `demo`), deixar passar el temps i reiniciar (fase, famílies o tot). Té la seva pròpia base de dades a `demo/dades/` (no es puja mai). **La carpeta `demo/` no va mai a l'hosting.**
+
 ## Instal·lació (hosting, a partir de la Fase B)
 
 1. Puja `public_html/` a l'arrel web i `pessebre/` (i `eines/`) fora de l'arrel web. Si `pessebre/` és en un altre lloc, canvia la línia `$PESSEBRE` d'`api.php`.
@@ -39,6 +47,7 @@ Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ro
 - `disseny-origen/` paquet de disseny v2 (no s'edita) → `php eines/converteix.php` → `public_html/disseny/`
 - `public_html/` visor (`index.html`, `app/`), disseny convertit, exemples · `pessebre/` servidor (a partir de la Fase B)
 - `eines/` conversió, dades d'exemple, servidor de proves, comprovador de secrets · `proves/` proves automàtiques
+- `demo/` mode demostració (només en local, mai a l'hosting)
 
 ## Repositori públic: secrets
 

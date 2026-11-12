@@ -49,13 +49,7 @@ $pdo = bd_connecta($cfg);
 
 switch ($ordre) {
     case 'installa':
-        bd_esquema($pdo);
-        $n = llocs_carrega($pdo, disseny($cfg, 'mapa.json'));
-        fites_inicialitza($pdo);
-        $defectes = DEFECTES_CALENDARI + ['classes_tanca' => '2026-12-21 22:59:00', 'moment' => 'dia', 'zones' => 'Z0', 'aturada' => '0',
-                                          'claustre_limit' => '50', 'ronda' => '1', 'llindar_zona' => '75', 'objectiu' => '600', 'minim_dies' => '1',
-                                          'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40'];
-        foreach ($defectes as $k => $v) if (config_llegeix($pdo, $k) === null) config_desa($pdo, $k, $v);
+        $n = app_installa($pdo, $cfg);
         snapshot_regenera($pdo, $cfg, $ara);
         echo "Base de dades a punt: $n llocs. snapshot.json regenerat.\n";
         break;
