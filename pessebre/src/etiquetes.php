@@ -6,7 +6,7 @@ require_once __DIR__ . '/qr.php';
 
 const ETIQUETES = ['columnes' => 3, 'files' => 8, 'ample' => 70, 'alt' => 37, 'marge_sup' => 0.5, 'marge_esq' => 0];
 
-function etiquetes_html(array $codis, string $url_base, int $lot): string
+function etiquetes_html(array $codis, string $url_base, int $lot, int $usos = 3): string
 {
     $e = ETIQUETES;
     $per_full = $e['columnes'] * $e['files'];
@@ -33,7 +33,7 @@ function etiquetes_html(array $codis, string $url_base, int $lot): string
             $o .= '<div class="et">' . qr_svg($url_base . '#c=' . $c) . '<div class="tx">'
                 . '<p class="t">Pessebre de l\'escola</p>'
                 . '<p class="c">' . $h(codi_impres($c)) . '</p>'
-                . '<p class="p">Escaneja el QR o entra a ' . $h($host) . ', toca «Participar» i escriu el codi. Un codi, una figura.</p>'
+                . '<p class="p">Escaneja el QR o entra a ' . $h($host) . ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' . $usos . ($usos === 1 ? ' figura' : ' figures') . '.</p>'
                 . '</div></div>';
         }
         $o .= '</div>';

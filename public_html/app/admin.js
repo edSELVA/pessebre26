@@ -259,7 +259,7 @@
       h('table', { class: 'taula' }, [h('thead', {}, [cap]), h('tbody', {}, files)]),
       fila('Ocupacions', origens || 'cap'),
       fila('Claustre', e.claustre.fetes + ' de ' + e.claustre.limit),
-      fila('Segona ronda', e.config.ronda === '2' ? 'activada' : 'no'),
+      fila('Figures per codi', e.config.usos_codi),
       h('h3', { text: 'Retencions actives (' + e.retencions.length + ')' }),
       e.retencions.length ? h('ul', { class: 'llista' }, e.retencions.map(function (r) {
         return h('li', {}, [enllacLloc(r.lloc), ' · ' + r.origen + ' · fins a les ' + r.caduca.slice(11)]);
@@ -304,9 +304,9 @@
         resultat.textContent = '';
         if (!r.trobat) { resultat.appendChild(h('p', { text: 'Aquest codi no existeix.' })); return; }
         resultat.appendChild(fila('Lot', r.lot));
-        resultat.appendChild(fila('Fet servir', r.usos + ' de ' + r.permesos + (r.usos ? ' (figura posada)' : '')));
-        if (admin() && r.usos > 0) resultat.appendChild(h('div', { class: 'botons' }, [boto('Reactivar (que pugui tornar a participar)', function () {
-          if (!window.confirm('Reactivar aquest codi? Abans cal haver alliberat la figura de la família.')) return;
+        resultat.appendChild(fila('Fet servir', r.usos + ' de ' + r.permesos + (r.usos ? ' (figures posades)' : '')));
+        if (admin() && r.usos > 0) resultat.appendChild(h('div', { class: 'botons' }, [boto('Reactivar (una figura més)', function () {
+          if (!window.confirm('Reactivar aquest codi? Se li torna una figura. Abans cal haver alliberat la figura de la família.')) return;
           api('admin.reactivar', { codi: cerca.value }).then(function () { UI.avis('Codi reactivat.'); resultat.textContent = ''; })
             .catch(function (e) { UI.avis(e.message); });
         })]));
@@ -342,7 +342,7 @@
         full.appendChild(h('div', { class: 'etiqueta' }, [document.importNode(qr, true), h('div', { class: 'tx' }, [
           h('p', { class: 't', text: 'Pessebre de l\'escola' }),
           h('p', { class: 'c', text: c.codi }),
-          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. Un codi, una figura.' })
+          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.') })
         ])]));
       });
       zona.appendChild(full);
@@ -422,9 +422,7 @@
       h('h3', { text: 'Participació' }),
       numeric('claustre_limit', 'Límit del claustre', 200),
       numeric('llindar_zona', 'Obrir zona nova al (%)', 100),
-      h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: 'Segona ronda' }),
-        admin() ? boto(c.ronda === '2' ? 'Activada · desactivar' : 'Desactivada · activar', function () { desaConfig('ronda', c.ronda === '2' ? '1' : '2'); })
-                : h('span', { text: c.ronda === '2' ? 'activada' : 'no' })]),
+      numeric('usos_codi', 'Figures per codi de família', 10),
       h('h3', { text: 'Zones' }),
       h('p', { class: 'suau', text: 'S\'obren soles en arribar al llindar; aquí es poden forçar o endarrerir (sempre en ordre).' }),
       h('div', { class: 'botons' }, zones),

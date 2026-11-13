@@ -5,7 +5,7 @@
 //   php eines/gestio.php classes FITXER            carrega la llista de classes (format: etapa;nom)
 //   php eines/gestio.php enllac ETAPA|totes|claustre  crea o regenera enllaços d'etapa o del claustre (es mostren UN SOL COP)
 //   php eines/gestio.php codis N                   crea un lot de N codis de família i el full d'etiquetes per imprimir
-//   php eines/gestio.php ronda 1|2                 segona ronda: cada codi permet una segona participació
+//   php eines/gestio.php usos N                    figures per codi de família (1–10; per defecte 3)
 //   php eines/gestio.php calendari CLAU "AAAA-MM-DD hh:mm"   families_des, families_fins, claustre_des, claustre_tanca (hora de Barcelona)
 //   php eines/gestio.php contrasenya admin|lectura  contrasenya de la pàgina d'administració (es desa només el hash)
 //   php eines/gestio.php allibera LLOC             allibera una casa (p. ex. C014)
@@ -120,17 +120,17 @@ switch ($ordre) {
         registre_afegeix($pdo, $ara, 'terminal', 'admin.generar_codis', null, "lot {$lot['lot']}: $n codis");
         $pdo->commit();
         $fitxer = dirname($cfg['bloqueig']) . "/etiquetes-lot-{$lot['lot']}.html";
-        file_put_contents($fitxer, etiquetes_html($lot['codis'], $cfg['url_base'], $lot['lot']));
+        file_put_contents($fitxer, etiquetes_html($lot['codis'], $cfg['url_base'], $lot['lot'], codi_usos_permesos($pdo)));
         chmod($fitxer, 0600);
         echo "Lot {$lot['lot']}: $n codis.\nFull d'etiquetes: $fitxer\n";
         echo "Obre'l amb el navegador i imprimeix-lo a mida real. Conté codis vàlids: ESBORRA'L quan l'hagis imprès.\n";
         break;
 
-    case 'ronda':
+    case 'usos':
         $v = $args[1] ?? '';
-        if ($v !== '1' && $v !== '2') surt('Ús: php eines/gestio.php ronda 1|2');
-        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $v) { config_desa($pdo, 'ronda', $v); });
-        echo $v === '2' ? "Segona ronda ACTIVADA: cada codi permet una segona participació.\n" : "Una participació per codi.\n";
+        if (!preg_match('/^\d{1,2}$/', $v) || (int)$v < 1 || (int)$v > 10) surt('Ús: php eines/gestio.php usos N   (N entre 1 i 10)');
+        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $v) { config_desa($pdo, 'usos_codi', (string)(int)$v); });
+        echo "Cada codi de família permet ara " . (int)$v . ((int)$v === 1 ? " figura" : " figures") . ".\n";
         break;
 
     case 'calendari':
@@ -175,12 +175,12 @@ switch ($ordre) {
         $ret->execute([bd_hora($ara)]);
         echo "Retencions actives ara: " . $ret->fetchColumn() . "\n";
         $mad = function ($clau) use ($pdo) { return (new DateTimeImmutable(calendari($pdo, $clau), new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Madrid'))->format('Y-m-d H:i'); };
-        echo "Famílies: " . $mad('families_des') . " → " . $mad('families_fins') . " · ronda " . config_llegeix($pdo, 'ronda', '1') . "\n";
+        echo "Famílies: " . $mad('families_des') . " → " . $mad('families_fins') . " · figures per codi " . codi_usos_permesos($pdo) . "\n";
         echo "Claustre: " . $mad('claustre_des') . " → " . $mad('claustre_tanca') . " · " . claustre_estat($pdo, $ara)['fetes'] . " de " . config_llegeix($pdo, 'claustre_limit', '50') . "\n";
         $cod = $pdo->query('SELECT COUNT(*) AS n, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats FROM codis')->fetch();
         echo "Codis: {$cod['n']} creats, " . (int)$cod['usats'] . " usats · zones obertes: " . implode(', ', zones_obertes($pdo)) . "\n";
         break;
 
     default:
-        surt("Ordres: installa, classes, enllac, codis, ronda, calendari, contrasenya, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
+        surt("Ordres: installa, classes, enllac, codis, usos, calendari, contrasenya, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
 }

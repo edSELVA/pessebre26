@@ -33,7 +33,7 @@ $prova_admin = function (array $cfg, string $nom) {
     igual(429, $e, 'després de 5 contrasenyes dolentes cal esperar');
     [$e] = $crida(['a' => 'admin.estat'] + $A, '2026-12-22 10:16:00', '10.2.0.9');
     igual(200, $e, 'passats 15 minuts es pot tornar a entrar');
-    [$e, $r] = $crida(['a' => 'admin.config', 'opcio' => 'ronda', 'valor' => '2'] + $L);
+    [$e, $r] = $crida(['a' => 'admin.config', 'opcio' => 'usos_codi', 'valor' => '5'] + $L);
     igual([403, 'lectura'], [$e, $r['codi'] ?? ''], 'la contrasenya de lectura no pot fer canvis');
 
     // Classes (enganxant la llista) i casa d'una classe
@@ -75,10 +75,20 @@ $prova_admin = function (array $cfg, string $nom) {
     [$e] = $crida(['a' => 'admin.casa_sense_placa', 'lloc' => 'P0001', 'peca' => 'CASA-ALTA-SP', 'colors' => [0, 0, 0, 0]] + $A);
     igual(400, $e, 'no es pot posar una casa sense placa fora del casc antic');
 
+    // Figures per codi: l'administració les canvia (1–10)
+    igual('3', $crida(['a' => 'admin.estat'] + $A)[1]['config']['usos_codi'] ?? null, 'per defecte, cada codi serveix per a 3 figures');
+    igual(200, $crida(['a' => 'admin.config', 'opcio' => 'usos_codi', 'valor' => '4'] + $A)[0], 'l\'administració canvia les figures per codi');
+    igual('4', $crida(['a' => 'admin.estat'] + $A)[1]['config']['usos_codi'] ?? null, 'i queda desat');
+    igual(400, $crida(['a' => 'admin.config', 'opcio' => 'usos_codi', 'valor' => '0'] + $A)[0], 'no pot ser 0');
+    igual(400, $crida(['a' => 'admin.config', 'opcio' => 'usos_codi', 'valor' => '11'] + $A)[0], 'ni més de 10');
+    igual(400, $crida(['a' => 'admin.config', 'opcio' => 'ronda', 'valor' => '2'] + $A)[0], 'la «segona ronda» ja no existeix');
+    $crida(['a' => 'admin.config', 'opcio' => 'usos_codi', 'valor' => '3'] + $A);
+
     // Codis: generar, cercar, alliberar i reactivar
     [$e, $r] = $crida(['a' => 'admin.generar_codis', 'quants' => 2] + $A);
     igual([200, 2], [$e, count($r['codis'] ?? [])], 'l\'administració genera un lot de 2 codis');
     comprova(strpos($r['codis'][0]['qr'] ?? '', '<svg') === 0, 'cada codi porta el seu QR en SVG');
+    igual(3, $r['usos'] ?? null, 'la resposta diu quantes figures permet cada codi (per a l\'etiqueta): 3');
     $codi = str_replace('-', '', $r['codis'][0]['codi']);
     $persona = $un(function ($l) { return $l['tipus'] === 'persona' && $l['grup'] === 'general' && $l['zona'] === 'Z0'; });
     [, $r] = $crida(['a' => 'codi.retenir', 'c' => $codi, 'lloc' => $persona['id']]);
@@ -86,7 +96,7 @@ $prova_admin = function (array $cfg, string $nom) {
                    'colors' => array_fill(0, count($peces['PER-ADU-F']['pers']), 0)]);
     igual(200, $e, 'una família participa amb un codi nou');
     [$e, $r] = $crida(['a' => 'admin.cercar', 'codi' => $codi] + $L);
-    igual([true, 1], [$r['trobat'] ?? null, $r['usos'] ?? null], 'la cerca troba el codi i quantes vegades s\'ha fet servir');
+    igual([true, 1, 3], [$r['trobat'] ?? null, $r['usos'] ?? null, $r['permesos'] ?? null], 'la cerca troba el codi, quantes vegades s\'ha fet servir i quantes en permet (3)');
     comprova(!isset($r['llocs']), 'la cerca no diu on és la figura (participació anònima)');
     [, $r] = $crida(['a' => 'admin.lloc', 'lloc' => $persona['id']] + $L);
     igual('familia', $r['ocupacio']['origen'] ?? null, 'el lloc diu que és d\'una família…');

@@ -21,6 +21,8 @@
   ];
   var aturaCompte = null;
   var pot = false;
+  var queden = 1;             // figures que encara es poden posar amb aquest codi (famílies)
+  var permesos = 1;           // figures que permet el codi en total
 
   function api(accio, dades) {
     var cos = { a: accio };
@@ -86,6 +88,9 @@
     });
     UI.mostra([
       h('h2', { text: mode === 'claustre' ? 'Claustre: què vols posar al pessebre?' : 'Què vols posar al pessebre?' }),
+      mode === 'familia' && permesos > 1
+        ? h('p', { class: 'suau', text: 'Amb aquest codi pots posar ' + (queden === permesos ? permesos + ' figures.' : queden === 1 ? 'una figura més.' : 'encara ' + queden + ' figures.') })
+        : null,
       h('div', { class: 'tipus' }, botons)
     ]);
   }
@@ -147,8 +152,8 @@
   }
 
   function confirma() {
-    var avisConf = mode === 'familia'
-      ? 'Confirmes? Amb aquest codi només es pot posar una figura.'
+    var avisConf = mode === 'familia' && queden === 1
+      ? 'Confirmes? Aquesta serà l\'última figura d\'aquest codi.'
       : 'Confirmes aquesta figura per al pessebre?';
     if (!window.confirm(avisConf)) return;
     api(prefix + 'confirmar', { lloc: tria.lloc.id, retencio: tria.retencio, peca: tria.peca, mirall: tria.mirall, colors: tria.colors, finestres: tria.finestres })
@@ -159,6 +164,7 @@
           Visor.treu(id);
           tria = null;
           Visor.redibuixa();
+          if (mode === 'familia') queden = r.queden;
           pasFet(r.zona_nova);
         });
       })
@@ -172,15 +178,17 @@
     pot = false;
     filtre = null;
     Visor.filtre(null);
+    var altra = mode === 'claustre' || (mode === 'familia' && queden > 0);       // es pot posar una altra figura
     var fills = [
-      h('h2', { text: 'Gràcies! Ja sou al pessebre.' }),
+      h('h2', { text: mode === 'familia' && queden > 0 ? 'Gràcies! Ja és al pessebre.' : 'Gràcies! Ja sou al pessebre.' }),
       zonaNova ? h('p', { text: 'Amb la vostra participació s\'ha obert una zona nova del pessebre!' }) : null,
       h('p', { class: 'suau', text: mode === 'familia'
-        ? 'Si cal canviar alguna cosa, demaneu-ho a porteria o per correu.'
+        ? (queden > 0 ? 'Amb aquest codi encara pots posar ' + (queden === 1 ? 'una figura més.' : queden + ' figures més.')
+                      : 'Ja heu posat totes les figures d\'aquest codi. Si cal canviar alguna cosa, demaneu-ho a porteria o per correu.')
         : 'Podeu posar més figures mentre quedin llocs del claustre.' }),
       h('div', { class: 'botons' }, [h('a', { class: 'boto', href: './', text: 'Veure el pessebre' })])
     ];
-    if (mode === 'claustre') { pot = true; fills[3].insertBefore(h('button', { type: 'button', class: 'boto primari', text: 'Posar-ne una altra', clic: pasInici }), fills[3].firstChild); }
+    if (altra) { pot = true; fills[3].insertBefore(h('button', { type: 'button', class: 'boto primari', text: 'Posar-ne una altra', clic: pasInici }), fills[3].firstChild); }
     UI.mostra(fills);
   }
 
@@ -250,6 +258,7 @@
     Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {
       if (r[1].tancat) return;
       if (!r[0].pot) { noPot(r[0].missatge); return; }
+      if (mode === 'familia') { permesos = r[0].permesos; queden = r[0].permesos - r[0].usos; }
       pot = true;
       pasInici();
     }).catch(function (e) {

@@ -178,7 +178,7 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Claustre (decidit):** els seus llocs que quedin lliures a les 22:00 del 21 des **passen a les famílies** (si la zona és oberta). Límit de 50 participacions (`claustre_limit`). El claustre veu els seus llocs encara que la zona sigui tancada.
 - **Pastors:** paleta de terra a `disseny-propi/paletes.json` (grup `pastors`), també quan una família ocupa un lloc de pastor alliberat.
 - **Desfer (decidit):** no; només l'administració retira.
-- **Famílies (decidit):** des del **21 des a les 00:00** fins al 6 gen (`families_des`, `families_fins`). Retenció de 5 minuts. Segona ronda: `ronda 2` (dues figures per codi).
+- **Famílies (decidit):** des del **21 des a les 00:00** fins al 6 gen (`families_des`, `families_fins`). Retenció de 5 minuts. **Figures per codi:** 3 (§29; abans una, amb una «segona ronda» que ja no existeix).
 - **Zones:** s'obren automàticament (Z0 → Z1 → Z2 → Z3) quan les obertes arriben al **75 %** d'ocupació real (`llindar_zona`; no compten les automàtiques).
 - **QR propi** (`pessebre/src/qr.php`, versions 1–9, nivell M) generat al servidor; comprovat amb un lector real. No hi ha `app/qr.js`.
 - **Visor públic:** botó «Participar» per escriure el codi si no es pot escanejar el QR.
@@ -259,3 +259,10 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Figura fixa que ningú posa:** peça pròpia `ESC-CAGANER` (píxels, de perfil, barretina vermella, camisa blanca, faixa, pantalons abaixats i la caqueta). Es dibuixa a totes les pàgines.
 - **Cada dia en un amagatall diferent:** 17 llocs a `disseny-propi/caganer.json` (un per dia del 21 des al 6 gen; abans i després torna a començar), triats perquè siguin a terra, no trepitgin cap lloc ni peça fixa, quedin lluny del camí dels Reis i, si pot ser, darrere d'un arbre, i ordenats perquè cada dia salti d'una banda a l'altra. El visor tria el d'avui amb la data del snapshot (com els Reis); a la demo, «+1 dia» el canvia de lloc. El conversor els comprova i en fa `disseny/caganer.json`; `proves/prova-caganer.php` ho verifica.
 - **Visor públic:** botó «Cerca el caganer» (a baix a l'esquerra). Es busca movent-se i fent zoom; tocar-lo → «L'has trobat!». **Tres pistes:** 1 s'enfosqueix la meitat on no és · 2 s'enfosqueix tot menys el quadrant on és (meitat esquerra/dreta i a dalt/a baix de la y 500) · 3 es marca amb un anell i s'hi apropa. No es desa res: si es recarrega, es torna a començar. No surt en mode participar (ho fa `app/caganer.js`).
+
+## 29. Tres figures per codi (13 nov 2026, decidit)
+- **Cada codi de família serveix per a 3 figures** (abans, una). Si s'omple tot el pessebre es considera un èxit: simplement ja no es poden posar més figures. Substitueix la «segona ronda».
+- **Opció `usos_codi`** (1–10, per defecte 3): l'administració la canvia a Configuració («Figures per codi de família») o amb `php eines/gestio.php usos N`; si a gener queden llocs lliures, es pot pujar. Substitueix `ronda`.
+- **Com es veu a la família:** «Amb aquest codi pots posar 3 figures» → després de cada una, «Amb aquest codi encara pots posar N figures» i el botó «Posar-ne una altra» → a l'última, l'avís «Aquesta serà l'última figura d'aquest codi» i el missatge final. Es pot posar la segona i la tercera en qualsevol moment: tornant a entrar amb el mateix codi o enllaç.
+- **Anònim com abans:** del codi només es desa quantes vegades s'ha fet servir. «Reactivar» un codi li torna una figura. Les etiquetes diuen «Pots posar-hi fins a 3 figures» (nombre segons l'opció en generar-les).
+- **Efecte sobre els llocs:** amb 874 llocs per a famílies i 3 per codi, 292 famílies ja podrien ocupar-ho tot. Les automàtiques, el ritme i la regla de fites no canvien (compten participacions, no codis).

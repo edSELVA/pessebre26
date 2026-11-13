@@ -1,5 +1,5 @@
 <?php
-// Fase C: codis de família, QR, etiquetes, participació de famílies i claustre, segona ronda i obertura de zones.
+// Fase C: codis de família, QR, etiquetes, participació de famílies i claustre, figures per codi i obertura de zones.
 require_once $ARREL . '/pessebre/src/app.php';
 require_once $ARREL . '/pessebre/src/etiquetes.php';
 
@@ -131,22 +131,41 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual([400, 'peca'], [$e, $r['codi'] ?? ''], 'no es poden posar peces de l\'escena fixa');
     [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $persona['id'], 'retencio' => $ret, 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => $col('PER-PAS-F', [6, 3])], $h);
     igual(200, $e, 'una família pot posar un pastor (PER-PAS-F) amb la paleta normal');
-    [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona2['id']], $h);
-    igual([403, 'codi_no'], [$e, $r['codi'] ?? ''], 'un codi només serveix per a una figura');
+    igual(2, $r['queden'] ?? null, 'en confirmar la primera figura, la resposta diu que en queden 2');
     [, $r] = $crida(['a' => 'codi.validar', 'c' => $c[0]], $h);
-    igual(false, $r['pot'] ?? null, 'el codi gastat ho diu en validar-lo');
+    igual([true, 1, 3], [$r['pot'] ?? null, $r['usos'] ?? null, $r['permesos'] ?? null], 'cada codi serveix per a 3 figures: n\'ha fet servir 1 de 3');
 
-    // Segona ronda
-    config_desa($pdo, 'ronda', '2');
+    // Tres figures per codi: la segona és la casa de la perifèria, la tercera un altre lloc de persona
     [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $casa['id']], $h);
-    igual(200, $e, 'amb la segona ronda el mateix codi pot tornar a participar');
+    igual(200, $e, 'el mateix codi pot posar una segona figura');
     [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $casa['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => $casa['codi'], 'colors' => array_slice([2, 1, 0, 3], 0, count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['pers'])),
                        'finestres' => count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['finestres']) ? 1 : 0], $h);
     igual(200, $e, 'una família pinta una casa de la perifèria (i hi treu una finestra)');
     if (count(disseny($cfg, 'peces.json')['peces'][$casa['codi']]['finestres'])) igual(1, $snap()['o'][$casa['id']]['f'] ?? null, 'el snapshot porta la finestra treta de la casa de la família');
-    [$e] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona2['id']], $h);
-    igual(403, $e, 'a la segona ronda, com a molt dues figures per codi');
-    config_desa($pdo, 'ronda', '1');
+    igual(1, $r['queden'] ?? null, 'en confirmar la segona figura, en queda 1');
+    $lliure = function (array $exclosos) use ($un) {
+        return $un(function ($l) use ($exclosos) { return $l['tipus'] === 'persona' && $l['grup'] === 'general' && $l['zona'] === 'Z0' && !in_array($l['id'], $exclosos, true); });
+    };
+    $persona3 = $lliure([$persona['id'], $persona2['id']]);
+    $persona4 = $lliure([$persona['id'], $persona2['id'], $persona3['id']]);
+    [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona3['id']], $h);
+    igual(200, $e, 'i una tercera');
+    [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[0], 'lloc' => $persona3['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-ADU-F', 'mirall' => 0, 'colors' => $col('PER-ADU-F', [1, 1])], $h);
+    igual([200, 0], [$e, $r['queden'] ?? null], 'en confirmar la tercera, ja no en queden');
+    [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona4['id']], $h);
+    igual([403, 'codi_no'], [$e, $r['codi'] ?? ''], 'a la quarta figura, el codi està gastat');
+    [, $r] = $crida(['a' => 'codi.validar', 'c' => $c[0]], $h);
+    igual(false, $r['pot'] ?? null, 'el codi gastat ho diu en validar-lo');
+    // L'administració canvia les figures per codi (p. ex. a gener, si queden llocs lliures)
+    config_desa($pdo, 'usos_codi', '4');
+    [$e, $r] = $crida(['a' => 'codi.retenir', 'c' => $c[0], 'lloc' => $persona4['id']], $h);
+    igual(200, $e, 'si es puja a 4 figures per codi, el mateix codi en pot posar una altra');
+    $crida(['a' => 'codi.deixar', 'c' => $c[0], 'lloc' => $persona4['id'], 'retencio' => $r['retencio'] ?? ''], $h);
+    config_desa($pdo, 'usos_codi', '1');
+    [$e] = $crida(['a' => 'codi.retenir', 'c' => $c[1], 'lloc' => $persona4['id']], $h);
+    igual(200, $e, 'amb 1 figura per codi, un codi nou encara pot participar');
+    config_desa($pdo, 'usos_codi', '3');
+    $pdo->exec("DELETE FROM ocupacions WHERE estat = 'retingut'");
 
     // Element: un arbre es pot canviar per una altra espècie (i girar), però no per una peça d'un altre grup
     $arbre = $un(function ($l) { return $l['tipus'] === 'element' && $l['grup'] === 'general' && $l['zona'] === 'Z0' && strpos($l['codi'], 'ELE-ARBRE') === 0; });
@@ -189,7 +208,7 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual(400, $e, 'en un lloc de persona no hi va un gos');
     [$e, $r] = $crida(['a' => 'codi.confirmar', 'c' => $c[3], 'lloc' => $persona2['id'], 'retencio' => $ret4, 'peca' => 'PER-INF-F', 'mirall' => 0, 'colors' => $col('PER-INF-F', [1])], $h);
     $s = $snap();
-    // Esperat: s'obren zones mentre les obertes tinguin com a mínim l'1 % de llocs ocupats (7 participacions reals)
+    // Esperat: s'obren zones mentre les obertes tinguin com a mínim l'1 % de llocs ocupats (8 participacions reals)
     $esperades = ['Z0'];
     foreach (['Z1', 'Z2', 'Z3'] as $z) {
         $total = count(array_filter($mapa['llocs'], function ($l) use ($esperades) { return $l['grup'] !== 'poble' && in_array($l['zona'], $esperades, true); }));
@@ -206,7 +225,7 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     $obre = $pdo->query("SELECT COUNT(*) FROM registre WHERE accio = 'zones.obre'")->fetchColumn();
     igual(count($esperades) - 1, (int)$obre, 'el registre apunta cada zona oberta');
     igual([], snapshot_errors($s, $mapa, disseny($cfg, 'peces.json')['peces'], disseny($cfg, 'paletes.json')), 'el snapshot generat és vàlid');
-    igual(['tipus' => 'participacions', 'fet' => 7, 'fita' => null], $s['comptador'], 'comptador: 7 participacions reals');
+    igual(['tipus' => 'participacions', 'fet' => 8, 'fita' => null], $s['comptador'], 'comptador: 8 participacions reals');
     igual(1, $s['o'][$arbre['id']]['m'] ?? $arbre['mirall'], 'l\'arbre queda girat (m al snapshot si és diferent del mapa)');
 
     // Registre sense dades personals

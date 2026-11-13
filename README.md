@@ -25,7 +25,7 @@ Famílies i claustre (Fase C): `php eines/gestio.php codis 30` crea un lot de co
 
 Administració (Fase D): `php eines/gestio.php contrasenya admin` (i `lectura`) i després `admin.html`. Des d'allà es fa tot el que fan les ordres de terminal, es veu el ritme de participació i, si cal, s'hi afegeixen figures (compten com a participació).
 
-Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `ronda 1|2`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
+Altres ordres: `allibera C014`, `tanca "2026-12-21 23:59"`, `aturada si|no`, `usos N` (figures per codi, 3 per defecte), `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
 ## Demostració (per ensenyar-lo)
 

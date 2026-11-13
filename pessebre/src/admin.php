@@ -8,7 +8,7 @@ const ADMIN_FALLADES = 5;
 const CLAUS_CALENDARI = ['classes_tanca', 'claustre_des', 'claustre_tanca', 'families_des', 'families_fins'];
 const NOM_CLASSE = '/^[\p{L}\p{N} .·\'-]{1,8}$/u';
 // Opcions numèriques editables: [mínim, màxim]
-const CONFIG_NUMERICA = ['claustre_limit' => [1, 200], 'llindar_zona' => [1, 100], 'objectiu' => [10, 5000], 'minim_dies' => [0, 10],
+const CONFIG_NUMERICA = ['claustre_limit' => [1, 200], 'llindar_zona' => [1, 100], 'usos_codi' => [1, 10], 'objectiu' => [10, 5000], 'minim_dies' => [0, 10],
                          'auto_posta' => [0, 100], 'auto_nit' => [0, 100], 'auto_neu' => [0, 100], 'auto_max_zona' => [0, 100]];
 
 /** Comprova la contrasenya i retorna el rol ('admin' o 'lectura'). */
@@ -63,7 +63,7 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
     $lots = $pdo->query("SELECT lot, COUNT(*) AS codis, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats, MIN(creat) AS creat FROM codis GROUP BY lot ORDER BY lot")->fetchAll();
     $config = [];
     foreach (CLAUS_CALENDARI as $k) $config[$k] = hora_local(config_llegeix($pdo, $k, DEFECTES_CALENDARI[$k] ?? '2026-12-21 22:59:00'));
-    foreach (['aturada' => '0', 'ronda' => '1', 'zones' => 'Z0', 'claustre_limit' => '50', 'llindar_zona' => '75', 'objectiu' => '600',
+    foreach (['aturada' => '0', 'usos_codi' => '3', 'zones' => 'Z0', 'claustre_limit' => '50', 'llindar_zona' => '75', 'objectiu' => '600',
               'minim_dies' => '1', 'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40', 'tancat' => '0',
               'moment' => 'dia', 'auto_fase' => ''] as $k => $d) $config[$k] = config_llegeix($pdo, $k, $d);
     return [
@@ -190,9 +190,6 @@ function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
         $desat = bd_hora($t);
     } elseif ($clau === 'aturada') {
         if ($v !== '0' && $v !== '1') throw new ErrorPessebre('Valor no vàlid.', 400, 'valor');
-        $desat = $v;
-    } elseif ($clau === 'ronda') {
-        if ($v !== '1' && $v !== '2') throw new ErrorPessebre('Valor no vàlid.', 400, 'valor');
         $desat = $v;
     } elseif (isset(CONFIG_NUMERICA[$clau])) {
         [$min, $max] = CONFIG_NUMERICA[$clau];
@@ -334,7 +331,7 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
                 if ($n < 1 || $n > 1000) throw new ErrorPessebre('Es poden generar entre 1 i 1000 codis de cop.', 400, 'quants');
                 $lot = codis_genera($pdo, $cfg['pebre'], $n, $ara);
                 registre_afegeix($pdo, $ara, 'administració', 'admin.generar_codis', null, "lot {$lot['lot']}: $n codis");
-                return ['lot' => $lot['lot'], 'url_base' => $cfg['url_base'],
+                return ['lot' => $lot['lot'], 'url_base' => $cfg['url_base'], 'usos' => codi_usos_permesos($pdo),
                         'codis' => array_map(function ($c) use ($cfg) { return ['codi' => codi_impres($c), 'qr' => qr_svg($cfg['url_base'] . '#c=' . $c)]; }, $lot['codis'])];
             case 'admin.classes':
                 [$n, $avisos] = classes_carrega($pdo, (string)($p['text'] ?? ''));

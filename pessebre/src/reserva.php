@@ -135,7 +135,7 @@ function reserva_allibera(PDO $pdo, string $lloc_id, string $qui, DateTimeImmuta
 }
 
 // ───────────────────────────── Famílies (codi) i claustre (enllaç comú)
-// Retenció de 5 minuts. Famílies: un codi = una participació (dues si l'administració activa la segona ronda).
+// Retenció de 5 minuts. Famílies: cada codi serveix per a diverses figures (USOS_CODI, 3 per defecte; l'administració ho canvia).
 // Claustre: fins a «claustre_limit» participacions (50) i fins a «claustre_tanca» (21 des a les 22:00).
 
 const RETENCIO_FAMILIES = 300;
@@ -188,9 +188,12 @@ function codi_comprova(PDO $pdo, array $cfg, $text): array
     return $r;
 }
 
+const USOS_CODI = 3;
+
+/** Quantes figures permet cada codi de família (opció «usos_codi», entre 1 i 10). */
 function codi_usos_permesos(PDO $pdo): int
 {
-    return config_llegeix($pdo, 'ronda', '1') === '2' ? 2 : 1;
+    return max(1, min(10, (int)config_llegeix($pdo, 'usos_codi', (string)USOS_CODI)));
 }
 
 /** Estat del codi per a la pàgina (no canvia res). */
@@ -303,7 +306,7 @@ function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, 
     confirma_ocupacio($pdo, $o['lloc_id'], $p, $ara);
     registre_afegeix($pdo, $ara, 'família', 'codi.confirmar', $o['lloc_id'], $p[0]);     // sense el codi: participació anònima
     $obertes = zones_actualitza($pdo, $ara);
-    return ['lloc' => $o['lloc_id'], 'zona_nova' => $obertes];
+    return ['lloc' => $o['lloc_id'], 'zona_nova' => $obertes, 'queden' => $e['permesos'] - (int)$codi['usos'] - 1];
 }
 
 function codi_deixar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, DateTimeImmutable $ara): array
