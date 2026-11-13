@@ -1,0 +1,23 @@
+{
+ "nota": "Amagatalls del caganer: un per dia a partir de primer_dia (i torna a començar). [x, y] és l'ancoratge (peus). Triats perquè no trepitgin cap lloc ni peça fixa, siguin a terra, lluny del camí dels Reis i, si pot ser, darrere d'un arbre; ordenats perquè cada dia salti d'una banda a l'altra.",
+ "primer_dia": "2026-12-21",
+ "llocs": [
+  [212, 612],
+  [1772, 416],
+  [1136, 636],
+  [2240, 548],
+  [632, 360],
+  [1460, 672],
+  [320, 672],
+  [1804, 516],
+  [1100, 384],
+  [2056, 748],
+  [620, 724],
+  [1368, 340],
+  [128, 416],
+  [1852, 716],
+  [560, 560],
+  [2232, 384],
+  [1480, 508]
+ ]
+}

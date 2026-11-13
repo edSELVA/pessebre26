@@ -257,6 +257,7 @@
     });
   } else {
     boto.hidden = false;
-    boto.addEventListener('click', function () { demanaCodi(); });
+    boto.addEventListener('click', function () { Caganer.atura(); demanaCodi(); });
+    carregat.then(Caganer.inicia).catch(function () {});        // el joc del caganer, només al visor públic
   }
 })();

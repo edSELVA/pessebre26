@@ -386,6 +386,7 @@ function converteix(string $zip, string $arrel): array
     $sortida['escena-fixa.json'] = json_llista_per_linies(['nota' => 'Peces fixes (no participables). ordre = y de dibuix quan no coincideix amb y.'], 'peces', $fixa);
     $sortida['paletes.json'] = json_encode($paletes, JSON_F | JSON_PRETTY_PRINT) . "\n";   // cases, persones i pastors
     $sortida['reis-cami.json'] = json_encode($reis, JSON_F) . "\n";
+    $sortida['caganer.json'] = caganer_llocs("$arrel/disseny-propi/caganer.json", $registre);
     $sortida['moments.css'] = "/* Generat per eines/converteix.php a partir de moments/*.css del paquet v2. */\n" . $moments;
     $sortida['escena.css'] = escena_css($css, $registre);
     ksort($sortida);
@@ -794,6 +795,19 @@ function suau(array $pts, int $n): array
 }
 
 /** Recorregut dels Reis: polilínia del camí + distància (al llarg del camí) de cada rei el primer i el darrer dia. */
+/** Amagatalls del caganer (disseny-propi/caganer.json): un per dia a partir de primer_dia. Es comproven i es copien tal qual. */
+function caganer_llocs(string $font, array $registre): string
+{
+    $d = json_decode((string)file_get_contents($font), true);
+    if (!is_array($d) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d['primer_dia'] ?? '') || !is_array($d['llocs'] ?? null) || !$d['llocs']) falla("$font: format no vàlid");
+    if (!isset($registre['ESC-CAGANER'])) falla("$font: falta la peça ESC-CAGANER");
+    foreach ($d['llocs'] as $i => $l) {
+        if (!is_array($l) || count($l) !== 2 || !is_int($l[0]) || !is_int($l[1]) || $l[0] < 0 || $l[0] > 2400 || $l[1] < 0 || $l[1] > 800) falla("$font: lloc $i no vàlid");
+    }
+    return json_encode(['nota' => 'Generat per eines/converteix.php des de disseny-propi/caganer.json. Un amagatall per dia a partir de primer_dia.',
+                        'peca' => 'ESC-CAGANER', 'primer_dia' => $d['primer_dia'], 'llocs' => $d['llocs']], JSON_F) . "\n";
+}
+
 function cami_reis(string $font, array $fixa): array
 {
     $d = json_decode((string)file_get_contents($font), true);

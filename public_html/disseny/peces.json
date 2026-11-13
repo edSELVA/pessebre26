@@ -75,6 +75,7 @@
   "ESC-ANGEL": {"cat":"escena","vb":[34,30],"a":[17,28],"caixa":[2,0,33,27],"placa":null,"pers":[],"rols":["contorn","flor-clar","groc-clar","groc","groc-ombra","pell","pell-ombra","blanc","blanc-ombra","gris-clar","or"]},
   "ESC-AQUEDUCTE": {"cat":"escena","vb":[150,44],"a":[75,43],"caixa":[0,5,150,44],"placa":null,"pers":[],"rols":["contorn","pedra-clar","pedra","pedra-ombra","pedra-fosc"]},
   "ESC-BOU": {"cat":"escena","vb":[34,24],"a":[17,22],"caixa":[2,0,32,23],"placa":null,"pers":[],"rols":["contorn","pell","blanc","bru-clar","bru","bru-ombra","ombra-terra"]},
+  "ESC-CAGANER": {"cat":"escena","vb":[14,20],"a":[7,20],"caixa":[0,0,14,20],"placa":null,"pers":[],"rols":["contorn","barretina","barretina-ombra","pell","pell-ombra","camisa","camisa-ombra","pantalons","pantalons-ombra","caca","caca-ombra"]},
   "ESC-CASTELL": {"cat":"escena","vb":[110,52],"a":[55,51],"caixa":[2,2,107,51],"placa":null,"pers":[],"rols":["contorn","pedra-clar","pedra","pedra-ombra","pedra-fosc","fusta-ombra","llum"]},
   "ESC-ESTEL": {"cat":"escena","vb":[96,44],"a":[18,24],"caixa":[2,7,95,39],"placa":null,"pers":[],"rols":["groc-clar","groc","groc-ombra","or-ombra"]},
   "ESC-ESTEL-CUA": {"cat":"escena","vb":[112,44],"a":[20,24],"caixa":[8,7,110,33],"placa":null,"pers":[],"rols":["groc-clar","groc","groc-ombra","or-ombra"]},

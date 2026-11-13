@@ -358,3 +358,22 @@ body.pagina { overflow: auto; }
 .marca-ona { fill: #FFE14D; fill-opacity: .25; stroke: #FFF6C8; stroke-width: 2; animation: marca-pols 1.6s ease-in-out infinite; }
 @keyframes marca-pols { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
 @media (prefers-reduced-motion: reduce) { .marca-ona { animation: none; opacity: .6; } }
+
+/* Joc del caganer (visor públic) */
+.boto-caganer {
+  position: fixed; z-index: 3;
+  left: max(12px, env(safe-area-inset-left)); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 64px);
+  display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 14px 4px 8px;
+  border: 0; border-radius: 99px; background: var(--vidre); color: var(--text);
+  font: 600 14px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 10px #0006;
+}
+.boto-caganer svg { width: 22px; height: 31px; }
+.boto-caganer[hidden], body.amb-full .boto-caganer { display: none; }
+.pista-fosc { fill: #050818; fill-opacity: .62; pointer-events: none; }
+#capa-pista circle {
+  transform: scale(var(--marca, 1)); transform-box: fill-box; transform-origin: center;
+  shape-rendering: geometricPrecision; pointer-events: none;
+}
+.pista-anell { fill: none; stroke: #FFE14D; stroke-width: 4; animation: marca-pols 1.2s ease-in-out infinite; }
+.pista-anell.trobat { stroke: #7CF29A; stroke-width: 5; }
+@media (prefers-reduced-motion: reduce) { .pista-anell { animation: none; } }

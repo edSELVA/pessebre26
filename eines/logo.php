@@ -3,7 +3,7 @@
 // Llegeix el PNG de disseny-propi/logo/ i escriu public_html/disseny/logo.svg. Tots dos són a .gitignore:
 // el logo NO es puja mai al repositori públic (CLAUDE.md §9); es copia a l'hosting a mà.
 //
-//   php eines/logo.php [--cel=100] [--bloc=4] [--fi=2] [--x=278] [--y=46] [--png=CAMÍ] [--sortida=CAMÍ]
+//   php eines/logo.php [--cel=100] [--bloc=4] [--fi=2] [--x=278] [--y=40] [--png=CAMÍ] [--sortida=CAMÍ]
 //
 //   --cel     quantes cel·les (píxels del cor) d'ample
 //   --bloc    quantes unitats de l'escena fa cada cel·la del cor (4 = píxels grossos, d'arcade)
@@ -16,7 +16,7 @@
 declare(strict_types=1);
 
 $arrel = dirname(__DIR__);
-$opc = ['cel' => '100', 'bloc' => '4', 'fi' => '2', 'x' => '278', 'y' => '46', 'png' => '', 'sortida' => "$arrel/public_html/disseny/logo.svg"];
+$opc = ['cel' => '100', 'bloc' => '4', 'fi' => '2', 'x' => '278', 'y' => '40', 'png' => '', 'sortida' => "$arrel/public_html/disseny/logo.svg"];
 foreach (array_slice($argv, 1) as $a) {
     if (!preg_match('/^--(\w+)=(.*)$/', $a, $m) || !isset($opc[$m[1]])) { fwrite(STDERR, "Opció desconeguda: $a\n"); exit(1); }
     $opc[$m[1]] = $m[2];

@@ -70,6 +70,41 @@
    ],
    "personalitzables": [],
    "placa": null
+  },
+  "ESC-CAGANER": {
+   "fitxer": "peces/ESC-CAGANER.svg",
+   "categoria": "escena",
+   "viewBox": [
+    0,
+    0,
+    14,
+    20
+   ],
+   "ancoratge": [
+    7,
+    20
+   ],
+   "caixa": [
+    0,
+    0,
+    14,
+    20
+   ],
+   "rols": [
+    "contorn",
+    "barretina",
+    "barretina-ombra",
+    "pell",
+    "pell-ombra",
+    "camisa",
+    "camisa-ombra",
+    "pantalons",
+    "pantalons-ombra",
+    "caca",
+    "caca-ombra"
+   ],
+   "personalitzables": [],
+   "placa": null
   }
  }
 }

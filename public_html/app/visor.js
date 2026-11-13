@@ -61,6 +61,7 @@ var Visor = (function () {
     capes.peces = el('g', { id: 'capa-peces' }, svg);
     capes.aire = el('g', { id: 'capa-llum-aire' }, svg);
     incrusta(svgDe(t.aire), capes.aire);
+    capes.pista = el('g', { id: 'capa-pista' }, svg);           // pistes del joc del caganer (enfosquir i marcar)
     capes.marques = el('g', { id: 'capa-marques' }, svg);       // punts dels llocs lliures en mode participar
     capes.destacat = el('g', { id: 'capa-destacat' }, svg);     // requadre del lloc seleccionat (administració)
     capes.tolls = svg.querySelector('#llum-terra-tolls');
@@ -68,7 +69,7 @@ var Visor = (function () {
     var escena = document.getElementById('escena');
     escena.textContent = '';
     escena.appendChild(svg);
-    Zoom.inicia(escena, svg, { vista: op.vista, enToc: op.enToc ? toc : null });
+    Zoom.inicia(escena, svg, { vista: op.vista, enToc: toc });
     Zoom.botons(document.getElementById('zoom-mes'), document.getElementById('zoom-menys'), document.getElementById('zoom-tot'));
     document.getElementById('zoom').hidden = false;
   }
@@ -114,6 +115,9 @@ var Visor = (function () {
       Object.keys(f.colors || {}).forEach(function (k) { vars['--' + k] = f.colors[k]; });
       llista.push({ y: y, ordre: f.ordre, node: usa(f.codi, x, y, !!f.mirall, vars) });
     });
+    // El caganer: cada dia en un amagatall diferent (com els Reis, segons la data del pessebre)
+    var cg = llocCaganer(s);
+    if (cg) llista.push({ y: cg.y, node: usa(D.caganer.peca, cg.x, cg.y, false, null, 'caganer') });
 
     var poble = 0, ocupades = 0;
     D.mapa.llocs.forEach(function (l) {
@@ -155,6 +159,48 @@ var Visor = (function () {
     Compon.ordena(llista).forEach(function (e) { frag.appendChild(e.node); });
     capes.peces.appendChild(frag);
     mostraComptador(s.comptador);
+  }
+
+  // ── Joc del caganer
+
+  var joc = null;            // funció a cridar quan es toca el caganer (només mentre es busca)
+
+  // Amagatall d'avui: un per dia a partir de primer_dia, i torna a començar
+  function llocCaganer(s) {
+    var c = D.caganer;
+    if (!c || !c.llocs.length || !s || !s.data || !D.peces[c.peca]) return null;
+    var n = c.llocs.length, i = ((Compon.dies(c.primer_dia, s.data) % n) + n) % n;
+    return { x: c.llocs[i][0], y: c.llocs[i][1] };
+  }
+
+  // El toc és sobre el caganer? (amb un marge de 10 px de pantalla, perquè és petit)
+  function tocaCaganer(sx, sy) {
+    var cg = llocCaganer(darrer);
+    if (!cg) return false;
+    var c = Compon.caixa(D.peces[D.caganer.peca], cg.x, cg.y, false), m = Math.max(2, 10 / Zoom.escala());
+    return sx >= c.x0 - m && sx <= c.x1 + m && sy >= c.y0 - m && sy <= c.y1 + m;
+  }
+
+  // Pistes: 0 res · 1 s'enfosqueix la meitat on no és · 2 tot menys el quadrant on és · 3 a més, es marca on és.
+  // «trobat»: només l'anell. Els quadrants: meitat esquerra o dreta, i a dalt o a baix de la y 500 (el terra va de 230 a 800).
+  function pista(nivell) {
+    capes.pista.textContent = '';
+    var cg = llocCaganer(darrer);
+    if (!cg || !nivell) return;
+    var esq = cg.x < AMPLE / 2, dalt = cg.y < 500;
+    if (nivell === 1) {
+      el('rect', { x: esq ? AMPLE / 2 : 0, y: 0, width: AMPLE / 2, height: ALT, class: 'pista-fosc' }, capes.pista);
+      Zoom.centra(AMPLE / 2, ALT / 2, AMPLE);
+    } else if (nivell === 2 || nivell === 3) {
+      var qx = esq ? 0 : AMPLE / 2, qy = dalt ? 0 : 500, qh = dalt ? 500 : ALT - 500;
+      el('path', { d: 'M0 0H' + AMPLE + 'V' + ALT + 'H0Z M' + qx + ' ' + qy + 'h' + AMPLE / 2 + 'v' + qh + 'h-' + AMPLE / 2 + 'z',
+                   'fill-rule': 'evenodd', class: 'pista-fosc' }, capes.pista);
+      if (nivell === 2) Zoom.centra(qx + AMPLE / 4, qy + qh / 2, AMPLE / 2);
+    }
+    if (nivell === 3 || nivell === 'trobat') {
+      el('circle', { cx: cg.x, cy: cg.y - 10, r: 40, class: 'pista-anell' + (nivell === 'trobat' ? ' trobat' : '') }, capes.pista);
+      Zoom.centra(cg.x, cg.y - 10, 300);
+    }
   }
 
   // Punt lluminós al peu d'un lloc lliure (persones, animals i elements). Fa la mateixa mida a la pantalla a qualsevol
@@ -220,6 +266,8 @@ var Visor = (function () {
   // Toc sobre l'escena: busca el lloc que hi ha a sota entre els candidats que decideix la pàgina.
   function toc(sx, sy) {
     if (!darrer) return;
+    if (joc && tocaCaganer(sx, sy)) { joc(); return; }
+    if (!op.enToc) return;
     var candidats = D.mapa.llocs.filter(function (l) { return op.esCandidat(l, darrer); });
     var lliures = candidats.filter(function (l) { return !darrer.o[l.id] && (darrer.r || []).indexOf(l.id) < 0; });
     var ocupats = candidats.filter(function (l) { return darrer.o[l.id]; });
@@ -248,9 +296,10 @@ var Visor = (function () {
       carrega(d + 'peces.svg'), carrega(d + 'terreny.svg'), carrega(d + 'llum-terra.svg'), carrega(d + 'llum-aire.svg'),
       carrega(d + 'mapa.json', 'json'), carrega(d + 'peces.json', 'json'), carrega(d + 'paletes.json', 'json'),
       carrega(d + 'escena-fixa.json', 'json'), carrega(d + 'reis-cami.json', 'json'), carrega(op.font, 'json'),
-      carrega(d + 'logo.svg').catch(function () { return null; })          // opcional
+      carrega(d + 'logo.svg').catch(function () { return null; }),         // opcional
+      carrega(d + 'caganer.json', 'json').catch(function () { return null; })
     ]).then(function (r) {
-      D = { mapa: r[4], peces: r[5].peces, paletes: r[6], fixa: r[7].peces, reis: r[8] };
+      D = { mapa: r[4], peces: r[5].peces, paletes: r[6], fixa: r[7].peces, reis: r[8], caganer: r[11] };
       construeix({ peces: r[0], terreny: r[1], terra: r[2], aire: r[3], logo: r[10] });
       dibuixa(r[9]);
       if (op.enSnapshot) op.enSnapshot(r[9]);
@@ -290,6 +339,12 @@ var Visor = (function () {
     centra: function (x, y, amplada) { if (svg) Zoom.centra(x, y, amplada); },
     snapshot: function () { return darrer; },
     // Marca un lloc amb un requadre (o cap, amb null)
+    // Joc del caganer: hi és avui? · començar (enTrobat) o acabar (null) · pistes (0–3 o 'trobat')
+    caganer: {
+      hiEs: function () { return !!llocCaganer(darrer); },
+      joc: function (enTrobat) { joc = enTrobat || null; if (!joc) pista(0); },
+      pista: pista
+    },
     destaca: function (l) {
       capes.destacat.textContent = '';
       if (!l) return;
