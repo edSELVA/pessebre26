@@ -1,5 +1,5 @@
 // Visor públic (index.html) i mode participar.
-//   #c=CODI  famílies (el codi de l'etiqueta; amb el botó «Participar» també es pot escriure). Si és d'una classe → classes.html
+//   #c=CODI  famílies (el codi de l'etiqueta; amb el botó «Participar» també es pot escriure). Si és d'una etapa (tutors) → classes.html
 //   #k=ENLLAÇ claustre
 // El que va després del # no arriba mai al servidor en carregar la pàgina; només va dins les peticions POST a api.php.
 // Flux: tocar un lloc lliure (retingut 5 minuts) → triar la figura, els colors i cap on mira → confirmar.
@@ -208,7 +208,7 @@
       e.preventDefault();
       var c = camp.value.toUpperCase().replace(/[\s.\-]/g, '');
       UI.api({ a: 'codi.validar', c: c }).then(function (r) {
-        if (r.tipus === 'classe') { location.href = 'classes.html#c=' + c; return; }     // codi d'una classe: pàgina dels tutors
+        if (r.tipus === 'etapa') { location.href = 'classes.html#c=' + c; return; }      // codi d'etapa: pàgina dels tutors
         location.hash = 'c=' + c;
         location.reload();
       }).catch(function (err) { demanaCodi(err.message); });
@@ -217,7 +217,7 @@
     form.addEventListener('submit', enviar);
     UI.mostra([
       h('h2', { text: 'Escriu el teu codi' }),
-      h('label', { for: 'camp-codi', id: 'ajuda-codi', class: 'suau', text: 'El de l\'etiqueta de la família o el de la classe: 10 lletres i xifres. Els guions no cal escriure\'ls.' }),
+      h('label', { for: 'camp-codi', id: 'ajuda-codi', class: 'suau', text: 'El de l\'etiqueta de la família o el de l\'etapa (tutors): 10 lletres i xifres. Els guions no cal escriure\'ls.' }),
       form,
       error ? h('p', { class: 'error', role: 'alert', text: error }) : null,
       h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: 'Tancar', clic: function () { UI.mostra([]); } })])
@@ -258,7 +258,7 @@
     avisMode.hidden = false;
     boto.hidden = true;
     Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {
-      if (r[0].tipus === 'classe') { location.replace('classes.html#c=' + hash.c); return; }   // QR o enllaç d'una classe
+      if (r[0].tipus === 'etapa') { location.replace('classes.html#c=' + hash.c); return; }    // QR o enllaç d'un codi d'etapa
       if (r[1].tancat) return;
       if (!r[0].pot) { noPot(r[0].missatge); return; }
       if (mode === 'familia') { permesos = r[0].permesos; queden = r[0].permesos - r[0].usos; }

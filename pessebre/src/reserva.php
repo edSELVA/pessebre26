@@ -1,5 +1,5 @@
 <?php
-// Reserva de cases de classe (tutors). Flux: codi de la classe → retenir una casa (10 min) → triar colors → confirmar.
+// Reserva de cases de classe (tutors). Flux: codi de l'etapa → triar la classe → retenir una casa (10 min) → triar colors → confirmar.
 // Una retenció caducada compta com a lloc lliure. Un cop confirmada, només l'administració la pot alliberar.
 declare(strict_types=1);
 
@@ -24,13 +24,26 @@ function classes_obertes(PDO $pdo, DateTimeImmutable $ara): void
     }
 }
 
-/** Estat de la classe del codi: si ja té casa, quina, i si encara es pot triar. */
-function classe_estat(PDO $pdo, array $c, DateTimeImmutable $ara): array
+/** Classes de les etapes del codi, indicant si ja tenen casa, i si encara es pot triar. */
+function etapa_estat(PDO $pdo, array $etapes, DateTimeImmutable $ara): array
 {
-    $o = ocupacio_de_classe($pdo, (int)$c['id']);
-    $feta = $o && $o['estat'] === 'confirmat';
+    $marques = implode(',', array_fill(0, count($etapes), '?'));
+    $st = $pdo->prepare("SELECT c.id, c.nom, o.estat FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id
+                         WHERE c.etapa IN ($marques) ORDER BY c.ordre, c.nom");
+    $st->execute($etapes);
+    $classes = array_map(function ($c) { return ['id' => (int)$c['id'], 'nom' => $c['nom'], 'feta' => $c['estat'] === 'confirmat']; }, $st->fetchAll());
     $obert = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00') && config_llegeix($pdo, 'aturada', '0') !== '1';
-    return ['classe' => $c['nom'], 'etapa' => ETAPES[$c['etapa']] ?? $c['etapa'], 'feta' => $feta, 'lloc' => $feta ? $o['lloc_id'] : null, 'obert' => $obert];
+    return ['etapa' => etapes_nom($etapes), 'classes' => $classes, 'obert' => $obert];
+}
+
+/** La classe triada, si és d'alguna de les etapes del codi. */
+function classe_de_etapes(PDO $pdo, $classe_id, array $etapes): array
+{
+    $st = $pdo->prepare('SELECT * FROM classes WHERE id = ?');
+    $st->execute([is_int($classe_id) ? $classe_id : -1]);
+    $c = $st->fetch();
+    if (!$c || !in_array($c['etapa'], $etapes, true)) throw new ErrorPessebre('Aquesta classe no és de la llista d\'aquest codi.', 400, 'classe');
+    return $c;
 }
 
 function ocupacio_de_classe(PDO $pdo, int $classe_id): ?array

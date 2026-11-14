@@ -1,6 +1,7 @@
-// Pàgina dels tutors (classes.html#c=CODI DE LA CLASSE, §30): el codi diu quina és la classe. 1) tocar una casa transparent
-// del casc antic, 2) triar façana, teulada i porta amb llum neutra, 3) confirmar. La casa queda retinguda 10 minuts mentre es tria.
-// S'hi arriba amb el QR o l'enllaç de la classe, o escrivint el codi al botó «Participar» del pessebre.
+// Pàgina dels tutors (classes.html#c=CODI D'ETAPA, §30): el mateix codi per a tots els tutors de l'etapa. 1) triar la classe
+// de la llista de l'etapa, 2) tocar una casa transparent del casc antic, 3) triar façana, teulada i porta amb llum neutra,
+// 4) confirmar. La casa queda retinguda 10 minuts mentre es tria. S'hi arriba escrivint el codi al botó «Participar» del
+// pessebre (o amb el QR o l'enllaç del codi).
 // El codi va després del #: el navegador no l'envia mai en carregar la pàgina; només va dins les peticions POST a api.php.
 'use strict';
 
@@ -8,7 +9,7 @@
   var NS = 'http://www.w3.org/2000/svg';
   var codi = Visor.hash().c || '';
   var full = document.getElementById('full');
-  var estat = { classe: null, lloc: null, retencio: null, caduca: 0, colors: [], mirall: 0, finestres: 0 };
+  var estat = { etapa: '', classes: [], classe: null, lloc: null, retencio: null, caduca: 0, colors: [], mirall: 0, finestres: 0 };
   var rellotge = null, temporitzadorAvis = null;
 
   // ── utilitats
@@ -58,23 +59,44 @@
     return Visor.disseny().mapa.llocs.filter(function (l) { return l.id === id; })[0];
   }
 
+  // ── pas 1: triar la classe
+
+  function pasClasse() {
+    estat.classe = null;
+    var pendents = estat.classes.filter(function (c) { return !c.feta; });
+    var botons = estat.classes.map(function (c) {
+      var b = h('button', { type: 'button', class: 'boto', text: c.nom + (c.feta ? ' ✓' : '') });
+      if (c.feta) { b.disabled = true; b.setAttribute('aria-label', c.nom + ', ja té casa'); }
+      else b.addEventListener('click', function () { estat.classe = c; pasCasa(); });
+      return b;
+    });
+    mostra([
+      h('h2', { text: pendents.length ? 'Quina és la teva classe?' : 'Totes les classes ja tenen casa' }),
+      h('p', { class: 'suau', text: pendents.length
+        ? 'Tria-la de la llista. Les que porten ✓ ja tenen la casa al pessebre.'
+        : 'Aquesta etapa ja ha acabat. Gràcies!' }),
+      h('div', { class: 'llista-classes' }, botons),
+      h('div', { class: 'botons' }, [h('a', { class: 'boto suau', href: './', text: 'Veure el pessebre' })])
+    ]);
+  }
+
   // ── pas 2: tocar una casa
 
   function pasCasa() {
     mostra([
       h('h2', { text: estat.classe.nom + ': tria una casa' }),
       h('p', { text: 'Toca una casa transparent del poble, al mig del pessebre. Pots apropar-t\'hi amb dos dits.' }),
-      h('div', { class: 'botons' }, [h('a', { class: 'boto suau', href: './', text: 'Veure el pessebre' })])
+      h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: 'Canviar de classe', clic: pasClasse })])
     ]);
     Visor.centra(1130, 400, 620);
   }
 
   function enToc(l, s) {
-    if (!estat.classe || estat.classe.feta || estat.retencio) return;   // durant la tria de colors (o si ja té casa) no
+    if (!estat.classe || estat.retencio) return;          // primer cal triar la classe; durant la tria de colors no
     if (!l) return;
     if (s.o[l.id]) { avis('Aquesta casa ja és d\'una altra classe.'); return; }
     // Si la casa és retinguda, ho decideix el servidor: pot ser la mateixa classe que torna (p. ex. després de recarregar).
-    api('classes.retenir', { lloc: l.id }).then(function (r) {
+    api('classes.retenir', { classe: estat.classe.id, lloc: l.id }).then(function (r) {
       estat.lloc = l;
       estat.retencio = r.retencio;
       estat.caduca = Date.now() + r.segons * 1000;
@@ -162,14 +184,14 @@
     var l = estat.lloc, t = estat.retencio;
     netejaTria();
     pasCasa();
-    api('classes.deixar', { lloc: l.id, retencio: t })
+    api('classes.deixar', { classe: estat.classe.id, lloc: l.id, retencio: t })
       .catch(function () { /* si falla, la retenció caduca sola en 10 minuts */ })
       .then(function () { return Visor.refresca(); }).catch(function () {});
   }
 
   function confirma() {
     if (!window.confirm('Confirmes la casa de ' + estat.classe.nom + '? Després només la coordinació la pot canviar.')) return;
-    api('classes.confirmar', { lloc: estat.lloc.id, retencio: estat.retencio, colors: estat.colors,
+    api('classes.confirmar', { classe: estat.classe.id, lloc: estat.lloc.id, retencio: estat.retencio, colors: estat.colors,
                                mirall: estat.mirall, finestres: estat.finestres })
       .then(function () {
         var nom = estat.classe.nom;
@@ -191,12 +213,14 @@
 
   // ── pas 4: fet
 
-  function pasFet(nom, ja) {
+  function pasFet(nom) {
     mostra([
-      h('h2', { text: (ja ? 'La casa de ' : 'Fet! La casa de ') + nom + ' ja és al pessebre.' }),
-      h('p', { class: 'suau', text: ja ? 'Aquest codi ja s\'ha fet servir. Si cal canviar alguna cosa, demaneu-ho a la coordinació.'
-                                       : 'Gràcies. Si cal canviar alguna cosa, demaneu-ho a la coordinació.' }),
-      h('div', { class: 'botons' }, [h('a', { class: 'boto primari', href: './', text: 'Veure el pessebre' })])
+      h('h2', { text: 'Fet! La casa de ' + nom + ' ja és al pessebre.' }),
+      h('p', { class: 'suau', text: 'Gràcies. Si cal canviar alguna cosa, demaneu-ho a la coordinació.' }),
+      h('div', { class: 'botons' }, [
+        h('button', { type: 'button', class: 'boto', text: 'Fer la casa d\'una altra classe', clic: pasClasse }),
+        h('a', { class: 'boto suau', href: './', text: 'Veure el pessebre' })
+      ])
     ]);
   }
 
@@ -218,21 +242,16 @@
   carregat.catch(function () { /* el missatge ja es mostra */ });
 
   if (!codi) {
-    errorEnllac('Falta el codi de la classe. Escaneja el QR de la classe o escriu el codi al botó «Participar» del pessebre.');
+    errorEnllac('Falta el codi de l\'etapa. Escriu-lo al botó «Participar» del pessebre.');
   } else {
     Promise.all([api('classes.estat'), carregat]).then(function (r) {
-      estat.classe = { nom: r[0].classe, feta: r[0].feta };
+      estat.etapa = r[0].etapa;
+      estat.classes = r[0].classes;
       var avisMode = document.getElementById('avis-mode');
-      avisMode.textContent = 'Tutors · ' + r[0].classe;
+      avisMode.textContent = 'Tutors · ' + r[0].etapa;
       avisMode.hidden = false;
-      if (r[0].feta) {
-        var l = lloc(r[0].lloc);
-        if (l) Visor.centra(l.x, l.y - 30, 400);
-        pasFet(r[0].classe, true);
-        return;
-      }
       if (!r[0].obert) { errorEnllac('El període per triar les cases de classe ja s\'ha tancat.'); return; }
-      pasCasa();
+      pasClasse();
     }).catch(function (e) { errorEnllac(e.message); });
   }
 })();

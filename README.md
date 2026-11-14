@@ -21,7 +21,7 @@ php eines/gestio.php usuari eduard admin               # primer compte d'adminis
 php eines/gestio.php classes eines/classes-exemple.txt # classes inventades (la llista real: classes.csv, mai al repositori)
 ```
 
-Després, tot es fa des d'`admin.html` (usuari i contrasenya): codis de classe per als tutors i enllaç amb QR del claustre («Claustre i classes»), codis de família amb etiquetes («Codis»), comptes de l'equip («Comptes»), configuració, fites i ritme. Tothom participa des del mateix enllaç amb el seu codi (botó «Participar» o QR). Per terminal també: `codis-classe pendents`, `enllac claustre`, `codis 30`, `usos N`, `calendari CLAU "AAAA-MM-DD hh:mm"`, `allibera C014`, `aturada si|no`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
+Després, tot es fa des d'`admin.html` (usuari i contrasenya): codis d'etapa per als tutors i enllaç amb QR del claustre («Claustre i tutors»), codis de família amb etiquetes («Codis»), comptes de l'equip («Comptes»), configuració, fites i ritme. Tothom participa des del mateix enllaç amb el seu codi (botó «Participar» o QR). Per terminal també: `codi-etapa primaria` (o `llar+infantil`), `enllac claustre`, `codis 30`, `usos N`, `calendari CLAU "AAAA-MM-DD hh:mm"`, `allibera C014`, `aturada si|no`, `estat`. Proves amb MySQL: defineix `PESSEBRE_MYSQL_DSN`, `PESSEBRE_MYSQL_USUARI` i `PESSEBRE_MYSQL_CLAU`.
 
 Logo de l'escola al cel (no es puja mai al repositori): posa el PNG a `disseny-propi/logo/` i `php eines/logo.php` (genera `public_html/disseny/logo.svg`).
 

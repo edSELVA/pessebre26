@@ -124,29 +124,39 @@ function codi_busca(PDO $pdo, string $pebre, string $c): ?array
     return $r ?: null;
 }
 
-// ── Codis de classe (§30): un per classe, amb el mateix format que els de família. La classe en desa l'HMAC (codi_hash).
-//    Identifiquen la classe (el tutor no tria res de cap llista). Regenerar-ne un fa que l'anterior deixi de funcionar.
+// ── Codis d'etapa (§30): un per etapa, el mateix per a tots els tutors de l'etapa (llar i infantil poden compartir-ne un).
+//    Mateix format que els de família; se'n desa l'HMAC. Amb el codi, el tutor tria la seva classe de la llista de l'etapa.
 
-/** Codi nou per a una classe (l'anterior queda anul·lat). Retorna el codi: es mostra un sol cop. */
-function codi_classe_nou(PDO $pdo, string $pebre, int $classe_id): string
+/** Codi nou per a una o més etapes. Les etapes que en tenien un d'actiu el perden (també si era compartit). Es mostra un sol cop. */
+function codi_etapa_nou(PDO $pdo, string $pebre, array $etapes, DateTimeImmutable $ara): string
 {
+    foreach ($etapes as $e) if (!isset(ETAPES[$e])) throw new InvalidArgumentException("Etapa desconeguda: $e");
+    foreach ($pdo->query('SELECT id, etapes FROM codis_etapa WHERE activa = 1')->fetchAll() as $r) {
+        if (array_intersect(explode(',', $r['etapes']), $etapes)) $pdo->prepare('UPDATE codis_etapa SET activa = 0 WHERE id = ?')->execute([$r['id']]);
+    }
     $familia = $pdo->prepare('SELECT COUNT(*) FROM codis WHERE hash = ?');
-    $classe = $pdo->prepare('SELECT COUNT(*) FROM classes WHERE codi_hash = ?');
+    $etapa = $pdo->prepare('SELECT COUNT(*) FROM codis_etapa WHERE hash = ?');
     do {
         $c = codi_nou();
         $h = codi_hash($pebre, $c);
         $familia->execute([$h]);
-        $classe->execute([$h]);
-    } while ((int)$familia->fetchColumn() || (int)$classe->fetchColumn());
-    $pdo->prepare('UPDATE classes SET codi_hash = ? WHERE id = ?')->execute([$h, $classe_id]);
+        $etapa->execute([$h]);
+    } while ((int)$familia->fetchColumn() || (int)$etapa->fetchColumn());
+    $pdo->prepare('INSERT INTO codis_etapa (etapes, hash, activa, creat) VALUES (?, ?, 1, ?)')->execute([implode(',', $etapes), $h, bd_hora($ara)]);
     return $c;
 }
 
-/** La classe d'un codi (ja normalitzat), o null. */
-function classe_per_codi(PDO $pdo, string $pebre, string $c): ?array
+/** Les etapes d'un codi d'etapa actiu (ja normalitzat), o null. */
+function etapes_per_codi(PDO $pdo, string $pebre, string $c): ?array
 {
-    $st = $pdo->prepare('SELECT * FROM classes WHERE codi_hash = ?');
+    $st = $pdo->prepare('SELECT etapes FROM codis_etapa WHERE hash = ? AND activa = 1');
     $st->execute([codi_hash($pebre, $c)]);
-    $r = $st->fetch();
-    return $r ?: null;
+    $e = $st->fetchColumn();
+    return $e === false ? null : explode(',', (string)$e);
+}
+
+/** Nom de les etapes per a la pantalla: «Llar d'infants i Infantil». */
+function etapes_nom(array $etapes): string
+{
+    return implode(' i ', array_map(function ($e) { return ETAPES[$e] ?? $e; }, $etapes));
 }

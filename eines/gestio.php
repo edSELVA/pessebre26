@@ -4,7 +4,7 @@
 //   php eines/gestio.php installa                 crea la base de dades i carrega els llocs (en local, també config.php de proves)
 //   php eines/gestio.php classes FITXER            carrega la llista de classes (format: etapa;nom)
 //   php eines/gestio.php enllac claustre           crea o regenera l'enllaç del claustre per a la torronada (UN SOL COP)
-//   php eines/gestio.php codis-classe pendents|totes  codis de classe per als tutors (UN SOL COP) i full per imprimir
+//   php eines/gestio.php codi-etapa ETAPA|llar+infantil  codi d'etapa per als tutors (UN SOL COP; el mateix per a tota l'etapa)
 //   php eines/gestio.php codis N                   crea un lot de N codis de família i el full d'etiquetes per imprimir
 //   php eines/gestio.php usos N                    figures per codi de família (1–10; per defecte 3)
 //   php eines/gestio.php calendari CLAU "AAAA-MM-DD hh:mm"   families_des, families_fins, claustre_des, claustre_tanca (hora de Barcelona)
@@ -115,27 +115,23 @@ switch ($ordre) {
         break;
 
     case 'enllac':
-        if (($args[1] ?? 'claustre') !== 'claustre') surt('Ús: php eines/gestio.php enllac claustre   (les classes ara tenen codi: «codis-classe»)');
+        if (($args[1] ?? 'claustre') !== 'claustre') surt('Ús: php eines/gestio.php enllac claustre   (els tutors tenen un codi per etapa: «codi-etapa»)');
         $t = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $ara);
         registre_afegeix($pdo, $ara, 'terminal', 'admin.enllac', null, 'claustre');
         echo "Enllaç nou del claustre per a la torronada (es mostra UN SOL COP; l'anterior deixa de funcionar):\n\n  {$cfg['url_base']}#k=$t\n\n";
         break;
 
-    case 'codis-classe':
-        $quines = $args[1] ?? 'pendents';
-        if ($quines !== 'pendents' && $quines !== 'totes') surt('Ús: php eines/gestio.php codis-classe pendents|totes');
+    case 'codi-etapa':
+        $quina = $args[1] ?? '';
         try {
             $pdo->beginTransaction();
-            $r = admin_codis_classe($pdo, $cfg, $quines, $ara);
+            $r = admin_codi_etapa($pdo, $cfg, $quina, $ara);
             $pdo->commit();
         } catch (ErrorPessebre $e) {
             $pdo->rollBack();
-            surt($e->getMessage());
+            surt($e->getMessage() . ' Ús: php eines/gestio.php codi-etapa ' . implode('|', array_keys(ETAPES)) . '|llar+infantil');
         }
-        $fitxer = dirname($cfg['bloqueig']) . '/codis-classe.html';
-        file_put_contents($fitxer, etiquetes_html(array_column($r['codis'], 'codi'), $cfg['url_base'], 0, 1, array_column($r['codis'], 'classe')));
-        echo count($r['codis']) . " codis de classe (es mostren UN SOL COP). Full per imprimir: $fitxer (esborra'l després d'imprimir)\n";
-        foreach ($r['codis'] as $c) printf("  %-10s %s\n", $c['classe'], $c['codi']);
+        echo "Codi de {$r['etapa']} (es mostra UN SOL COP; l'anterior deixa de funcionar):\n\n  {$r['codi']}\n  {$r['url']}\n\n";
         break;
 
     case 'codis':
@@ -208,5 +204,5 @@ switch ($ordre) {
         break;
 
     default:
-        surt("Ordres: installa, classes, enllac, codis-classe, codis, usos, usuari, usuaris, treu-usuari, calendari, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
+        surt("Ordres: installa, classes, enllac, codi-etapa, codis, usos, usuari, usuaris, treu-usuari, calendari, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
 }

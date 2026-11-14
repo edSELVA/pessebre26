@@ -41,7 +41,9 @@ function bd_esquema(PDO $pdo): void
     $taules = [
         "llocs (id VARCHAR(8) NOT NULL PRIMARY KEY, tipus VARCHAR(10) NOT NULL, zona VARCHAR(2) NOT NULL,
                 grup VARCHAR(10) NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, codi VARCHAR(30) NULL, mirall INTEGER NOT NULL DEFAULT 0)",
-        "classes (id $auto, etapa VARCHAR(12) NOT NULL, nom VARCHAR(40) NOT NULL UNIQUE, ordre INTEGER NOT NULL, codi_hash CHAR(64) NULL UNIQUE)",
+        "classes (id $auto, etapa VARCHAR(12) NOT NULL, nom VARCHAR(40) NOT NULL UNIQUE, ordre INTEGER NOT NULL)",
+        // Codis d'etapa (§30): un per etapa, el mateix per a tots els tutors; «etapes» pot ser «llar,infantil» (un sol codi per a totes dues)
+        "codis_etapa (id $auto, etapes VARCHAR(60) NOT NULL, hash CHAR(64) NOT NULL UNIQUE, activa INTEGER NOT NULL DEFAULT 1, creat VARCHAR(19) NOT NULL)",
         "enllacos (id $auto, tipus VARCHAR(10) NOT NULL, etapa VARCHAR(12) NULL, hash CHAR(64) NOT NULL UNIQUE,
                    activa INTEGER NOT NULL DEFAULT 1, creat VARCHAR(19) NOT NULL)",
         // lloc_id és la clau: la base de dades mateixa impedeix dues ocupacions del mateix lloc;
@@ -65,12 +67,6 @@ function bd_esquema(PDO $pdo): void
     // Bases de dades creades abans d'afegir les finestres (11 nov)
     try { $pdo->query('SELECT finestres FROM ocupacions LIMIT 1'); }
     catch (PDOException $e) { $pdo->exec('ALTER TABLE ocupacions ADD COLUMN finestres INTEGER NULL'); }
-    // … i abans dels codis de classe (14 nov)
-    try { $pdo->query('SELECT codi_hash FROM classes LIMIT 1'); }
-    catch (PDOException $e) {
-        $pdo->exec('ALTER TABLE classes ADD COLUMN codi_hash CHAR(64) NULL');
-        $pdo->exec('CREATE UNIQUE INDEX classes_codi ON classes (codi_hash)');
-    }
 }
 
 /** Hora UTC en format de base de dades. */

@@ -82,17 +82,17 @@ function app_transaccio(PDO $pdo, callable $feina)
     catch (Throwable $e) { $pdo->rollBack(); throw $e; }
 }
 
-/** La classe del codi de la petició (i el límit d'intents). La fallada s'apunta a app_executa, fora de la transacció.
+/** Les etapes del codi d'etapa de la petició (i el límit d'intents). La fallada s'apunta a app_executa, fora de la transacció.
  *  Errors de format o del caràcter de control: no compten com a intents (com als codis de família). */
-function app_classe(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
+function app_etapes(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
 {
     limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
     $c = codi_normalitza($p['c'] ?? null);
     if ($c === null) throw new ErrorPessebre('El codi té 10 caràcters (lletres i xifres), com K7M-QX4-P9TR. Revisa\'l.', 400, 'format');
     if (!codi_control_ok($c)) throw new ErrorPessebre('Sembla que hi ha un caràcter mal copiat. Revisa el codi.', 400, 'control');
-    $classe = classe_per_codi($pdo, $cfg['pebre'], $c);
-    if (!$classe) throw new ErrorPessebre('Aquest codi no és de cap classe, o ja s\'ha canviat. Demana\'l a la coordinació.', 403, 'codi');
-    return $classe;
+    $etapes = etapes_per_codi($pdo, $cfg['pebre'], $c);
+    if (!$etapes) throw new ErrorPessebre('Aquest codi no és de cap etapa, o ja s\'ha canviat. Demana\'l a la coordinació.', 403, 'codi');
+    return $etapes;
 }
 
 /** Codi de família de la petició (comprovant el límit d'intents). */
@@ -133,14 +133,14 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 return [200, ['ok' => true, 'fet' => false]];
 
             case 'classes.estat':
-                $classe = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_classe($pdo, $cfg, $p, $ip, $ara); });
-                return [200, ['ok' => true] + classe_estat($pdo, $classe, $ara)];
+                $etapes = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_etapes($pdo, $cfg, $p, $ip, $ara); });
+                return [200, ['ok' => true] + etapa_estat($pdo, $etapes, $ara)];
 
             case 'classes.retenir':
             case 'classes.confirmar':
             case 'classes.deixar':
                 $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
-                    $c = app_classe($pdo, $cfg, $p, $ip, $ara);
+                    $c = classe_de_etapes($pdo, $p['classe'] ?? null, app_etapes($pdo, $cfg, $p, $ip, $ara));
                     if ($a === 'classes.retenir') return classes_retenir($pdo, $cfg, $c, $p['lloc'] ?? null, $ara);
                     if ($a === 'classes.confirmar') return classes_confirmar($pdo, $cfg, $c, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['colors'] ?? null, $ara, $p['mirall'] ?? null, $p['finestres'] ?? 0);
                     return classes_deixar($pdo, $cfg, $c, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
@@ -148,15 +148,15 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 return [200, ['ok' => true] + $res];
 
             case 'codi.validar':
-                // Un sol botó «Participar» per a tothom: si el codi és d'una classe, la pàgina va a la dels tutors.
-                // Primer el límit d'intents (també per als codis de classe), després família o classe.
+                // Un sol botó «Participar» per a tothom: si el codi és d'una etapa, la pàgina va a la dels tutors.
+                // Primer el límit d'intents (també per als codis d'etapa), després família o etapa.
                 $codi = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) {
                     limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
                     $c = codi_normalitza($p['c'] ?? null);
-                    if ($c !== null && codi_control_ok($c) && classe_per_codi($pdo, $cfg['pebre'], $c)) return null;
+                    if ($c !== null && codi_control_ok($c) && etapes_per_codi($pdo, $cfg['pebre'], $c)) return null;
                     return codi_comprova($pdo, $cfg, $p['c'] ?? null);
                 });
-                if ($codi === null) return [200, ['ok' => true, 'tipus' => 'classe', 'pot' => true]];
+                if ($codi === null) return [200, ['ok' => true, 'tipus' => 'etapa', 'pot' => true]];
                 return [200, ['ok' => true, 'tipus' => 'familia'] + codi_estat($pdo, $codi, $ara)];
 
             case 'codi.retenir':

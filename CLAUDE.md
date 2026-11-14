@@ -129,7 +129,7 @@ proves/    proves automàtiques PHP
 **Protecció**
 - **Codis de família:** 10 caràcters d'un alfabet de 31 sense ambigus (`23456789ABCDEFGHJKMNPQRSTUVWXYZ`), 9 aleatoris amb generador criptogràfic + 1 de control; s'imprimeixen com `K7M-QX4-P9TR`. La BD només desa un **HMAC** amb el pebre de `config.php`. El QR porta el codi **després del `#`** (`https://…/#c=K7MQX4P9TR`): el navegador no l'envia mai al servidor, i no queda als registres d'accés. Els errors de transcripció detectats pel caràcter de control no compten com a intents.
 - **Límit d'intents:** empremta = HMAC de la IP amb una sal que canvia cada hora (la vella s'esborra). 10 fallades en 15 min → espera. Fre global si hi ha moltes fallades per minut. **No es desa la IP.**
-- **Enllaç del claustre:** testimoni aleatori de 128 bits després del `#`, desat com a hash, regenerable. **Codis de classe:** mateix format i protecció que els de família (§30).
+- **Enllaç del claustre:** testimoni aleatori de 128 bits després del `#`, desat com a hash, regenerable. **Codis d'etapa:** mateix format i protecció que els de família (§30).
 - **Administració:** comptes personals (§31: usuari i contrasenya, `password_hash` a la taula `usuaris`). Sense cookies no hi ha sessió: la pàgina demana usuari i contrasenya a cada càrrega, els guarda només a memòria i els envia a cada acció. 5 fallades → espera 15 min. HTTPS obligatori. Cada acció queda al registre amb el nom del compte.
 
 ## 8. Privacitat i tancament
@@ -238,7 +238,7 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 ## 24. Codis en lloc d'enllaços i comptes d'administració (12 nov 2026, acordat; FET el 14 nov: vegeu §30 i §31)
 - **Es farà quan es faci el pas cap a l'hosting**, no abans (primer s'ensenya la versió actual a la direcció i a l'equip de valors).
 - **Un sol enllaç públic** per a tothom (mirar i, amb codi, participar). Desapareixen els enllaços d'etapa dels tutors i l'enllaç del claustre.
-- **Un codi per classe** (identifica la classe: el tutor ja no la tria d'una llista; un cop confirmada la casa, queda gastat i només es pot mirar; també pot anar en un enllaç `#c=CODI`; l'administració el pot regenerar). **Claustre:** finalment, un enllaç propi amb QR (§30).
+- ~~Un codi per classe~~ → finalment **un codi per etapa**, el mateix per a tots els tutors (§30). **Claustre:** un enllaç propi amb QR (§30).
 - **Administració:** pàgina pròpia amb **comptes personals** (usuari i contrasenya, nivell administrador o només lectura) en lloc de contrasenyes compartides, perquè el registre digui qui ha fet cada canvi i es pugui donar de baixa una persona. No cal perfil de moderador (no hi ha text lliure).
 - La demo s'haurà d'adaptar. Quan es faci, actualitzar el §7 i el §13.
 
@@ -267,9 +267,9 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Anònim com abans:** del codi només es desa quantes vegades s'ha fet servir. «Reactivar» un codi li torna una figura. Les etiquetes diuen «Pots posar-hi fins a 3 figures» (nombre segons l'opció en generar-les).
 - **Efecte sobre els llocs:** amb 874 llocs per a famílies i 3 per codi, 292 famílies ja podrien ocupar-ho tot. Les automàtiques, el ritme i la regla de fites no canvien (compten participacions, no codis).
 
-## 30. Tutors amb codi de classe i claustre amb un enllaç per a la torronada (14 nov 2026, decidit i fet)
-- **Un sol enllaç públic** per a famílies i tutors: tothom escriu el seu codi al botó «Participar» (o escaneja el QR) i la pàgina sap si és d'una família o d'una classe. Desapareixen els 5 enllaços d'etapa.
-- **Codi de classe:** mateix format que els de família (10 caràcters, control, HMAC a `classes.codi_hash`). Identifica la classe: `classes.html#c=CODI` va directament a triar la casa, sense cap llista (ja no es pot triar per error una altra classe). Amb la casa confirmada, el codi només deixa mirar. Es generen a l'administració («Claustre i classes» → «Generar els codis que falten», es mostren un sol cop amb QR i un full A4 per imprimir) o amb `php eines/gestio.php codis-classe pendents|totes`; se'n pot regenerar un. Mateix límit d'intents que els de família. En tancar (Reis) s'esborren.
+## 30. Tutors amb codi d'etapa i claustre amb un enllaç per a la torronada (14 nov 2026, decidit i fet)
+- **Enllaços:** només tres: el **general** (tothom: mirar i, amb codi, participar), el d'**administració** i el de la **torronada** (claustre, amb QR). Desapareixen els 5 enllaços d'etapa dels tutors.
+- **Codi d'etapa (tutors):** un per etapa, **el mateix per a tots els tutors** de l'etapa (llar d'infants, infantil, primària, secundària i batxillerat, cicles); **llar i infantil poden compartir-ne un**. El tutor l'escriu al botó «Participar» del pessebre (o fa servir l'enllaç o el QR del codi) → `classes.html#c=CODI` → tria la seva classe de la llista de l'etapa → tria i pinta la casa → «Fer la casa d'una altra classe». Mateix format i protecció que els de família (taula `codis_etapa`, HMAC; límit d'intents). Es creen a l'administració («Claustre i tutors»: un botó per etapa i un per a llar + infantil; es mostren un sol cop, amb enllaç, QR i botó d'imprimir) o amb `php eines/gestio.php codi-etapa ETAPA|llar+infantil`. Un codi nou substitueix l'anterior de les mateixes etapes. En tancar (Reis) s'esborren. (Risc acceptat, com abans: un tutor podria triar per error una altra classe; l'administració ho desfà.)
 - **Claustre (torronada):** l'únic enllaç a part, **amb QR** per imprimir o projectar (administració o `gestio.php enllac claustre`). Qui entra hi veu «Torronada» i el missatge que la gràcia és omplir l'escena dels pastors i l'anunciació. **Sense límit de figures** (desapareix `claustre_limit`). Llocs: els del claustre (encara que la zona sigui tancada) i qualsevol lloc lliure de les famílies d'una zona oberta. Horari: `claustre_des` – `claustre_tanca` (21 des, fins a les 22:00).
 
 ## 31. Comptes personals d'administració (14 nov 2026, decidit i fet)

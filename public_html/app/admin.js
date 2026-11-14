@@ -333,7 +333,7 @@
   }
 
   // Full d'etiquetes per imprimir (només es veu en imprimir). El QR (SVG) el genera el servidor.
-  function prepara(r) {      // r: { url_base, codis: [{codi, qr, classe?}], usos?, classes? }
+  function prepara(r) {      // r: { url_base, codis: [{codi, qr}], usos }
     var zona = document.getElementById('impressio');
     zona.textContent = '';
     var host = r.url_base.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -342,10 +342,9 @@
       r.codis.slice(i, i + 24).forEach(function (c) {
         var qr = new DOMParser().parseFromString(c.qr, 'image/svg+xml').documentElement;
         full.appendChild(h('div', { class: 'etiqueta' }, [document.importNode(qr, true), h('div', { class: 'tx' }, [
-          h('p', { class: 't', text: r.classes ? 'Pessebre · ' + c.classe : 'Pessebre de l\'escola' }),
+          h('p', { class: 't', text: 'Pessebre de l\'escola' }),
           h('p', { class: 'c', text: c.codi }),
-          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. '
-            + (r.classes ? 'Serveix per triar i pintar la casa de la classe.' : 'Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.')) })
+          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.') })
         ])]));
       });
       zona.appendChild(full);
@@ -354,74 +353,84 @@
 
   // ── Enllaços
 
-  // Claustre (un enllaç amb QR per a la torronada) i codis de classe (un per classe, §30)
+  // Claustre (un enllaç amb QR per a la torronada) i codis d'etapa per als tutors (§30)
+  var FILES_ETAPA = [['llar', 'Llar d\'infants'], ['infantil', 'Infantil'], ['llar+infantil', 'Llar d\'infants i Infantil (un sol codi)'],
+                     ['primaria', 'Primària'], ['secundaria', 'Secundària i batxillerat'], ['cicles', 'Cicles']];
+
   function pEnllacos() {
     var claustre = estat.enllacos.filter(function (e) { return e.tipus === 'claustre'; })[0];
+    var sortida = h('div', {}), sortidaCodi = h('div', {});
+    // Codi actiu de cada fila (la de llar+infantil, només si és compartit)
+    var actiu = function (f) {
+      var et = f === 'llar+infantil' ? ['llar', 'infantil'] : [f];
+      return estat.codis_etapa.filter(function (c) { return c.etapes.join(',') === et.join(','); })[0];
+    };
     var classes = [];
     Object.keys(estat.etapes).forEach(function (et) { (estat.classes[et] || []).forEach(function (c) { classes.push(c); }); });
-    var senseCodi = classes.filter(function (c) { return !c.codi; }).length;
-    var sortida = h('div', {});
     mostra([
-      h('h2', { text: 'Claustre i classes' }),
+      h('h2', { text: 'Claustre i tutors' }),
       h('h3', { text: 'Enllaç del claustre (torronada)' }),
       h('p', { class: 'suau', text: 'Un enllaç comú amb QR: qui el té pot posar tantes figures com vulgui el dia de la torronada. '
         + 'Un enllaç nou fa que l\'anterior deixi de funcionar. Es mostra un sol cop: imprimeix o projecta el QR.' }),
       fila('Estat', claustre ? 'actiu des de ' + claustre.creat : 'encara no n\'hi ha'),
       admin() ? h('div', { class: 'botons' }, [boto(claustre ? 'Regenerar l\'enllaç' : 'Crear l\'enllaç', function () { nouEnllac(sortida); }, 'primari')]) : null,
       sortida,
-      h('h3', { text: 'Codis de classe' }),
-      h('p', { class: 'suau', text: 'Cada classe té el seu codi (amb QR) per triar la casa: el tutor l\'escriu al botó «Participar» o escaneja el QR. '
-        + 'Es mostren un sol cop: imprimeix el full i dona a cada tutor el de la seva classe.' }),
-      fila('Classes', classes.length + ' · amb codi ' + (classes.length - senseCodi) + ' · amb casa ' + classes.filter(function (c) { return c.lloc; }).length),
-      admin() && senseCodi ? h('div', { class: 'botons' }, [boto('Generar els codis que falten (' + senseCodi + ')', function () { codisClasse('pendents'); }, 'primari')]) : null,
-      h('table', { class: 'taula' }, [h('tbody', {}, classes.map(function (c) {
-        return h('tr', {}, [h('td', { text: c.nom }), h('td', { class: 'suau', text: (c.codi ? 'codi' : 'sense codi') + (c.lloc ? ' · casa ' + c.lloc : '') }),
-          h('td', {}, [admin() && c.codi ? boto('Regenerar', function () { codisClasse(c.id, c.nom); }) : null])]);
-      }))])
+      h('h3', { text: 'Codis d\'etapa (tutors)' }),
+      h('p', { class: 'suau', text: 'Un codi per etapa, el mateix per a tots els tutors: l\'escriuen al botó «Participar» del pessebre i trien la seva classe. '
+        + 'Llar i infantil poden tenir un sol codi. Un codi nou substitueix l\'anterior. Es mostra un sol cop: copia\'l i envia\'l.' }),
+      h('table', { class: 'taula' }, [h('tbody', {}, FILES_ETAPA.map(function (f) {
+        var a = actiu(f[0]);
+        return h('tr', {}, [h('td', { text: f[1] }), h('td', { class: 'suau', text: a ? 'actiu des de ' + a.creat : 'cap' }),
+          h('td', {}, [admin() ? boto(a ? 'Regenerar' : 'Crear', function () { codiEtapa(f, sortidaCodi); }) : null])]);
+      }))]),
+      sortidaCodi,
+      fila('Classes', classes.length + ' · amb casa ' + classes.filter(function (c) { return c.lloc; }).length)
     ]);
+  }
+
+  function codiEtapa(f, sortida) {
+    if (!window.confirm('Crear un codi nou per a «' + f[1] + '»? L\'anterior deixarà de funcionar.')) return;
+    api('admin.codi_etapa', { etapa: f[0] }).then(function (r) {
+      mostraCodi(sortida, 'Codi de ' + r.etapa + ':', r.codi, r.url, r.qr, 'Codi dels tutors de ' + r.etapa);
+      return api('admin.estat').then(function (e) { estat = e; });
+    }).catch(function (e) { UI.avis(e.message); });
+  }
+
+  // Mostra un codi o un enllaç acabat de crear (un sol cop): text per copiar, QR i botó d'imprimir
+  function mostraCodi(sortida, titol, codi, url, qrSvg, titolImpres) {
+    var camp = h('input', { type: 'text', class: 'camp', readonly: 'readonly', value: url, 'aria-label': 'Enllaç' });
+    var qr = document.importNode(new DOMParser().parseFromString(qrSvg, 'image/svg+xml').documentElement, true);
+    qr.setAttribute('class', 'qr-gran');
+    sortida.textContent = '';
+    sortida.appendChild(h('p', { text: titol }));
+    if (codi) sortida.appendChild(h('p', { class: 'codi-gran', text: codi }));
+    sortida.appendChild(h('div', { class: 'form-codi' }, [camp, boto('Copiar', function () {
+      camp.select();
+      if (navigator.clipboard) navigator.clipboard.writeText(codi ? codi + '  ·  ' + url : url).then(function () { UI.avis('Copiat.'); });
+    })]));
+    sortida.appendChild(qr);
+    sortida.appendChild(h('div', { class: 'botons' }, [boto('Imprimir', function () { imprimeixQR(qrSvg, titolImpres, codi); window.print(); })]));
   }
 
   function nouEnllac(sortida) {
     if (!window.confirm('Crear un enllaç nou del claustre? L\'anterior deixarà de funcionar.')) return;
     api('admin.enllac', { tipus: 'claustre' }).then(function (r) {
-      var camp = h('input', { type: 'text', class: 'camp', readonly: 'readonly', value: r.url, 'aria-label': 'Enllaç nou' });
-      var qr = document.importNode(new DOMParser().parseFromString(r.qr, 'image/svg+xml').documentElement, true);
-      qr.setAttribute('class', 'qr-gran');
-      sortida.textContent = '';
-      sortida.appendChild(h('p', { text: 'Enllaç nou del claustre:' }));
-      sortida.appendChild(h('div', { class: 'form-codi' }, [camp, boto('Copiar', function () {
-        camp.select();
-        if (navigator.clipboard) navigator.clipboard.writeText(r.url).then(function () { UI.avis('Copiat.'); });
-      })]));
-      sortida.appendChild(qr);
-      sortida.appendChild(h('div', { class: 'botons' }, [boto('Imprimir el QR', function () { imprimeixQR(r.qr); window.print(); })]));
+      mostraCodi(sortida, 'Enllaç nou del claustre:', null, r.url, r.qr, 'Torronada: posa la teva figura al pessebre!');
       return api('admin.estat').then(function (e) { estat = e; });
     }).catch(function (e) { UI.avis(e.message); });
   }
 
-  // Full per imprimir amb el QR del claustre en gran
-  function imprimeixQR(svg) {
+  // Full per imprimir amb un QR en gran (el del claustre o el d'un codi d'etapa)
+  function imprimeixQR(svg, titol, codi) {
     var zona = document.getElementById('impressio');
     zona.textContent = '';
     var qr = document.importNode(new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement, true);
-    zona.appendChild(h('div', { class: 'full-qr' }, [h('h1', { text: 'Torronada: posa la teva figura al pessebre!' }), qr,
-      h('p', { text: 'Escaneja el codi QR amb el mòbil. Pots posar-ne tantes com vulguis.' })]));
+    zona.appendChild(h('div', { class: 'full-qr' }, [h('h1', { text: titol }), qr,
+      h('p', { text: codi ? 'Codi: ' + codi + ' · Escaneja el QR o escriu el codi al botó «Participar» del pessebre i tria la teva classe.'
+                          : 'Escaneja el codi QR amb el mòbil. Pots posar-ne tantes com vulguis.' })]));
   }
 
-  function codisClasse(quines, nom) {
-    var pregunta = quines === 'pendents' ? 'Generar els codis de les classes que encara no en tenen? Es veuran un sol cop.'
-      : 'Regenerar el codi de ' + nom + '? L\'anterior deixarà de funcionar.';
-    if (!window.confirm(pregunta)) return;
-    api('admin.codis_classe', { quines: quines }).then(function (r) {
-      prepara({ url_base: r.url_base, codis: r.codis, classes: true });
-      mostra([
-        h('h2', { text: r.codis.length === 1 ? 'Codi nou de ' + r.codis[0].classe : r.codis.length + ' codis de classe' }),
-        h('p', { class: 'error', text: 'Es mostren UN SOL COP. Imprimeix-los ara (A4, 24 per full).' }),
-        h('div', { class: 'botons' }, [boto('Imprimir', function () { window.print(); }, 'primari'), boto('Fet', function () { refresca().then(function () { obre('enllacos'); }); })]),
-        h('table', { class: 'taula' }, [h('tbody', {}, r.codis.map(function (c) { return h('tr', {}, [h('td', { text: c.classe }), h('td', { class: 'codi', text: c.codi })]); }))])
-      ]);
-    }).catch(function (e) { UI.avis(e.message); });
-  }
+
 
   // ── Configuració
 

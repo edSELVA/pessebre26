@@ -106,8 +106,8 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
     $ret = $pdo->prepare("SELECT lloc_id, origen, caduca FROM ocupacions WHERE estat = 'retingut' AND caduca > ? ORDER BY caduca");
     $ret->execute([bd_hora($ara)]);
     $classes = [];
-    foreach ($pdo->query("SELECT c.id, c.etapa, c.nom, c.codi_hash, o.lloc_id, o.estat FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id ORDER BY c.etapa, c.ordre") as $c) {
-        $classes[$c['etapa']][] = ['id' => (int)$c['id'], 'nom' => $c['nom'], 'codi' => $c['codi_hash'] !== null, 'lloc' => $c['estat'] === 'confirmat' ? $c['lloc_id'] : null];
+    foreach ($pdo->query("SELECT c.etapa, c.nom, o.lloc_id, o.estat FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id ORDER BY c.etapa, c.ordre") as $c) {
+        $classes[$c['etapa']][] = ['nom' => $c['nom'], 'lloc' => $c['estat'] === 'confirmat' ? $c['lloc_id'] : null];
     }
     $enllacos = $pdo->query("SELECT tipus, etapa, creat FROM enllacos WHERE activa = 1 AND tipus = 'claustre'")->fetchAll();
     $lots = $pdo->query("SELECT lot, COUNT(*) AS codis, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats, MIN(creat) AS creat FROM codis GROUP BY lot ORDER BY lot")->fetchAll();
@@ -123,6 +123,7 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
         'retencions' => array_map(function ($r) { return ['lloc' => $r['lloc_id'], 'origen' => $r['origen'], 'caduca' => hora_local($r['caduca'])]; }, $ret->fetchAll()),
         'classes' => $classes,
         'etapes' => ETAPES,
+        'codis_etapa' => codis_etapa_actius($pdo),
         'enllacos' => array_map(function ($e) { return ['tipus' => $e['tipus'], 'etapa' => $e['etapa'], 'creat' => hora_local($e['creat'])]; }, $enllacos),
         'lots' => $lots,
         'claustre' => claustre_estat($pdo, $ara),
@@ -298,22 +299,23 @@ function admin_afegeix(PDO $pdo, array $cfg, array $p, DateTimeImmutable $ara): 
     return ['lloc' => $l['id'], 'zona_nova' => zones_actualitza($pdo, $ara)];
 }
 
-/** Codis de classe (§30): 'pendents' (les classes que encara no en tenen), 'totes' (tots de nou) o l'id d'una classe
- *  (regenerar-ne un). Els codis es mostren un sol cop, amb el QR, per imprimir-los i donar-los a cada tutor. */
-function admin_codis_classe(PDO $pdo, array $cfg, $quines, DateTimeImmutable $ara): array
+/** Codi d'etapa (§30): $quina és una etapa (llar, infantil, primaria, secundaria, cicles) o 'llar+infantil' (un sol codi per a totes
+ *  dues). Es mostra un sol cop, amb l'enllaç i el QR, per fer-lo arribar a tots els tutors de l'etapa. */
+function admin_codi_etapa(PDO $pdo, array $cfg, $quina, DateTimeImmutable $ara): array
 {
-    if ($quines === 'pendents') $st = $pdo->query('SELECT * FROM classes WHERE codi_hash IS NULL ORDER BY etapa, ordre');
-    elseif ($quines === 'totes') $st = $pdo->query('SELECT * FROM classes ORDER BY etapa, ordre');
-    elseif (is_int($quines)) { $st = $pdo->prepare('SELECT * FROM classes WHERE id = ?'); $st->execute([$quines]); }
-    else throw new ErrorPessebre('Quines classes?', 400, 'quines');
-    $out = [];
-    foreach ($st->fetchAll() as $c) {
-        $codi = codi_classe_nou($pdo, $cfg['pebre'], (int)$c['id']);
-        $out[] = ['classe' => $c['nom'], 'etapa' => ETAPES[$c['etapa']] ?? $c['etapa'], 'codi' => codi_impres($codi), 'qr' => qr_svg($cfg['url_base'] . '#c=' . $codi)];
-    }
-    if (!$out) throw new ErrorPessebre(is_int($quines) ? 'Aquesta classe no existeix.' : 'Totes les classes ja tenen codi.', 400, 'cap');
-    registre_afegeix($pdo, $ara, 'administració', 'admin.codis_classe', null, count($out) . ' codis de classe');
-    return ['codis' => $out, 'url_base' => $cfg['url_base']];
+    $etapes = $quina === 'llar+infantil' ? ['llar', 'infantil'] : (is_string($quina) && isset(ETAPES[$quina]) ? [$quina] : null);
+    if (!$etapes) throw new ErrorPessebre('Etapa desconeguda.', 400, 'etapa');
+    $codi = codi_etapa_nou($pdo, $cfg['pebre'], $etapes, $ara);
+    registre_afegeix($pdo, $ara, 'administració', 'admin.codi_etapa', null, implode('+', $etapes));
+    $url = $cfg['url_base'] . '#c=' . $codi;
+    return ['etapa' => etapes_nom($etapes), 'codi' => codi_impres($codi), 'url' => $url, 'qr' => qr_svg($url)];
+}
+
+/** Codis d'etapa actius (sense el codi: només es veu en crear-lo). */
+function codis_etapa_actius(PDO $pdo): array
+{
+    return array_map(function ($r) { return ['etapes' => explode(',', $r['etapes']), 'nom' => etapes_nom(explode(',', $r['etapes'])), 'creat' => hora_local($r['creat'])]; },
+                     $pdo->query('SELECT etapes, creat FROM codis_etapa WHERE activa = 1 ORDER BY id')->fetchAll());
 }
 
 /** Tancament de Reis: s'esborren codis, enllaços, intents i registre; el pessebre queda com a pàgina estàtica. */
@@ -325,7 +327,7 @@ function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
     $pdo->exec("DELETE FROM ocupacions WHERE estat = 'retingut'");
     foreach (['codis', 'enllacos', 'intents', 'registre'] as $t) $pdo->exec("DELETE FROM $t");
     $pdo->exec("UPDATE ocupacions SET codi_id = NULL, hash_retencio = NULL");
-    $pdo->exec('UPDATE classes SET codi_hash = NULL');                      // els codis de classe també
+    $pdo->exec('DELETE FROM codis_etapa');                                  // els codis d'etapa també
     foreach (['sal', 'sal_hora', 'global_minut', 'global_fallades', 'auto_fase', 'auto_hora'] as $k) $pdo->prepare('DELETE FROM config WHERE clau = ?')->execute([$k]);
     config_desa($pdo, 'tancat', '1');
     return ['tancat' => true];
@@ -408,8 +410,8 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
                 registre_afegeix($pdo, $ara, 'administració', 'admin.enllac', null, 'claustre');
                 $url = $cfg['url_base'] . '#k=' . $t;
                 return ['url' => $url, 'qr' => qr_svg($url)];
-            case 'admin.codis_classe':
-                return admin_codis_classe($pdo, $cfg, $p['quines'] ?? null, $ara);
+            case 'admin.codi_etapa':
+                return admin_codi_etapa($pdo, $cfg, $p['etapa'] ?? null, $ara);
             case 'admin.generar_codis':
                 $n = (int)($p['quants'] ?? 0);
                 if ($n < 1 || $n > 1000) throw new ErrorPessebre('Es poden generar entre 1 i 1000 codis de cop.', 400, 'quants');

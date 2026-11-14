@@ -390,3 +390,4 @@ body.pagina { overflow: auto; }
 .form-compte { display: grid; gap: 8px; max-width: 360px; }
 .camp[readonly] { text-transform: none; letter-spacing: 0; font-size: 14px; }
 .form-compte .camp { text-transform: none; letter-spacing: 0; font-size: 16px; }
+.codi-gran { font: 700 22px/1.2 ui-monospace, Menlo, monospace; letter-spacing: 1px; margin: 4px 0 8px; }

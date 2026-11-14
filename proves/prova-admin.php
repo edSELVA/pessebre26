@@ -49,17 +49,17 @@ $prova_admin = function (array $cfg, string $nom) {
     [$e, $r] = $crida(['a' => 'admin.classes', 'text' => "primaria;Mussols\nprimaria;Guineus\ncicles;Isards"] + $A);
     igual([200, 3], [$e, $r['classes'] ?? null], 'es carreguen 3 classes enganxant la llista');
     $id = (int)$pdo->query("SELECT id FROM classes WHERE nom = 'Mussols'")->fetchColumn();
-    $codiMussols = codi_classe_nou($pdo, $cfg['pebre'], $id);
+    $codiPrim = codi_etapa_nou($pdo, $cfg['pebre'], ['primaria'], $t0);
     config_desa($pdo, 'classes_tanca', '2026-12-31 00:00:00');
-    [, $r] = $crida(['a' => 'classes.retenir', 'c' => $codiMussols, 'lloc' => 'C001']);
+    [, $r] = $crida(['a' => 'classes.retenir', 'c' => $codiPrim, 'classe' => $id, 'lloc' => 'C001']);
     $pc = $peces[$un(function ($l) { return $l['id'] === 'C001'; })['codi']];
-    [$e] = $crida(['a' => 'classes.confirmar', 'c' => $codiMussols, 'lloc' => 'C001', 'retencio' => $r['retencio'] ?? '', 'colors' => array_fill(0, count($pc['pers']), 0)]);
+    [$e] = $crida(['a' => 'classes.confirmar', 'c' => $codiPrim, 'classe' => $id, 'lloc' => 'C001', 'retencio' => $r['retencio'] ?? '', 'colors' => array_fill(0, count($pc['pers']), 0)]);
     igual(200, $e, 'una classe confirma la seva casa (preparació)');
 
     // Estat i lloc
     [$e, $r] = $crida(['a' => 'admin.estat'] + $L);
     igual(1, $r['zones']['Z0']['classes']['ocupats'] ?? null, 'l\'estat compta la casa de classe ocupada a Z0');
-    igual(['id' => $id, 'nom' => 'Mussols', 'codi' => true, 'lloc' => 'C001'], $r['classes']['primaria'][0] ?? null, 'l\'estat diu quina casa i si té codi cada classe');
+    igual(['nom' => 'Mussols', 'lloc' => 'C001'], $r['classes']['primaria'][0] ?? null, 'l\'estat diu quina casa té cada classe');
     [$e, $r] = $crida(['a' => 'admin.lloc', 'lloc' => 'C001'] + $L);
     igual(['confirmat', 'Mussols'], [$r['ocupacio']['estat'] ?? null, $r['ocupacio']['classe'] ?? null], 'el lloc diu qui l\'ocupa');
 
@@ -133,8 +133,7 @@ $prova_admin = function (array $cfg, string $nom) {
     [$e] = $crida(['a' => 'admin.config', 'opcio' => 'pebre', 'valor' => 'x'] + $A);
     igual(400, $e, 'no es poden canviar opcions que no són a la llista');
     [$e] = $crida(['a' => 'admin.config', 'opcio' => 'aturada', 'valor' => '1'] + $A);
-    $codiGuineus = codi_classe_nou($pdo, $cfg['pebre'], (int)$pdo->query("SELECT id FROM classes WHERE nom = 'Guineus'")->fetchColumn());
-    [$e, $r] = $crida(['a' => 'classes.retenir', 'c' => $codiGuineus, 'lloc' => 'C005']);
+    [$e, $r] = $crida(['a' => 'classes.retenir', 'c' => $codiPrim, 'classe' => (int)$pdo->query("SELECT id FROM classes WHERE nom = 'Guineus'")->fetchColumn(), 'lloc' => 'C005']);
     igual([403, 'aturada'], [$e, $r['codi'] ?? ''], 'el botó d\'aturada atura les reserves');
     $crida(['a' => 'admin.config', 'opcio' => 'aturada', 'valor' => '0'] + $A);
 
@@ -148,23 +147,34 @@ $prova_admin = function (array $cfg, string $nom) {
     igual(200, $crida(['a' => 'claustre.estat', 'k' => $k2], $h, '10.2.0.5')[0], 'el nou, sí');
     igual(1, count($crida(['a' => 'admin.estat'] + $L)[1]['enllacos']), 'només hi ha un enllaç actiu: el del claustre');
 
-    // Codis de classe (§30): es generen a l'administració, un per classe, i es mostren un sol cop
-    [$e, $r] = $crida(['a' => 'admin.codis_classe', 'quines' => 'pendents'] + $L);
-    igual(403, $e, 'un compte de lectura no pot generar codis de classe');
-    [$e, $r] = $crida(['a' => 'admin.codis_classe', 'quines' => 'pendents'] + $A);
-    igual([200, ['Isards']], [$e, array_column($r['codis'] ?? [], 'classe')], 'genera el codi de la classe que encara no en té');
-    comprova(strpos($r['codis'][0]['qr'] ?? '', '<svg') === 0 && preg_match('/^\w{3}-\w{3}-\w{4}$/', $r['codis'][0]['codi'] ?? '') === 1, 'cada codi de classe porta el seu QR i es veu amb guions');
-    $codiIsards = str_replace('-', '', $r['codis'][0]['codi']);
-    [, $r] = $crida(['a' => 'codi.validar', 'c' => $codiIsards], $h, '10.2.0.5');
-    igual('classe', $r['tipus'] ?? null, 'el botó «Participar» reconeix un codi de classe (i la pàgina va a la dels tutors)');
-    [, $r] = $crida(['a' => 'classes.estat', 'c' => $codiIsards], $h, '10.2.0.5');
-    igual(['Isards', 'Cicles', false], [$r['classe'] ?? null, $r['etapa'] ?? null, $r['feta'] ?? null], 'el codi diu quina és la classe (sense haver-la de triar)');
-    igual(400, $crida(['a' => 'admin.codis_classe', 'quines' => 'pendents'] + $A)[0], 'si totes en tenen, no en genera cap');
-    [$e, $r] = $crida(['a' => 'admin.codis_classe', 'quines' => $id] + $A);
-    igual([200, 'Mussols'], [$e, $r['codis'][0]['classe'] ?? null], 'l\'administració regenera el codi d\'una classe');
-    igual(403, $crida(['a' => 'classes.estat', 'c' => $codiMussols], $h, '10.2.0.5')[0], 'el codi antic ja no funciona');
-    [, $r] = $crida(['a' => 'classes.estat', 'c' => str_replace('-', '', $r['codis'][0]['codi'])], $h, '10.2.0.5');
-    igual([true, 'C001'], [$r['feta'] ?? null, $r['lloc'] ?? null], 'amb el codi nou, la classe veu que ja té la casa');
+    // Codis d'etapa (§30): un per etapa, el mateix per a tots els tutors; llar i infantil en poden compartir un
+    igual(403, $crida(['a' => 'admin.codi_etapa', 'etapa' => 'cicles'] + $L)[0], 'un compte de lectura no pot generar codis d\'etapa');
+    igual(400, $crida(['a' => 'admin.codi_etapa', 'etapa' => 'universitat'] + $A)[0], 'una etapa que no existeix → error');
+    [$e, $r] = $crida(['a' => 'admin.codi_etapa', 'etapa' => 'cicles'] + $A);
+    igual([200, 'Cicles'], [$e, $r['etapa'] ?? null], 'l\'administració crea el codi de cicles');
+    comprova(strpos($r['qr'] ?? '', '<svg') === 0 && preg_match('/^\w{3}-\w{3}-\w{4}$/', $r['codi'] ?? '') === 1 && strpos($r['url'] ?? '', '#c=') !== false,
+             'el codi d\'etapa es veu amb guions i porta enllaç i QR');
+    $codiCicles = str_replace('-', '', $r['codi']);
+    [, $r] = $crida(['a' => 'codi.validar', 'c' => $codiCicles], $h, '10.2.0.5');
+    igual('etapa', $r['tipus'] ?? null, 'el botó «Participar» reconeix un codi d\'etapa (i la pàgina va a la dels tutors)');
+    [, $r] = $crida(['a' => 'classes.estat', 'c' => $codiCicles], $h, '10.2.0.5');
+    igual(['Cicles', ['Isards']], [$r['etapa'] ?? null, array_column($r['classes'] ?? [], 'nom')], 'amb el codi de cicles surten les classes de cicles');
+    [$e, $r] = $crida(['a' => 'admin.codi_etapa', 'etapa' => 'primaria'] + $A);
+    igual(403, $crida(['a' => 'classes.estat', 'c' => $codiPrim], $h, '10.2.0.5')[0], 'regenerat el de primària, l\'antic ja no funciona');
+    [, $r] = $crida(['a' => 'classes.estat', 'c' => str_replace('-', '', $r['codi'])], $h, '10.2.0.5');
+    igual(true, $r['classes'][0]['feta'] ?? null, 'amb el codi nou, la llista de primària diu que els Mussols ja tenen casa');
+    // Llar i infantil amb un sol codi
+    $crida(['a' => 'admin.classes', 'text' => "primaria;Mussols\nprimaria;Guineus\ncicles;Isards\nllar;Llar 1\ninfantil;I3A"] + $A);
+    [, $r] = $crida(['a' => 'admin.codi_etapa', 'etapa' => 'llar'] + $A);
+    $codiLlar = str_replace('-', '', $r['codi']);
+    [$e, $r] = $crida(['a' => 'admin.codi_etapa', 'etapa' => 'llar+infantil'] + $A);
+    igual([200, "Llar d'infants i Infantil"], [$e, $r['etapa'] ?? null], 'es pot crear un sol codi per a llar i infantil');
+    [, $r2] = $crida(['a' => 'classes.estat', 'c' => str_replace('-', '', $r['codi'])], $h, '10.2.0.5');
+    igual(['Llar 1', 'I3A'], array_column($r2['classes'] ?? [], 'nom'), 'amb el codi compartit surten les classes de llar i d\'infantil');
+    igual(403, $crida(['a' => 'classes.estat', 'c' => $codiLlar], $h, '10.2.0.5')[0], 'el codi propi de llar que hi havia queda substituït');
+    $etapesActives = array_column($crida(['a' => 'admin.estat'] + $L)[1]['codis_etapa'] ?? [], 'nom');
+    sort($etapesActives);
+    igual(['Cicles', "Llar d'infants i Infantil", 'Primària'], $etapesActives, 'l\'estat diu quins codis d\'etapa hi ha actius (sense mostrar-los)');
 
     // Comptes (§31)
     [$e, $r] = $crida(['a' => 'admin.usuari', 'nom' => 'Marta', 'nova' => 'una-clau-de-marta', 'rol' => 'lectura'] + $L);
@@ -190,7 +200,7 @@ $prova_admin = function (array $cfg, string $nom) {
     [$e, $r] = $crida(['a' => 'admin.registre'] + $L);
     $accions = array_column($r['registre'] ?? [], 'accio');
     foreach (['admin.alliberar', 'admin.canvia', 'admin.casa_sense_placa', 'admin.config', 'admin.enllac', 'admin.generar_codis', 'admin.classes', 'admin.reactivar',
-              'admin.codis_classe', 'admin.usuari', 'admin.usuari_treu', 'admin.contrasenya_propia'] as $acc) {
+              'admin.codi_etapa', 'admin.usuari', 'admin.usuari_treu', 'admin.contrasenya_propia'] as $acc) {
         comprova(in_array($acc, $accions, true), "el registre apunta $acc");
     }
     $quins = array_unique(array_column(array_filter($r['registre'] ?? [], function ($f) { return strpos($f['accio'], 'admin.') === 0; }), 'qui'));

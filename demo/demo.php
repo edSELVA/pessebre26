@@ -8,7 +8,7 @@
 //    continua passant (les retencions caduquen), i «Deixar passar el temps» avança el desfasament.
 //  · Cada fase es munta des de zero repetint la mateixa història amb les funcions reals del servidor (classes,
 //    claustre, famílies, fites, participació automàtica). Fa servir un atzar amb llavor fixa: sempre surt igual.
-//  · Els codis de família i de classe i l'enllaç del claustre són inventats i es desen a estat.json per poder
+//  · Els codis de família i d'etapa i l'enllaç del claustre són inventats i es desen a estat.json per poder
 //    entrar «com a» tutor, claustre o família des del panell.
 declare(strict_types=1);
 require_once __DIR__ . '/../pessebre/src/app.php';
@@ -70,13 +70,13 @@ function demo_desa(array $cfg, array $e): void
     rename(demo_cami_estat($cfg) . '.tmp', demo_cami_estat($cfg));
 }
 
-/** Estat de la demo, al dia: si no n'hi ha, la fase 1; si és d'abans dels codis de classe i els comptes (14 nov),
+/** Estat de la demo, al dia: si no n'hi ha, la fase 1; si és d'abans dels codis d'etapa i els comptes (14 nov),
  *  es torna a muntar la mateixa fase. */
 function demo_estat_al_dia(PDO $pdo, array $cfg): array
 {
     $e = demo_estat($cfg);
     if ($e === null) return demo_munta($pdo, $cfg, 1);
-    if (!isset($e['classes'])) return demo_munta($pdo, $cfg, (int)$e['fase']);
+    if (!isset($e['etapes'])) return demo_munta($pdo, $cfg, (int)$e['fase']);
     return $e;
 }
 
@@ -195,12 +195,12 @@ function demo_munta_fase(PDO $pdo, array $cfg, int $fase): array
     mt_srand(2026);
     $inici = demo_utc('2026-12-01 09:00');
     $fi = demo_utc(DEMO_FASES[$fase]['fins']);
-    $e = ['fase' => $fase, 'hores' => 0, 'desfasament' => 0, 'enllacos' => [], 'classes' => [], 'codis' => []];
+    $e = ['fase' => $fase, 'hores' => 0, 'desfasament' => 0, 'enllacos' => [], 'etapes' => [], 'codis' => []];
 
     $pdo->beginTransaction();
     usuari_desa($pdo, DEMO_USUARI, DEMO_CONTRASENYA, 'admin', $inici);     // compte d'administració de la demo
     classes_carrega($pdo, demo_classes($cfg));
-    foreach ($pdo->query('SELECT id FROM classes')->fetchAll(PDO::FETCH_COLUMN) as $id) $e['classes'][$id] = codi_classe_nou($pdo, $cfg['pebre'], (int)$id);
+    foreach (array_keys(ETAPES) as $etapa) $e['etapes'][$etapa] = codi_etapa_nou($pdo, $cfg['pebre'], [$etapa], $inici);
     $e['enllacos']['claustre'] = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $inici);
     $e['codis'] = codis_genera($pdo, $cfg['pebre'], 150, $inici)['codis'];
 
@@ -272,9 +272,9 @@ function demo_resum(PDO $pdo, array $cfg, array $e): array
 
     $rols = [['rol' => 'public', 'nom' => 'Públic', 'url' => 'index.html']];
     if (!$tancat && bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00')) {
-        $c = $pdo->query("SELECT c.id, c.nom FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id AND o.estat = 'confirmat'
-                          WHERE o.lloc_id IS NULL ORDER BY CASE c.etapa WHEN 'primaria' THEN 0 ELSE 1 END, c.ordre LIMIT 1")->fetch();
-        if ($c && isset($e['classes'][$c['id']])) $rols[] = ['rol' => 'tutor', 'nom' => 'Tutor (' . $c['nom'] . ')', 'url' => 'classes.html#c=' . $e['classes'][$c['id']]];
+        $etapa = $pdo->query("SELECT c.etapa FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id AND o.estat = 'confirmat'
+                              WHERE o.lloc_id IS NULL ORDER BY CASE c.etapa WHEN 'primaria' THEN 0 ELSE 1 END, c.ordre LIMIT 1")->fetchColumn();
+        if ($etapa && isset($e['etapes'][$etapa])) $rols[] = ['rol' => 'tutor', 'nom' => 'Tutor (' . ETAPES[$etapa] . ')', 'url' => 'classes.html#c=' . $e['etapes'][$etapa]];
     }
     if (!$tancat && finestra($pdo, 'claustre_des', 'claustre_tanca', $ara) === 'obert') {
         $rols[] = ['rol' => 'claustre', 'nom' => 'Claustre', 'url' => 'index.html#k=' . $e['enllacos']['claustre']];
