@@ -5,12 +5,14 @@ require_once $ARREL . '/pessebre/src/app.php';
 $prova_ritme = function (array $cfg, string $nom) {
     echo "    ($nom)\n";
     $pdo = bd_connecta($cfg);
-    foreach (['fites', 'intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
+    foreach (['fites', 'intents', 'config', 'registre', 'ocupacions', 'enllacos', 'classes', 'codis', 'llocs', 'usuaris'] as $t) $pdo->exec("DROP TABLE IF EXISTS $t");
     app_installa($pdo, $cfg);
+    usuari_desa($pdo, 'anna', 'admin-de-prova-1234', 'admin', new DateTimeImmutable('2026-12-01', new DateTimeZone('UTC')), 4);
+    usuari_desa($pdo, 'lluc', 'lectura-de-prova-1234', 'lectura', new DateTimeImmutable('2026-12-01', new DateTimeZone('UTC')), 4);
     $mapa = disseny($cfg, 'mapa.json');
     $utc = function (string $h) { return new DateTimeImmutable($h, new DateTimeZone('UTC')); };
     $crida = function (array $p, string $hora, string $clau = 'admin-de-prova-1234') use ($pdo, $cfg, $utc) {
-        return app_executa($pdo, $cfg, $p + ['contrasenya' => $clau], '10.4.0.1', $utc($hora));
+        return app_executa($pdo, $cfg, $p + ['usuari' => $clau === 'lectura-de-prova-1234' ? 'lluc' : 'anna', 'contrasenya' => $clau], '10.4.0.1', $utc($hora));
     };
     $snap = function () use ($cfg) { return json_decode((string)file_get_contents($cfg['snapshot']), true); };
     $lliure = function (callable $f) use ($pdo, $mapa) {
@@ -103,8 +105,7 @@ $prova_ritme = function (array $cfg, string $nom) {
 $tmp = sys_get_temp_dir() . '/pessebre-ritme-' . getmypid();
 @mkdir($tmp, 0700, true);
 $base = ['pebre' => bin2hex(random_bytes(32)), 'llavor' => 'llavor-de-prova', 'web' => "$ARREL/public_html", 'snapshot' => "$tmp/snapshot.json",
-         'bloqueig' => "$tmp/escriptura.lock", 'data_simulada' => null, 'url_base' => 'https://pessebre.exemple.cat/',
-         'hash_admin' => password_hash('admin-de-prova-1234', PASSWORD_DEFAULT), 'hash_lectura' => password_hash('lectura-de-prova-1234', PASSWORD_DEFAULT)];
+         'bloqueig' => "$tmp/escriptura.lock", 'data_simulada' => null, 'url_base' => 'https://pessebre.exemple.cat/'];
 $prova_ritme($base + ['bd_tipus' => 'sqlite', 'bd_sqlite' => "$tmp/pessebre.sqlite"], 'SQLite');
 if (getenv('PESSEBRE_MYSQL_DSN')) {
     $prova_ritme($base + ['bd_tipus' => 'mysql', 'bd_mysql' => ['dsn' => getenv('PESSEBRE_MYSQL_DSN'), 'usuari' => getenv('PESSEBRE_MYSQL_USUARI'), 'clau' => getenv('PESSEBRE_MYSQL_CLAU')]], 'MySQL');

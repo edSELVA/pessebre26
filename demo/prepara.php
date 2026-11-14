@@ -1,7 +1,7 @@
 <?php
 // Prepara la DEMOSTRACIÓ (ho crida eines/demo.sh): crea demo/dades/config.php amb valors aleatoris i 'demo' => true
 // i, si encara no hi és, la base de dades de la demo a la fase 1. demo/dades/ no es puja mai (és a .gitignore).
-// La contrasenya d'administració de la demo és «demo» (només serveix dins la demo, a la xarxa local).
+// Administració de la demo: usuari «demo», contrasenya «demo-pessebre» (només serveix dins la demo, a la xarxa local).
 declare(strict_types=1);
 require __DIR__ . '/demo.php';
 
@@ -15,8 +15,6 @@ if (!is_file($cami)) {
         'bd_sqlite' => "$dades/demo.sqlite",
         'pebre' => bin2hex(random_bytes(32)),
         'llavor' => bin2hex(random_bytes(16)),
-        'hash_admin' => password_hash('demo', PASSWORD_DEFAULT),
-        'hash_lectura' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
         'web' => realpath(__DIR__ . '/../public_html'),
         'snapshot' => "$dades/snapshot.json",
         'bloqueig' => "$dades/escriptura.lock",
@@ -31,11 +29,7 @@ if (!is_file($cami)) {
 $cfg = app_config($cami);
 $cfg['demo_classes'] = __DIR__ . '/../classes.csv';
 $pdo = bd_connecta($cfg);
-$e = demo_estat($cfg);
-if ($e === null || !is_file($cfg['snapshot'])) {
-    echo "Muntant la demo (fase 1)…\n";
-    $e = demo_munta($pdo, $cfg, 1);
-}
+$e = is_file($cfg['snapshot']) ? demo_estat_al_dia($pdo, $cfg) : demo_munta($pdo, $cfg, 1);
 $e = demo_rellotge_a_lloc($cfg, $e);
 $r = demo_resum($pdo, $cfg, $e);
 echo "Fase de la demo: {$r['fase']} · {$r['fases'][$r['fase'] - 1]['nom']} · {$r['hora']}\n";

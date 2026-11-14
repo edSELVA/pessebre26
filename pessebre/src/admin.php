@@ -8,21 +8,71 @@ const ADMIN_FALLADES = 5;
 const CLAUS_CALENDARI = ['classes_tanca', 'claustre_des', 'claustre_tanca', 'families_des', 'families_fins'];
 const NOM_CLASSE = '/^[\p{L}\p{N} .·\'-]{1,8}$/u';
 // Opcions numèriques editables: [mínim, màxim]
-const CONFIG_NUMERICA = ['claustre_limit' => [1, 200], 'llindar_zona' => [1, 100], 'usos_codi' => [1, 10], 'objectiu' => [10, 5000], 'minim_dies' => [0, 10],
+const CONFIG_NUMERICA = ['llindar_zona' => [1, 100], 'usos_codi' => [1, 10], 'objectiu' => [10, 5000], 'minim_dies' => [0, 10],
                          'auto_posta' => [0, 100], 'auto_nit' => [0, 100], 'auto_neu' => [0, 100], 'auto_max_zona' => [0, 100]];
 
-/** Comprova la contrasenya i retorna el rol ('admin' o 'lectura'). */
-function admin_autentica(PDO $pdo, array $cfg, $contrasenya, string $ip, DateTimeImmutable $ara): string
+// ── Comptes d'administració personals (§31). Sense cookies ni sessions: l'usuari i la contrasenya es demanen a cada càrrega
+//    de la pàgina, només es guarden a la memòria de la pàgina i s'envien a cada acció. 5 fallades → 15 minuts d'espera.
+const USUARI_NOM = '/^[a-z0-9][a-z0-9._-]{1,29}$/';
+const CONTRASENYA_MIN = 10;
+
+/** Comprova l'usuari i la contrasenya. Retorna ['nom', 'rol'] (rol: 'admin' o 'lectura'). */
+function admin_autentica(PDO $pdo, array $cfg, $usuari, $contrasenya, string $ip, DateTimeImmutable $ara): array
 {
     $empremta = hash('sha256', 'admin:' . limit_empremta($pdo, $ip, $ara));
     limit_comprova($pdo, $empremta, $ara, ADMIN_FALLADES);
-    if (is_string($contrasenya) && $contrasenya !== '') {
-        foreach (['admin' => 'hash_admin', 'lectura' => 'hash_lectura'] as $rol => $clau) {
-            $hash = $cfg[$clau] ?? '';
-            if ($hash !== '' && $hash !== 'CANVIA-AIXO' && password_verify($contrasenya, $hash)) return $rol;
-        }
+    if (is_string($usuari) && is_string($contrasenya) && $contrasenya !== '') {
+        $st = $pdo->prepare('SELECT nom, hash, rol FROM usuaris WHERE nom = ?');
+        $st->execute([mb_strtolower(trim($usuari))]);
+        $u = $st->fetch();
+        if ($u && password_verify($contrasenya, $u['hash'])) return ['nom' => $u['nom'], 'rol' => $u['rol']];
     }
-    throw new ErrorPessebre('Contrasenya incorrecta.', 403, 'contrasenya');
+    throw new ErrorPessebre('Usuari o contrasenya incorrectes.', 403, 'contrasenya');
+}
+
+function contrasenya_valida($c): string
+{
+    if (!is_string($c) || mb_strlen($c) < CONTRASENYA_MIN || mb_strlen($c) > 200) throw new ErrorPessebre('La contrasenya ha de tenir com a mínim ' . CONTRASENYA_MIN . ' caràcters.', 400, 'contrasenya_curta');
+    return $c;
+}
+
+/** Crea un compte, o li canvia la contrasenya i el nivell si ja existeix. $cost: només per a les proves (bcrypt més ràpid). */
+function usuari_desa(PDO $pdo, $nom, $contrasenya, $rol, DateTimeImmutable $ara, ?int $cost = null): array
+{
+    $nom = is_string($nom) ? mb_strtolower(trim($nom)) : '';
+    if (!preg_match(USUARI_NOM, $nom)) throw new ErrorPessebre('El nom d\'usuari: de 2 a 30 lletres sense accents, xifres, punts o guions (p. ex. «eduard»).', 400, 'nom');
+    if ($rol !== 'admin' && $rol !== 'lectura') throw new ErrorPessebre('El nivell ha de ser «admin» o «lectura».', 400, 'rol');
+    $hash = password_hash(contrasenya_valida($contrasenya), PASSWORD_DEFAULT, $cost ? ['cost' => $cost] : []);
+    $st = $pdo->prepare('SELECT rol FROM usuaris WHERE nom = ?');
+    $st->execute([$nom]);
+    $abans = $st->fetchColumn();
+    if ($abans === 'admin' && $rol !== 'admin' && usuaris_admin($pdo) === 1) throw new ErrorPessebre('Ha de quedar com a mínim un compte d\'administració.', 409, 'darrer');
+    if ($abans === false) $pdo->prepare('INSERT INTO usuaris (nom, hash, rol, creat) VALUES (?, ?, ?, ?)')->execute([$nom, $hash, $rol, bd_hora($ara)]);
+    else $pdo->prepare('UPDATE usuaris SET hash = ?, rol = ? WHERE nom = ?')->execute([$hash, $rol, $nom]);
+    return ['nom' => $nom, 'rol' => $rol, 'nou' => $abans === false];
+}
+
+function usuaris_admin(PDO $pdo): int
+{
+    return (int)$pdo->query("SELECT COUNT(*) FROM usuaris WHERE rol = 'admin'")->fetchColumn();
+}
+
+function usuaris_llista(PDO $pdo): array
+{
+    return array_map(function ($u) { return ['nom' => $u['nom'], 'rol' => $u['rol'], 'creat' => hora_local($u['creat'])]; },
+                     $pdo->query('SELECT nom, rol, creat FROM usuaris ORDER BY nom')->fetchAll());
+}
+
+function usuari_treu(PDO $pdo, $nom, string $jo): array
+{
+    $st = $pdo->prepare('SELECT rol FROM usuaris WHERE nom = ?');
+    $st->execute([is_string($nom) ? $nom : '']);
+    $rol = $st->fetchColumn();
+    if ($rol === false) throw new ErrorPessebre('Aquest compte no existeix.', 400, 'nom');
+    if ($nom === $jo) throw new ErrorPessebre('No et pots treure el teu propi compte.', 409, 'jo');
+    if ($rol === 'admin' && usuaris_admin($pdo) === 1) throw new ErrorPessebre('Ha de quedar com a mínim un compte d\'administració.', 409, 'darrer');
+    $pdo->prepare('DELETE FROM usuaris WHERE nom = ?')->execute([$nom]);
+    return ['nom' => $nom];
 }
 
 function admin_apunta_fallada(PDO $pdo, string $ip, DateTimeImmutable $ara): void
@@ -56,14 +106,14 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
     $ret = $pdo->prepare("SELECT lloc_id, origen, caduca FROM ocupacions WHERE estat = 'retingut' AND caduca > ? ORDER BY caduca");
     $ret->execute([bd_hora($ara)]);
     $classes = [];
-    foreach ($pdo->query("SELECT c.etapa, c.nom, o.lloc_id, o.estat FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id ORDER BY c.etapa, c.ordre") as $c) {
-        $classes[$c['etapa']][] = ['nom' => $c['nom'], 'lloc' => $c['estat'] === 'confirmat' ? $c['lloc_id'] : null];
+    foreach ($pdo->query("SELECT c.id, c.etapa, c.nom, c.codi_hash, o.lloc_id, o.estat FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id ORDER BY c.etapa, c.ordre") as $c) {
+        $classes[$c['etapa']][] = ['id' => (int)$c['id'], 'nom' => $c['nom'], 'codi' => $c['codi_hash'] !== null, 'lloc' => $c['estat'] === 'confirmat' ? $c['lloc_id'] : null];
     }
-    $enllacos = $pdo->query("SELECT tipus, etapa, creat FROM enllacos WHERE activa = 1")->fetchAll();
+    $enllacos = $pdo->query("SELECT tipus, etapa, creat FROM enllacos WHERE activa = 1 AND tipus = 'claustre'")->fetchAll();
     $lots = $pdo->query("SELECT lot, COUNT(*) AS codis, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats, MIN(creat) AS creat FROM codis GROUP BY lot ORDER BY lot")->fetchAll();
     $config = [];
     foreach (CLAUS_CALENDARI as $k) $config[$k] = hora_local(config_llegeix($pdo, $k, DEFECTES_CALENDARI[$k] ?? '2026-12-21 22:59:00'));
-    foreach (['aturada' => '0', 'usos_codi' => '3', 'zones' => 'Z0', 'claustre_limit' => '50', 'llindar_zona' => '75', 'objectiu' => '600',
+    foreach (['aturada' => '0', 'usos_codi' => '3', 'zones' => 'Z0', 'llindar_zona' => '75', 'objectiu' => '600',
               'minim_dies' => '1', 'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40', 'tancat' => '0',
               'moment' => 'dia', 'auto_fase' => ''] as $k => $d) $config[$k] = config_llegeix($pdo, $k, $d);
     return [
@@ -248,6 +298,24 @@ function admin_afegeix(PDO $pdo, array $cfg, array $p, DateTimeImmutable $ara): 
     return ['lloc' => $l['id'], 'zona_nova' => zones_actualitza($pdo, $ara)];
 }
 
+/** Codis de classe (§30): 'pendents' (les classes que encara no en tenen), 'totes' (tots de nou) o l'id d'una classe
+ *  (regenerar-ne un). Els codis es mostren un sol cop, amb el QR, per imprimir-los i donar-los a cada tutor. */
+function admin_codis_classe(PDO $pdo, array $cfg, $quines, DateTimeImmutable $ara): array
+{
+    if ($quines === 'pendents') $st = $pdo->query('SELECT * FROM classes WHERE codi_hash IS NULL ORDER BY etapa, ordre');
+    elseif ($quines === 'totes') $st = $pdo->query('SELECT * FROM classes ORDER BY etapa, ordre');
+    elseif (is_int($quines)) { $st = $pdo->prepare('SELECT * FROM classes WHERE id = ?'); $st->execute([$quines]); }
+    else throw new ErrorPessebre('Quines classes?', 400, 'quines');
+    $out = [];
+    foreach ($st->fetchAll() as $c) {
+        $codi = codi_classe_nou($pdo, $cfg['pebre'], (int)$c['id']);
+        $out[] = ['classe' => $c['nom'], 'etapa' => ETAPES[$c['etapa']] ?? $c['etapa'], 'codi' => codi_impres($codi), 'qr' => qr_svg($cfg['url_base'] . '#c=' . $codi)];
+    }
+    if (!$out) throw new ErrorPessebre(is_int($quines) ? 'Aquesta classe no existeix.' : 'Totes les classes ja tenen codi.', 400, 'cap');
+    registre_afegeix($pdo, $ara, 'administració', 'admin.codis_classe', null, count($out) . ' codis de classe');
+    return ['codis' => $out, 'url_base' => $cfg['url_base']];
+}
+
 /** Tancament de Reis: s'esborren codis, enllaços, intents i registre; el pessebre queda com a pàgina estàtica. */
 function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
 {
@@ -257,6 +325,7 @@ function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
     $pdo->exec("DELETE FROM ocupacions WHERE estat = 'retingut'");
     foreach (['codis', 'enllacos', 'intents', 'registre'] as $t) $pdo->exec("DELETE FROM $t");
     $pdo->exec("UPDATE ocupacions SET codi_id = NULL, hash_retencio = NULL");
+    $pdo->exec('UPDATE classes SET codi_hash = NULL');                      // els codis de classe també
     foreach (['sal', 'sal_hora', 'global_minut', 'global_fallades', 'auto_fase', 'auto_hora'] as $k) $pdo->prepare('DELETE FROM config WHERE clau = ?')->execute([$k]);
     config_desa($pdo, 'tancat', '1');
     return ['tancat' => true];
@@ -292,24 +361,38 @@ function classes_carrega(PDO $pdo, string $text): array
     return [count($noves), $avisos];
 }
 
-/** Executa una acció d'administració. Les de lectura les pot fer qualsevol de les dues contrasenyes. */
+/** Executa una acció d'administració. Les de lectura les pot fer qualsevol compte; la resta, només els d'administració. */
 function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, DateTimeImmutable $ara): array
 {
     $lectura = ['admin.estat', 'admin.lloc', 'admin.cercar', 'admin.registre'];
     if (in_array($a, $lectura, true)) {
-        $rol = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return admin_autentica($pdo, $cfg, $p['contrasenya'] ?? null, $ip, $ara); });
+        $u = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return admin_autentica($pdo, $cfg, $p['usuari'] ?? null, $p['contrasenya'] ?? null, $ip, $ara); });
         switch ($a) {
-            case 'admin.estat': return admin_estat($pdo, $cfg, $rol, $ara);
+            case 'admin.estat': return ['nom' => $u['nom']] + admin_estat($pdo, $cfg, $u['rol'], $ara) + ($u['rol'] === 'admin' ? ['usuaris' => usuaris_llista($pdo)] : []);
             case 'admin.lloc': return admin_lloc($pdo, $p['lloc'] ?? null);
             case 'admin.cercar': return admin_cerca_codi($pdo, $cfg, $p['codi'] ?? null);
             default: return ['registre' => admin_registre($pdo, (int)($p['quants'] ?? 100))];
         }
     }
     return app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $a, $p, $ip, $ara) {
-        if (admin_autentica($pdo, $cfg, $p['contrasenya'] ?? null, $ip, $ara) !== 'admin') {
-            throw new ErrorPessebre('Amb la contrasenya de lectura no es poden fer canvis.', 403, 'lectura');
+        $u = admin_autentica($pdo, $cfg, $p['usuari'] ?? null, $p['contrasenya'] ?? null, $ip, $ara);
+        registre_qui($u['nom'], true);
+        // Qualsevol compte pot canviar la seva pròpia contrasenya
+        if ($a === 'admin.contrasenya_propia') {
+            usuari_desa($pdo, $u['nom'], $p['nova'] ?? null, $u['rol'], $ara);
+            registre_afegeix($pdo, $ara, 'administració', 'admin.contrasenya_propia');
+            return ['nom' => $u['nom']];
         }
+        if ($u['rol'] !== 'admin') throw new ErrorPessebre('Amb un compte de només lectura no es poden fer canvis.', 403, 'lectura');
         switch ($a) {
+            case 'admin.usuari':
+                $r = usuari_desa($pdo, $p['nom'] ?? null, $p['nova'] ?? null, $p['rol'] ?? null, $ara);
+                registre_afegeix($pdo, $ara, 'administració', 'admin.usuari', null, ($r['nou'] ? 'compte nou: ' : 'contrasenya o nivell: ') . $r['nom'] . ' (' . $r['rol'] . ')');
+                return $r + ['usuaris' => usuaris_llista($pdo)];
+            case 'admin.usuari_treu':
+                $r = usuari_treu($pdo, $p['nom'] ?? null, $u['nom']);
+                registre_afegeix($pdo, $ara, 'administració', 'admin.usuari_treu', null, $r['nom']);
+                return $r + ['usuaris' => usuaris_llista($pdo)];
             case 'admin.alliberar': return admin_alliberar($pdo, $p['lloc'] ?? null, $ara);
             case 'admin.reactivar': return admin_reactiva_codi($pdo, $cfg, $p['codi'] ?? null, $ara);
             case 'admin.fita': return admin_fita($pdo, $p['numero'] ?? null, $p['data'] ?? null, $p['increment'] ?? null, $ara);
@@ -320,12 +403,13 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
             case 'admin.afegir': return admin_afegeix($pdo, $cfg, $p, $ara);
             case 'admin.config': return admin_config($pdo, $p['opcio'] ?? null, $p['valor'] ?? null, $ara);
             case 'admin.enllac':
-                $tipus = ($p['tipus'] ?? '') === 'claustre' ? 'claustre' : 'etapa';
-                $etapa = $tipus === 'etapa' ? ($p['etapa'] ?? '') : null;
-                if ($tipus === 'etapa' && !isset(ETAPES[$etapa])) throw new ErrorPessebre('Etapa desconeguda.', 400, 'etapa');
-                $t = enllac_crea($pdo, $cfg['pebre'], $tipus, $etapa, $ara);
-                registre_afegeix($pdo, $ara, 'administració', 'admin.enllac', null, $tipus . ($etapa ? " $etapa" : ''));
-                return ['url' => $cfg['url_base'] . ($tipus === 'claustre' ? '#k=' : 'classes.html#e=') . $t];
+                // L'únic enllaç: el del claustre per a la torronada (amb QR per imprimir o projectar)
+                $t = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $ara);
+                registre_afegeix($pdo, $ara, 'administració', 'admin.enllac', null, 'claustre');
+                $url = $cfg['url_base'] . '#k=' . $t;
+                return ['url' => $url, 'qr' => qr_svg($url)];
+            case 'admin.codis_classe':
+                return admin_codis_classe($pdo, $cfg, $p['quines'] ?? null, $ara);
             case 'admin.generar_codis':
                 $n = (int)($p['quants'] ?? 0);
                 if ($n < 1 || $n > 1000) throw new ErrorPessebre('Es poden generar entre 1 i 1000 codis de cop.', 400, 'quants');

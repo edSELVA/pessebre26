@@ -3,7 +3,7 @@
 'use strict';
 
 (function () {
-  var CONTRASENYA = 'demo';                 // contrasenya d'administració de la demo (demo/prepara.php)
+  var USUARI = 'demo', CONTRASENYA = 'demo-pessebre';      // compte d'administració de la demo (demo/demo.php)
   var obert = false;
   try { obert = sessionStorage.getItem('demo-obert') === '1'; } catch (e) { /* sense emmagatzematge: tancat */ }
   if (location.pathname === '/demo' || location.pathname === '/demo.html') obert = true;
@@ -105,7 +105,7 @@
       rols.appendChild(h('button', { type: 'button', 'aria-pressed': x.rol === rol ? 'true' : 'false', text: x.nom, clic: function () { ves(x.url); } }));
     });
     panell.appendChild(rols);
-    if (rol === 'admin') panell.appendChild(h('p', { class: 'demo-suau', text: 'Contrasenya de la demo: ' + CONTRASENYA }));
+    if (rol === 'admin') panell.appendChild(h('p', { class: 'demo-suau', text: 'Usuari: ' + USUARI + ' · contrasenya: ' + CONTRASENYA }));
 
     if (!r.tancat) {
       panell.appendChild(h('h3', { text: 'Deixar passar el temps' }));
@@ -128,12 +128,13 @@
 
   api({ a: 'demo.estat' }).then(pinta).catch(function (e) { panell.textContent = 'Demo: ' + e.message; });
 
-  // Administració: entra sola amb la contrasenya de la demo
+  // Administració: entra sola amb el compte de la demo
   var form = document.getElementById('form-entrada');
   var camp = document.getElementById('contrasenya');
   if (form && camp) {
     setTimeout(function () {
       if (document.getElementById('entrada').hidden) return;
+      document.getElementById('usuari').value = USUARI;
       camp.value = CONTRASENYA;
       if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true }));
     }, 300);

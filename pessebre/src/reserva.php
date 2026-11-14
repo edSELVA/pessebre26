@@ -1,5 +1,5 @@
 <?php
-// Reserva de cases de classe (tutors). Flux: triar la classe → retenir una casa (10 min) → triar colors → confirmar.
+// Reserva de cases de classe (tutors). Flux: codi de la classe → retenir una casa (10 min) → triar colors → confirmar.
 // Una retenció caducada compta com a lloc lliure. Un cop confirmada, només l'administració la pot alliberar.
 declare(strict_types=1);
 
@@ -24,27 +24,13 @@ function classes_obertes(PDO $pdo, DateTimeImmutable $ara): void
     }
 }
 
-/** Classes de l'etapa, indicant si ja tenen casa confirmada. */
-function classes_llista(PDO $pdo, string $etapa): array
+/** Estat de la classe del codi: si ja té casa, quina, i si encara es pot triar. */
+function classe_estat(PDO $pdo, array $c, DateTimeImmutable $ara): array
 {
-    $st = $pdo->prepare("SELECT c.id, c.nom, o.lloc_id, o.estat FROM classes c
-                         LEFT JOIN ocupacions o ON o.classe_id = c.id
-                         WHERE c.etapa = ? ORDER BY c.ordre, c.nom");
-    $st->execute([$etapa]);
-    $out = [];
-    foreach ($st->fetchAll() as $c) {
-        $out[] = ['id' => (int)$c['id'], 'nom' => $c['nom'], 'feta' => $c['estat'] === 'confirmat'];
-    }
-    return $out;
-}
-
-function classe_de_etapa(PDO $pdo, $classe_id, string $etapa): array
-{
-    $st = $pdo->prepare('SELECT * FROM classes WHERE id = ? AND etapa = ?');
-    $st->execute([is_int($classe_id) ? $classe_id : -1, $etapa]);
-    $c = $st->fetch();
-    if (!$c) throw new ErrorPessebre('Aquesta classe no és de la llista d\'aquest enllaç.', 400, 'classe');
-    return $c;
+    $o = ocupacio_de_classe($pdo, (int)$c['id']);
+    $feta = $o && $o['estat'] === 'confirmat';
+    $obert = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00') && config_llegeix($pdo, 'aturada', '0') !== '1';
+    return ['classe' => $c['nom'], 'etapa' => ETAPES[$c['etapa']] ?? $c['etapa'], 'feta' => $feta, 'lloc' => $feta ? $o['lloc_id'] : null, 'obert' => $obert];
 }
 
 function ocupacio_de_classe(PDO $pdo, int $classe_id): ?array
@@ -56,10 +42,9 @@ function ocupacio_de_classe(PDO $pdo, int $classe_id): ?array
 }
 
 /** Reté una casa de classe durant 10 minuts. Retorna el testimoni de la retenció (només el té qui l'ha demanada). */
-function classes_retenir(PDO $pdo, array $cfg, string $etapa, $classe_id, $lloc_id, DateTimeImmutable $ara): array
+function classes_retenir(PDO $pdo, array $cfg, array $c, $lloc_id, DateTimeImmutable $ara): array
 {
     classes_obertes($pdo, $ara);
-    $c = classe_de_etapa($pdo, $classe_id, $etapa);
     $l = is_string($lloc_id) ? lloc($pdo, $lloc_id) : null;
     if (!$l || $l['grup'] !== 'poble') throw new ErrorPessebre('Aquesta casa no es pot triar.', 400, 'lloc');
 
@@ -101,10 +86,9 @@ function finestres_valides(array $cfg, string $peca, $finestres): bool
 }
 
 /** Confirma la casa amb els colors triats (façana, teulada, porta i flors), les finestres tapades i si va girada. */
-function classes_confirmar(PDO $pdo, array $cfg, string $etapa, $classe_id, $lloc_id, $t, $colors, DateTimeImmutable $ara, $mirall = null, $finestres = 0): array
+function classes_confirmar(PDO $pdo, array $cfg, array $c, $lloc_id, $t, $colors, DateTimeImmutable $ara, $mirall = null, $finestres = 0): array
 {
     classes_obertes($pdo, $ara);
-    $c = classe_de_etapa($pdo, $classe_id, $etapa);
     $o = retencio_valida($pdo, $cfg, $c, $lloc_id, $t, $ara);
     if (!colors_valids($cfg, $o['peca'], $colors)) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
     if (!finestres_valides($cfg, $o['peca'], $finestres)) throw new ErrorPessebre('Les finestres triades no són vàlides.', 400, 'finestres');
@@ -116,9 +100,8 @@ function classes_confirmar(PDO $pdo, array $cfg, string $etapa, $classe_id, $llo
 }
 
 /** Deixa anar la retenció (el tutor tria una altra casa o surt). */
-function classes_deixar(PDO $pdo, array $cfg, string $etapa, $classe_id, $lloc_id, $t, DateTimeImmutable $ara): array
+function classes_deixar(PDO $pdo, array $cfg, array $c, $lloc_id, $t, DateTimeImmutable $ara): array
 {
-    $c = classe_de_etapa($pdo, $classe_id, $etapa);
     $o = retencio_valida($pdo, $cfg, $c, $lloc_id, $t, $ara);
     $pdo->prepare("DELETE FROM ocupacions WHERE lloc_id = ? AND estat = 'retingut'")->execute([$o['lloc_id']]);
     return ['lloc' => $o['lloc_id']];
@@ -136,7 +119,7 @@ function reserva_allibera(PDO $pdo, string $lloc_id, string $qui, DateTimeImmuta
 
 // ───────────────────────────── Famílies (codi) i claustre (enllaç comú)
 // Retenció de 5 minuts. Famílies: cada codi serveix per a diverses figures (USOS_CODI, 3 per defecte; l'administració ho canvia).
-// Claustre: fins a «claustre_limit» participacions (50) i fins a «claustre_tanca» (21 des a les 22:00).
+// Claustre: sense límit de figures, fins a «claustre_tanca» (21 des a les 22:00).
 
 const RETENCIO_FAMILIES = 300;
 const ORDRE_ZONES = ['Z0', 'Z1', 'Z2', 'Z3'];
@@ -319,28 +302,26 @@ function codi_deixar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, DateTimeIm
 
 // Claustre
 
+// Claustre (torronada, §30): un enllaç comú amb QR, sense límit de figures. Llocs: els del claustre (pastors i anunciació,
+// encara que la zona sigui tancada) i qualsevol lloc lliure de les famílies d'una zona oberta.
 function claustre_estat(PDO $pdo, DateTimeImmutable $ara): array
 {
     $f = finestra($pdo, 'claustre_des', 'claustre_tanca', $ara);
-    $limit = (int)config_llegeix($pdo, 'claustre_limit', '50');
     $fetes = (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'claustre' AND estat = 'confirmat'")->fetchColumn();
     $missatge = null;
-    if ($f === 'abans') $missatge = 'L\'enllaç del claustre s\'obre el 21 de desembre.';
-    elseif ($f === 'tancat') $missatge = 'El claustre ja ha tancat la seva part del pessebre. Gràcies!';
-    elseif ($fetes >= $limit) $missatge = 'El claustre ja ha arribat a les ' . $limit . ' participacions. Gràcies!';
+    if ($f === 'abans') $missatge = 'L\'enllaç del claustre s\'obre el dia de la torronada.';
+    elseif ($f === 'tancat') $missatge = 'La torronada ja s\'ha acabat. Gràcies per participar-hi!';
     elseif (config_llegeix($pdo, 'aturada', '0') === '1') $missatge = 'Ara mateix la participació està aturada. Torna-ho a provar més tard.';
-    return ['pot' => $missatge === null, 'missatge' => $missatge, 'fetes' => $fetes, 'limit' => $limit];
+    return ['pot' => $missatge === null, 'missatge' => $missatge, 'fetes' => $fetes];
 }
 
 function claustre_retenir(PDO $pdo, array $cfg, $lloc_id, DateTimeImmutable $ara): array
 {
     $e = claustre_estat($pdo, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
-    $st = $pdo->prepare("SELECT COUNT(*) FROM ocupacions WHERE origen = 'claustre' AND estat = 'retingut' AND caduca > ?");
-    $st->execute([bd_hora($ara)]);
-    if ($e['fetes'] + (int)$st->fetchColumn() >= $e['limit']) throw new ErrorPessebre('Ara mateix tots els llocs que queden s\'estan triant. Torna-ho a provar d\'aquí a uns minuts.', 409, 'ple');
     $l = lloc_lliure($pdo, $lloc_id);
-    if ($l['grup'] !== 'claustre') throw new ErrorPessebre('Aquest lloc no és del claustre. Tria un pastor o un lloc prop de la clariana.', 400, 'lloc');
+    $general = $l['grup'] === 'general' && in_array($l['zona'], zones_obertes($pdo), true);
+    if ($l['grup'] !== 'claustre' && !$general) throw new ErrorPessebre('Aquest lloc no es pot triar. Tria un pastor, un lloc de l\'anunciació o una silueta lliure.', 400, 'lloc');
     return retencio_nova($pdo, $cfg, $l, 'claustre', null, $ara);
 }
 

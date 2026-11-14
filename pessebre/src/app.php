@@ -29,7 +29,7 @@ function app_config(string $cami): array
 
 /** Valors inicials de la configuració (els que ja hi són no es toquen). */
 const CONFIG_INICIAL = DEFECTES_CALENDARI + ['classes_tanca' => '2026-12-21 22:59:00', 'moment' => 'dia', 'zones' => 'Z0', 'aturada' => '0',
-    'claustre_limit' => '50', 'usos_codi' => '3', 'llindar_zona' => '75', 'objectiu' => '600', 'minim_dies' => '1',
+    'usos_codi' => '3', 'llindar_zona' => '75', 'objectiu' => '600', 'minim_dies' => '1',
     'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40'];
 
 /** Crea les taules, carrega els llocs del mapa, les fites i la configuració inicial. Retorna quants llocs hi ha. */
@@ -82,13 +82,17 @@ function app_transaccio(PDO $pdo, callable $feina)
     catch (Throwable $e) { $pdo->rollBack(); throw $e; }
 }
 
-/** Comprova l'enllaç d'etapa (i el límit d'intents). La fallada s'apunta a app_executa, fora de la transacció. */
-function app_etapa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): string
+/** La classe del codi de la petició (i el límit d'intents). La fallada s'apunta a app_executa, fora de la transacció.
+ *  Errors de format o del caràcter de control: no compten com a intents (com als codis de família). */
+function app_classe(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
 {
     limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
-    $e = enllac_valida($pdo, $cfg['pebre'], $p['e'] ?? null, 'etapa');
-    if (!$e) throw new ErrorPessebre('Aquest enllaç no és vàlid o ja no està actiu. Demana l\'enllaç nou a la coordinació.', 403, 'enllac');
-    return $e['etapa'];
+    $c = codi_normalitza($p['c'] ?? null);
+    if ($c === null) throw new ErrorPessebre('El codi té 10 caràcters (lletres i xifres), com K7M-QX4-P9TR. Revisa\'l.', 400, 'format');
+    if (!codi_control_ok($c)) throw new ErrorPessebre('Sembla que hi ha un caràcter mal copiat. Revisa el codi.', 400, 'control');
+    $classe = classe_per_codi($pdo, $cfg['pebre'], $c);
+    if (!$classe) throw new ErrorPessebre('Aquest codi no és de cap classe, o ja s\'ha canviat. Demana\'l a la coordinació.', 403, 'codi');
+    return $classe;
 }
 
 /** Codi de família de la petició (comprovant el límit d'intents). */
@@ -111,6 +115,7 @@ function app_claustre(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmuta
 function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): array
 {
     try {
+        registre_qui(null, true);           // cada petició diu qui és (comptes d'administració)
         $a = $p['a'] ?? '';
         // Després de «Tancar i esborrar» (Reis) ja no es pot escriure res: el pessebre queda com a pàgina estàtica
         if (config_llegeix($pdo, 'tancat', '0') === '1' && !in_array($a, ['admin.estat', 'admin.lloc', 'admin.registre'], true)) {
@@ -127,25 +132,32 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 }
                 return [200, ['ok' => true, 'fet' => false]];
 
-            case 'classes.llista':
-                $etapa = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_etapa($pdo, $cfg, $p, $ip, $ara); });
-                $obert = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00') && config_llegeix($pdo, 'aturada', '0') !== '1';
-                return [200, ['ok' => true, 'etapa' => ETAPES[$etapa], 'obert' => $obert, 'classes' => classes_llista($pdo, $etapa)]];
+            case 'classes.estat':
+                $classe = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_classe($pdo, $cfg, $p, $ip, $ara); });
+                return [200, ['ok' => true] + classe_estat($pdo, $classe, $ara)];
 
             case 'classes.retenir':
             case 'classes.confirmar':
             case 'classes.deixar':
                 $res = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $cfg, $p, $ip, $ara, $a) {
-                    $etapa = app_etapa($pdo, $cfg, $p, $ip, $ara);
-                    if ($a === 'classes.retenir') return classes_retenir($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $ara);
-                    if ($a === 'classes.confirmar') return classes_confirmar($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['colors'] ?? null, $ara, $p['mirall'] ?? null, $p['finestres'] ?? 0);
-                    return classes_deixar($pdo, $cfg, $etapa, $p['classe'] ?? null, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
+                    $c = app_classe($pdo, $cfg, $p, $ip, $ara);
+                    if ($a === 'classes.retenir') return classes_retenir($pdo, $cfg, $c, $p['lloc'] ?? null, $ara);
+                    if ($a === 'classes.confirmar') return classes_confirmar($pdo, $cfg, $c, $p['lloc'] ?? null, $p['retencio'] ?? null, $p['colors'] ?? null, $ara, $p['mirall'] ?? null, $p['finestres'] ?? 0);
+                    return classes_deixar($pdo, $cfg, $c, $p['lloc'] ?? null, $p['retencio'] ?? null, $ara);
                 });
                 return [200, ['ok' => true] + $res];
 
             case 'codi.validar':
-                $codi = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) { return app_codi($pdo, $cfg, $p, $ip, $ara); });
-                return [200, ['ok' => true] + codi_estat($pdo, $codi, $ara)];
+                // Un sol botó «Participar» per a tothom: si el codi és d'una classe, la pàgina va a la dels tutors.
+                // Primer el límit d'intents (també per als codis de classe), després família o classe.
+                $codi = app_transaccio($pdo, function () use ($pdo, $cfg, $p, $ip, $ara) {
+                    limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
+                    $c = codi_normalitza($p['c'] ?? null);
+                    if ($c !== null && codi_control_ok($c) && classe_per_codi($pdo, $cfg['pebre'], $c)) return null;
+                    return codi_comprova($pdo, $cfg, $p['c'] ?? null);
+                });
+                if ($codi === null) return [200, ['ok' => true, 'tipus' => 'classe', 'pot' => true]];
+                return [200, ['ok' => true, 'tipus' => 'familia'] + codi_estat($pdo, $codi, $ara)];
 
             case 'codi.retenir':
             case 'codi.confirmar':

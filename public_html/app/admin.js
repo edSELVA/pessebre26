@@ -1,10 +1,11 @@
-// Administració (admin.html). La contrasenya es demana a cada càrrega, es guarda només en aquesta variable i
-// s'envia a cada acció. Amb la contrasenya de lectura es veu tot però els botons de canvi no hi són (i el servidor ho refusa).
+// Administració (admin.html). Comptes personals (§31): l'usuari i la contrasenya es demanen a cada càrrega, es guarden
+// només en aquestes variables i s'envien a cada acció. Amb un compte de només lectura es veu tot però els botons de canvi
+// no hi són (i el servidor ho refusa).
 'use strict';
 
 (function () {
   var h = UI.h;
-  var contrasenya = null;
+  var usuari = null, contrasenya = null;
   var estat = null;              // resposta d'admin.estat
   var pestanya = 'lloc';
   var sel = null;                // lloc seleccionat i la seva informació
@@ -17,10 +18,10 @@
   function D() { return Visor.disseny(); }
 
   function api(accio, dades) {
-    var cos = { a: accio, contrasenya: contrasenya };
+    var cos = { a: accio, usuari: usuari, contrasenya: contrasenya };
     Object.keys(dades || {}).forEach(function (k) { cos[k] = dades[k]; });
     return UI.api(cos).catch(function (e) {
-      if (e.codi === 'contrasenya') surt('La contrasenya ja no és vàlida.');
+      if (e.codi === 'contrasenya') surt('L\'usuari o la contrasenya ja no són vàlids.');
       throw e;
     });
   }
@@ -46,7 +47,7 @@
   // ── entrada i sortida
 
   function surt(missatge) {
-    contrasenya = null;
+    usuari = contrasenya = null;
     estat = null;
     document.getElementById('panell').hidden = true;
     document.getElementById('sortir').hidden = true;
@@ -54,20 +55,21 @@
     document.getElementById('entrada').hidden = false;
     document.getElementById('error-entrada').textContent = missatge || '';
     document.getElementById('contrasenya').value = '';
-    document.getElementById('contrasenya').focus();
+    document.getElementById('usuari').focus();
   }
 
   document.getElementById('form-entrada').addEventListener('submit', function (e) {
     e.preventDefault();
+    usuari = document.getElementById('usuari').value.trim().toLowerCase();
     contrasenya = document.getElementById('contrasenya').value;
     document.getElementById('contrasenya').value = '';
-    UI.api({ a: 'admin.estat', contrasenya: contrasenya }).then(function (r) {
+    UI.api({ a: 'admin.estat', usuari: usuari, contrasenya: contrasenya }).then(function (r) {
       estat = r;
       document.getElementById('entrada').hidden = true;
       document.getElementById('panell').hidden = false;
       document.getElementById('sortir').hidden = false;
       var b = document.getElementById('avis-mode');
-      b.textContent = r.rol === 'admin' ? 'Administració' : 'Només lectura';
+      b.textContent = r.nom + ' · ' + (r.rol === 'admin' ? 'administració' : 'només lectura');
       b.hidden = false;
       if (!visorCarregat) {
         visorCarregat = Visor.inicia({ font: 'snapshot.json', mode: 'admin', refresc: 60000,
@@ -81,7 +83,7 @@
       }
       obre('estat');
     }).catch(function (err) {
-      contrasenya = null;
+      usuari = contrasenya = null;
       document.getElementById('error-entrada').textContent = err.message;
     });
   });
@@ -96,7 +98,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.pestanyes button'), function (b) {
       b.setAttribute('aria-selected', String(b.getAttribute('data-p') === p));
     });
-    ({ lloc: pLloc, estat: pEstat, codis: pCodis, enllacos: pEnllacos, config: pConfig, fites: pFites, registre: pRegistre })[p]();
+    ({ lloc: pLloc, estat: pEstat, codis: pCodis, enllacos: pEnllacos, config: pConfig, fites: pFites, registre: pRegistre, comptes: pComptes })[p]();
   }
 
   // ── Lloc
@@ -258,7 +260,7 @@
       }, aturada ? 'primari' : '')]) : null,
       h('table', { class: 'taula' }, [h('thead', {}, [cap]), h('tbody', {}, files)]),
       fila('Ocupacions', origens || 'cap'),
-      fila('Claustre', e.claustre.fetes + ' de ' + e.claustre.limit),
+      fila('Claustre (torronada)', e.claustre.fetes + ' figures'),
       fila('Figures per codi', e.config.usos_codi),
       h('h3', { text: 'Retencions actives (' + e.retencions.length + ')' }),
       e.retencions.length ? h('ul', { class: 'llista' }, e.retencions.map(function (r) {
@@ -331,7 +333,7 @@
   }
 
   // Full d'etiquetes per imprimir (només es veu en imprimir). El QR (SVG) el genera el servidor.
-  function prepara(r) {
+  function prepara(r) {      // r: { url_base, codis: [{codi, qr, classe?}], usos?, classes? }
     var zona = document.getElementById('impressio');
     zona.textContent = '';
     var host = r.url_base.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -340,9 +342,10 @@
       r.codis.slice(i, i + 24).forEach(function (c) {
         var qr = new DOMParser().parseFromString(c.qr, 'image/svg+xml').documentElement;
         full.appendChild(h('div', { class: 'etiqueta' }, [document.importNode(qr, true), h('div', { class: 'tx' }, [
-          h('p', { class: 't', text: 'Pessebre de l\'escola' }),
+          h('p', { class: 't', text: r.classes ? 'Pessebre · ' + c.classe : 'Pessebre de l\'escola' }),
           h('p', { class: 'c', text: c.codi }),
-          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.') })
+          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. '
+            + (r.classes ? 'Serveix per triar i pintar la casa de la classe.' : 'Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.')) })
         ])]));
       });
       zona.appendChild(full);
@@ -351,33 +354,72 @@
 
   // ── Enllaços
 
+  // Claustre (un enllaç amb QR per a la torronada) i codis de classe (un per classe, §30)
   function pEnllacos() {
-    var actius = {};
-    estat.enllacos.forEach(function (e) { actius[e.tipus === 'claustre' ? 'claustre' : e.etapa] = e.creat; });
-    var files = Object.keys(estat.etapes).map(function (et) { return [et, estat.etapes[et], 'etapa']; }).concat([['claustre', 'Claustre', 'claustre']]);
+    var claustre = estat.enllacos.filter(function (e) { return e.tipus === 'claustre'; })[0];
+    var classes = [];
+    Object.keys(estat.etapes).forEach(function (et) { (estat.classes[et] || []).forEach(function (c) { classes.push(c); }); });
+    var senseCodi = classes.filter(function (c) { return !c.codi; }).length;
     var sortida = h('div', {});
     mostra([
-      h('h2', { text: 'Enllaços' }),
-      h('p', { class: 'suau', text: 'Un enllaç nou fa que l\'anterior deixi de funcionar. Es mostra un sol cop: copia\'l i envia\'l.' }),
+      h('h2', { text: 'Claustre i classes' }),
+      h('h3', { text: 'Enllaç del claustre (torronada)' }),
+      h('p', { class: 'suau', text: 'Un enllaç comú amb QR: qui el té pot posar tantes figures com vulgui el dia de la torronada. '
+        + 'Un enllaç nou fa que l\'anterior deixi de funcionar. Es mostra un sol cop: imprimeix o projecta el QR.' }),
+      fila('Estat', claustre ? 'actiu des de ' + claustre.creat : 'encara no n\'hi ha'),
+      admin() ? h('div', { class: 'botons' }, [boto(claustre ? 'Regenerar l\'enllaç' : 'Crear l\'enllaç', function () { nouEnllac(sortida); }, 'primari')]) : null,
       sortida,
-      h('table', { class: 'taula' }, [h('tbody', {}, files.map(function (f) {
-        return h('tr', {}, [h('td', { text: f[1] }), h('td', { class: 'suau', text: actius[f[0]] ? 'actiu des de ' + actius[f[0]] : 'cap' }),
-          h('td', {}, [admin() ? boto(actius[f[0]] ? 'Regenerar' : 'Crear', function () { nouEnllac(f, sortida); }) : null])]);
+      h('h3', { text: 'Codis de classe' }),
+      h('p', { class: 'suau', text: 'Cada classe té el seu codi (amb QR) per triar la casa: el tutor l\'escriu al botó «Participar» o escaneja el QR. '
+        + 'Es mostren un sol cop: imprimeix el full i dona a cada tutor el de la seva classe.' }),
+      fila('Classes', classes.length + ' · amb codi ' + (classes.length - senseCodi) + ' · amb casa ' + classes.filter(function (c) { return c.lloc; }).length),
+      admin() && senseCodi ? h('div', { class: 'botons' }, [boto('Generar els codis que falten (' + senseCodi + ')', function () { codisClasse('pendents'); }, 'primari')]) : null,
+      h('table', { class: 'taula' }, [h('tbody', {}, classes.map(function (c) {
+        return h('tr', {}, [h('td', { text: c.nom }), h('td', { class: 'suau', text: (c.codi ? 'codi' : 'sense codi') + (c.lloc ? ' · casa ' + c.lloc : '') }),
+          h('td', {}, [admin() && c.codi ? boto('Regenerar', function () { codisClasse(c.id, c.nom); }) : null])]);
       }))])
     ]);
   }
 
-  function nouEnllac(f, sortida) {
-    if (!window.confirm('Crear un enllaç nou per a «' + f[1] + '»? L\'anterior deixarà de funcionar.')) return;
-    api('admin.enllac', { tipus: f[2], etapa: f[2] === 'etapa' ? f[0] : null }).then(function (r) {
+  function nouEnllac(sortida) {
+    if (!window.confirm('Crear un enllaç nou del claustre? L\'anterior deixarà de funcionar.')) return;
+    api('admin.enllac', { tipus: 'claustre' }).then(function (r) {
       var camp = h('input', { type: 'text', class: 'camp', readonly: 'readonly', value: r.url, 'aria-label': 'Enllaç nou' });
+      var qr = document.importNode(new DOMParser().parseFromString(r.qr, 'image/svg+xml').documentElement, true);
+      qr.setAttribute('class', 'qr-gran');
       sortida.textContent = '';
-      sortida.appendChild(h('p', { text: 'Enllaç nou per a «' + f[1] + '»:' }));
+      sortida.appendChild(h('p', { text: 'Enllaç nou del claustre:' }));
       sortida.appendChild(h('div', { class: 'form-codi' }, [camp, boto('Copiar', function () {
         camp.select();
         if (navigator.clipboard) navigator.clipboard.writeText(r.url).then(function () { UI.avis('Copiat.'); });
       })]));
+      sortida.appendChild(qr);
+      sortida.appendChild(h('div', { class: 'botons' }, [boto('Imprimir el QR', function () { imprimeixQR(r.qr); window.print(); })]));
       return api('admin.estat').then(function (e) { estat = e; });
+    }).catch(function (e) { UI.avis(e.message); });
+  }
+
+  // Full per imprimir amb el QR del claustre en gran
+  function imprimeixQR(svg) {
+    var zona = document.getElementById('impressio');
+    zona.textContent = '';
+    var qr = document.importNode(new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement, true);
+    zona.appendChild(h('div', { class: 'full-qr' }, [h('h1', { text: 'Torronada: posa la teva figura al pessebre!' }), qr,
+      h('p', { text: 'Escaneja el codi QR amb el mòbil. Pots posar-ne tantes com vulguis.' })]));
+  }
+
+  function codisClasse(quines, nom) {
+    var pregunta = quines === 'pendents' ? 'Generar els codis de les classes que encara no en tenen? Es veuran un sol cop.'
+      : 'Regenerar el codi de ' + nom + '? L\'anterior deixarà de funcionar.';
+    if (!window.confirm(pregunta)) return;
+    api('admin.codis_classe', { quines: quines }).then(function (r) {
+      prepara({ url_base: r.url_base, codis: r.codis, classes: true });
+      mostra([
+        h('h2', { text: r.codis.length === 1 ? 'Codi nou de ' + r.codis[0].classe : r.codis.length + ' codis de classe' }),
+        h('p', { class: 'error', text: 'Es mostren UN SOL COP. Imprimeix-los ara (A4, 24 per full).' }),
+        h('div', { class: 'botons' }, [boto('Imprimir', function () { window.print(); }, 'primari'), boto('Fet', function () { refresca().then(function () { obre('enllacos'); }); })]),
+        h('table', { class: 'taula' }, [h('tbody', {}, r.codis.map(function (c) { return h('tr', {}, [h('td', { text: c.classe }), h('td', { class: 'codi', text: c.codi })]); }))])
+      ]);
     }).catch(function (e) { UI.avis(e.message); });
   }
 
@@ -420,7 +462,6 @@
       h('h3', { text: 'Dates (hora de Barcelona)' })
     ].concat(dates).concat([
       h('h3', { text: 'Participació' }),
-      numeric('claustre_limit', 'Límit del claustre', 200),
       numeric('llindar_zona', 'Obrir zona nova al (%)', 100),
       numeric('usos_codi', 'Figures per codi de família', 10),
       h('h3', { text: 'Zones' }),
@@ -551,5 +592,49 @@
     }).catch(function (e) { UI.avis(e.message); });
   }
 
-  document.getElementById('contrasenya').focus();
+  // ── Comptes (§31): cada persona el seu. Tothom pot canviar la seva contrasenya; l'administració crea i treu comptes.
+
+  function pComptes() {
+    var nova = h('input', { type: 'password', class: 'camp', autocomplete: 'new-password', 'aria-label': 'Contrasenya nova' });
+    var fills = [
+      h('h2', { text: 'Comptes' }),
+      fila('Has entrat com a', estat.nom + ' (' + (admin() ? 'administració' : 'només lectura') + ')'),
+      h('h3', { text: 'Canviar la meva contrasenya' }),
+      h('div', { class: 'form-codi' }, [nova, boto('Desar', function () {
+        api('admin.contrasenya_propia', { nova: nova.value }).then(function () {
+          contrasenya = nova.value;
+          nova.value = '';
+          UI.avis('Contrasenya canviada.');
+        }).catch(function (e) { UI.avis(e.message); });
+      })]),
+      h('p', { class: 'suau', text: 'Com a mínim 10 caràcters.' })
+    ];
+    if (admin()) {
+      var nom = h('input', { type: 'text', class: 'camp', autocapitalize: 'none', spellcheck: 'false', placeholder: 'nom (p. ex. marta)', 'aria-label': 'Nom d\'usuari' });
+      var clau = h('input', { type: 'password', class: 'camp', autocomplete: 'new-password', placeholder: 'contrasenya inicial', 'aria-label': 'Contrasenya inicial' });
+      var rol = h('select', { class: 'camp', 'aria-label': 'Nivell' }, [h('option', { value: 'lectura', text: 'Només lectura' }), h('option', { value: 'admin', text: 'Administració' })]);
+      fills.push(h('h3', { text: 'Comptes de l\'equip' }));
+      fills.push(h('table', { class: 'taula' }, [h('tbody', {}, (estat.usuaris || []).map(function (u) {
+        return h('tr', {}, [h('td', { text: u.nom }), h('td', { class: 'suau', text: u.rol === 'admin' ? 'administració' : 'només lectura' }),
+          h('td', {}, [u.nom === estat.nom ? null : boto('Treure', function () {
+            if (!window.confirm('Treure el compte «' + u.nom + '»? Ja no podrà entrar.')) return;
+            api('admin.usuari_treu', { nom: u.nom }).then(function (r) { estat.usuaris = r.usuaris; UI.avis('Compte tret.'); pComptes(); })
+              .catch(function (e) { UI.avis(e.message); });
+          })])]);
+      }))]));
+      fills.push(h('h3', { text: 'Afegir un compte (o canviar-ne la contrasenya)' }));
+      fills.push(h('div', { class: 'form-compte' }, [nom, clau, rol, boto('Desar', function () {
+        api('admin.usuari', { nom: nom.value, nova: clau.value, rol: rol.value }).then(function (r) {
+          estat.usuaris = r.usuaris;
+          UI.avis(r.nou ? 'Compte creat: ' + r.nom + '. Fes-li arribar la contrasenya en persona.' : 'Compte actualitzat: ' + r.nom + '.');
+          pComptes();
+        }).catch(function (e) { UI.avis(e.message); });
+      }, 'primari')]));
+      fills.push(h('p', { class: 'suau', text: 'Administració: pot fer canvis. Només lectura: ho veu tot però no pot canviar res (equip de valors, direcció). '
+        + 'Si algú ha oblidat la contrasenya, escriu el seu nom amb una contrasenya nova.' }));
+    }
+    mostra(fills);
+  }
+
+  document.getElementById('usuari').focus();
 })();

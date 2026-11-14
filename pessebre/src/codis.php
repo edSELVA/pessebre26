@@ -28,11 +28,10 @@ function testimoni_hash(string $pebre, string $t): string
     return hash_hmac('sha256', $t, $pebre);
 }
 
-/** Crea (o regenera) l'enllaç d'una etapa o del claustre. L'anterior queda desactivat. Retorna el testimoni (es mostra un sol cop). */
+/** Crea (o regenera) l'enllaç del claustre (l'únic enllaç que queda: §30). L'anterior queda desactivat. Retorna el testimoni. */
 function enllac_crea(PDO $pdo, string $pebre, string $tipus, ?string $etapa, DateTimeImmutable $ara): string
 {
-    if ($tipus === 'etapa' && !isset(ETAPES[$etapa])) throw new InvalidArgumentException("Etapa desconeguda: $etapa");
-    if ($tipus !== 'etapa' && $tipus !== 'claustre') throw new InvalidArgumentException("Tipus d'enllaç desconegut: $tipus");
+    if ($tipus !== 'claustre') throw new InvalidArgumentException("Tipus d'enllaç desconegut: $tipus");
     $pdo->prepare('UPDATE enllacos SET activa = 0 WHERE tipus = ? AND (etapa = ? OR (etapa IS NULL AND ? IS NULL))')->execute([$tipus, $etapa, $etapa]);
     $t = testimoni_nou();
     $pdo->prepare('INSERT INTO enllacos (tipus, etapa, hash, activa, creat) VALUES (?, ?, ?, 1, ?)')
@@ -120,6 +119,33 @@ function codis_genera(PDO $pdo, string $pebre, int $quants, DateTimeImmutable $a
 function codi_busca(PDO $pdo, string $pebre, string $c): ?array
 {
     $st = $pdo->prepare('SELECT * FROM codis WHERE hash = ?');
+    $st->execute([codi_hash($pebre, $c)]);
+    $r = $st->fetch();
+    return $r ?: null;
+}
+
+// ── Codis de classe (§30): un per classe, amb el mateix format que els de família. La classe en desa l'HMAC (codi_hash).
+//    Identifiquen la classe (el tutor no tria res de cap llista). Regenerar-ne un fa que l'anterior deixi de funcionar.
+
+/** Codi nou per a una classe (l'anterior queda anul·lat). Retorna el codi: es mostra un sol cop. */
+function codi_classe_nou(PDO $pdo, string $pebre, int $classe_id): string
+{
+    $familia = $pdo->prepare('SELECT COUNT(*) FROM codis WHERE hash = ?');
+    $classe = $pdo->prepare('SELECT COUNT(*) FROM classes WHERE codi_hash = ?');
+    do {
+        $c = codi_nou();
+        $h = codi_hash($pebre, $c);
+        $familia->execute([$h]);
+        $classe->execute([$h]);
+    } while ((int)$familia->fetchColumn() || (int)$classe->fetchColumn());
+    $pdo->prepare('UPDATE classes SET codi_hash = ? WHERE id = ?')->execute([$h, $classe_id]);
+    return $c;
+}
+
+/** La classe d'un codi (ja normalitzat), o null. */
+function classe_per_codi(PDO $pdo, string $pebre, string $c): ?array
+{
+    $st = $pdo->prepare('SELECT * FROM classes WHERE codi_hash = ?');
     $st->execute([codi_hash($pebre, $c)]);
     $r = $st->fetch();
     return $r ?: null;

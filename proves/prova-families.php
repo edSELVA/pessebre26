@@ -95,8 +95,14 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual([200, true], [$e, $r['pot'] ?? null], 'el claustre pot participar el 21 des');
     [$e, $r] = $crida(['a' => 'claustre.estat', 'k' => 'x'], $h, '10.1.0.7');
     igual(403, $e, 'enllaç del claustre dolent → 403');
+    // La torronada (§30): el claustre també pot posar figures als llocs de les famílies d'una zona oberta
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $persona['id']], $h);
-    igual([400, 'lloc'], [$e, $r['codi'] ?? ''], 'el claustre no pot triar llocs de les famílies');
+    igual(200, $e, 'el claustre pot triar un lloc lliure de les famílies (zona oberta)');
+    $crida(['a' => 'claustre.deixar', 'k' => $k, 'lloc' => $persona['id'], 'retencio' => $r['retencio'] ?? ''], $h);
+    [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $z1['id']], $h);
+    igual([400, 'lloc'], [$e, $r['codi'] ?? ''], 'però no en una zona tancada (si no és un lloc del claustre)');
+    [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => 'C001'], $h);
+    igual([400, 'lloc'], [$e, $r['codi'] ?? ''], 'ni en una casa de classe');
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $pastor['id']], $h);
     igual(200, $e, 'el claustre reté un pastor');
     [$e, $r2] = $crida(['a' => 'claustre.confirmar', 'k' => $k, 'lloc' => $pastor['id'], 'retencio' => $r['retencio'] ?? '', 'peca' => 'PER-PAS-F', 'mirall' => 1, 'colors' => $col('PER-PAS-F', [6, 0])], $h);
@@ -105,10 +111,10 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     igual(200, $e, 'el pastor es confirma amb la paleta de terra');
     igual(['p' => 'PER-PAS-F', 'm' => 1, 'c' => $col('PER-PAS-F', [3, 1])], $snap()['o'][$pastor['id']] ?? null, 'el snapshot porta el pastor');
     igual(true, $snap()['claustre'], 'el snapshot indica que el claustre és obert');
-    config_desa($pdo, 'claustre_limit', '1');
+    config_desa($pdo, 'claustre_limit', '1');           // l'opció antiga ja no fa res: el claustre no té límit
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $pastor2['id']], $h);
-    igual([403, 'claustre_no'], [$e, $r['codi'] ?? ''], 'el claustre no pot passar del límit de participacions');
-    config_desa($pdo, 'claustre_limit', '50');
+    igual(200, $e, 'el claustre no té límit de figures');
+    $crida(['a' => 'claustre.deixar', 'k' => $k, 'lloc' => $pastor2['id'], 'retencio' => $r['retencio'] ?? ''], $h);
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $pastor2['id']], '2026-12-21 21:00:00');
     igual([403, 'claustre_no'], [$e, $r['codi'] ?? ''], 'a les 22:00 del 21 des el claustre es tanca');
 

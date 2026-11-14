@@ -1,5 +1,5 @@
 // Visor públic (index.html) i mode participar.
-//   #c=CODI  famílies (el codi de l'etiqueta; amb el botó «Participar» també es pot escriure)
+//   #c=CODI  famílies (el codi de l'etiqueta; amb el botó «Participar» també es pot escriure). Si és d'una classe → classes.html
 //   #k=ENLLAÇ claustre
 // El que va després del # no arriba mai al servidor en carregar la pàgina; només va dins les peticions POST a api.php.
 // Flux: tocar un lloc lliure (retingut 5 minuts) → triar la figura, els colors i cap on mira → confirmar.
@@ -37,7 +37,7 @@
 
   function esCandidat(l, s) {
     if (l.grup === 'poble' || !filtre || l.tipus !== filtre) return false;      // primer cal triar què es vol posar
-    if (mode === 'claustre') return l.grup === 'claustre';
+    if (mode === 'claustre' && l.grup === 'claustre') return true;       // pastors i anunciació, encara que la zona sigui tancada
     var zona = s.zones.indexOf(l.zona) >= 0;
     return zona && (l.grup === 'general' || (l.grup === 'claustre' && s.claustre_alliberat));
   }
@@ -87,7 +87,8 @@
       return b;
     });
     UI.mostra([
-      h('h2', { text: mode === 'claustre' ? 'Claustre: què vols posar al pessebre?' : 'Què vols posar al pessebre?' }),
+      h('h2', { text: mode === 'claustre' ? 'Torronada: què vols posar al pessebre?' : 'Què vols posar al pessebre?' }),
+      mode === 'claustre' ? h('p', { class: 'suau', text: 'La gràcia és omplir l\'escena dels pastors i l\'anunciació, però podeu posar figures a qualsevol lloc lliure. Totes les que vulgueu!' }) : null,
       mode === 'familia' && permesos > 1
         ? h('p', { class: 'suau', text: 'Amb aquest codi pots posar ' + (queden === permesos ? permesos + ' figures.' : queden === 1 ? 'una figura més.' : 'encara ' + queden + ' figures.') })
         : null,
@@ -185,7 +186,7 @@
       h('p', { class: 'suau', text: mode === 'familia'
         ? (queden > 0 ? 'Amb aquest codi encara pots posar ' + (queden === 1 ? 'una figura més.' : queden + ' figures més.')
                       : 'Ja heu posat totes les figures d\'aquest codi. Si cal canviar alguna cosa, demaneu-ho a porteria o per correu.')
-        : 'Podeu posar més figures mentre quedin llocs del claustre.' }),
+        : 'Pots posar-ne tantes com vulguis, fins que s\'acabi la torronada.' }),
       h('div', { class: 'botons' }, [h('a', { class: 'boto', href: './', text: 'Veure el pessebre' })])
     ];
     if (altra) { pot = true; fills[3].insertBefore(h('button', { type: 'button', class: 'boto primari', text: 'Posar-ne una altra', clic: pasInici }), fills[3].firstChild); }
@@ -206,7 +207,8 @@
     var enviar = function (e) {
       e.preventDefault();
       var c = camp.value.toUpperCase().replace(/[\s.\-]/g, '');
-      UI.api({ a: 'codi.validar', c: c }).then(function () {
+      UI.api({ a: 'codi.validar', c: c }).then(function (r) {
+        if (r.tipus === 'classe') { location.href = 'classes.html#c=' + c; return; }     // codi d'una classe: pàgina dels tutors
         location.hash = 'c=' + c;
         location.reload();
       }).catch(function (err) { demanaCodi(err.message); });
@@ -214,8 +216,8 @@
     var form = h('form', { class: 'form-codi' }, [camp, h('button', { type: 'submit', class: 'boto primari', text: 'Continuar' })]);
     form.addEventListener('submit', enviar);
     UI.mostra([
-      h('h2', { text: 'Escriu el codi de la teva etiqueta' }),
-      h('label', { for: 'camp-codi', id: 'ajuda-codi', class: 'suau', text: 'Són 10 lletres i xifres. Els guions no cal escriure\'ls.' }),
+      h('h2', { text: 'Escriu el teu codi' }),
+      h('label', { for: 'camp-codi', id: 'ajuda-codi', class: 'suau', text: 'El de l\'etiqueta de la família o el de la classe: 10 lletres i xifres. Els guions no cal escriure\'ls.' }),
       form,
       error ? h('p', { class: 'error', role: 'alert', text: error }) : null,
       h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: 'Tancar', clic: function () { UI.mostra([]); } })])
@@ -252,10 +254,11 @@
   var boto = document.getElementById('participar');
   if (mode) {
     var avisMode = document.getElementById('avis-mode');
-    avisMode.textContent = mode === 'claustre' ? 'Participar · claustre' : 'Participar';
+    avisMode.textContent = mode === 'claustre' ? 'Torronada · claustre' : 'Participar';
     avisMode.hidden = false;
     boto.hidden = true;
     Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {
+      if (r[0].tipus === 'classe') { location.replace('classes.html#c=' + hash.c); return; }   // QR o enllaç d'una classe
       if (r[1].tancat) return;
       if (!r[0].pot) { noPot(r[0].missatge); return; }
       if (mode === 'familia') { permesos = r[0].permesos; queden = r[0].permesos - r[0].usos; }

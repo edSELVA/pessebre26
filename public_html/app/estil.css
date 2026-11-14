@@ -377,3 +377,16 @@ body.pagina { overflow: auto; }
 .pista-anell { fill: none; stroke: #FFE14D; stroke-width: 4; animation: marca-pols 1.2s ease-in-out infinite; }
 .pista-anell.trobat { stroke: #7CF29A; stroke-width: 5; }
 @media (prefers-reduced-motion: reduce) { .pista-anell { animation: none; } }
+
+/* QR del claustre (administració) i full per imprimir-lo */
+.qr-gran { display: block; width: 220px; height: 220px; margin: 10px 0; background: #fff; }
+.taula .codi { font: 700 14px/1 ui-monospace, Menlo, monospace; }
+@media print {
+  .full-qr { width: 210mm; height: 297mm; padding: 30mm 20mm; text-align: center; color: #000; font-family: system-ui, sans-serif; }
+  .full-qr h1 { font-size: 26pt; margin: 0 0 15mm; }
+  .full-qr svg { width: 140mm; height: 140mm; }
+  .full-qr p { font-size: 16pt; margin: 12mm 0 0; }
+}
+.form-compte { display: grid; gap: 8px; max-width: 360px; }
+.camp[readonly] { text-transform: none; letter-spacing: 0; font-size: 14px; }
+.form-compte .camp { text-transform: none; letter-spacing: 0; font-size: 16px; }

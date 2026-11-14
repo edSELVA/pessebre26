@@ -3,11 +3,13 @@
 //
 //   php eines/gestio.php installa                 crea la base de dades i carrega els llocs (en local, també config.php de proves)
 //   php eines/gestio.php classes FITXER            carrega la llista de classes (format: etapa;nom)
-//   php eines/gestio.php enllac ETAPA|totes|claustre  crea o regenera enllaços d'etapa o del claustre (es mostren UN SOL COP)
+//   php eines/gestio.php enllac claustre           crea o regenera l'enllaç del claustre per a la torronada (UN SOL COP)
+//   php eines/gestio.php codis-classe pendents|totes  codis de classe per als tutors (UN SOL COP) i full per imprimir
 //   php eines/gestio.php codis N                   crea un lot de N codis de família i el full d'etiquetes per imprimir
 //   php eines/gestio.php usos N                    figures per codi de família (1–10; per defecte 3)
 //   php eines/gestio.php calendari CLAU "AAAA-MM-DD hh:mm"   families_des, families_fins, claustre_des, claustre_tanca (hora de Barcelona)
-//   php eines/gestio.php contrasenya admin|lectura  contrasenya de la pàgina d'administració (es desa només el hash)
+//   php eines/gestio.php usuari NOM admin|lectura  crea un compte d'administració personal (o en canvia contrasenya/nivell)
+//   php eines/gestio.php usuaris                   llista els comptes · treu-usuari NOM: en treu un
 //   php eines/gestio.php allibera LLOC             allibera una casa (p. ex. C014)
 //   php eines/gestio.php tanca "AAAA-MM-DD hh:mm"  hora de tancament de les classes (hora de Barcelona)
 //   php eines/gestio.php aturada si|no             atura o reprèn les reserves
@@ -71,11 +73,12 @@ switch ($ordre) {
         echo "Classes carregades: $n (" . implode(', ', array_map(function ($e, $n) { return "$e $n"; }, array_keys($per), $per)) . ").\n";
         break;
 
-    case 'contrasenya':
-        // Desa a config.php el hash d'una contrasenya nova (la contrasenya no es desa enlloc)
-        $rol = $args[1] ?? '';
-        if ($rol !== 'admin' && $rol !== 'lectura') surt('Ús: php eines/gestio.php contrasenya admin|lectura');
-        fwrite(STDOUT, "Contrasenya nova per a «{$rol}» (no es veurà en escriure-la): ");
+    case 'usuari':
+        // Crea un compte d'administració personal o li canvia la contrasenya i el nivell (es desa només el hash, a la base de dades)
+        $nom = $args[1] ?? '';
+        $rol = $args[2] ?? '';
+        if ($nom === '' || ($rol !== 'admin' && $rol !== 'lectura')) surt('Ús: php eines/gestio.php usuari NOM admin|lectura');
+        fwrite(STDOUT, "Contrasenya per a «{$nom}» (no es veurà en escriure-la; com a mínim " . CONTRASENYA_MIN . " caràcters): ");
         if (function_exists('shell_exec')) @shell_exec('stty -echo 2>/dev/null');
         $c1 = trim((string)fgets(STDIN));
         fwrite(STDOUT, "\nTorna-la a escriure: ");
@@ -83,33 +86,56 @@ switch ($ordre) {
         if (function_exists('shell_exec')) @shell_exec('stty echo 2>/dev/null');
         fwrite(STDOUT, "\n");
         if ($c1 !== $c2) surt('No coincideixen.');
-        if (mb_strlen($c1) < 10) surt('Ha de tenir com a mínim 10 caràcters.');
-        $clau = $rol === 'admin' ? 'hash_admin' : 'hash_lectura';
-        $text = (string)file_get_contents($cami_config);
-        $hash = password_hash($c1, PASSWORD_DEFAULT);
-        $nou = preg_replace_callback("/('$clau'\s*=>\s*)'[^']*'/", function ($m) use ($hash) { return $m[1] . var_export($hash, true); }, $text, 1, $fet);
-        if (!$fet) surt("No trobo '$clau' a $cami_config");
-        file_put_contents($cami_config, $nou);
-        echo "Contrasenya de «{$rol}» desada (a config.php només hi ha el hash).\n";
+        try {
+            $r = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $nom, $c1, $rol, $ara) {
+                $r = usuari_desa($pdo, $nom, $c1, $rol, $ara);
+                registre_afegeix($pdo, $ara, 'terminal', 'admin.usuari', null, ($r['nou'] ? 'compte nou: ' : 'contrasenya o nivell: ') . $r['nom'] . ' (' . $r['rol'] . ')');
+                return $r;
+            });
+        } catch (ErrorPessebre $e) {
+            surt($e->getMessage());
+        }
+        echo ($r['nou'] ? "Compte creat" : "Compte actualitzat") . ": {$r['nom']} ({$r['rol']}).\n";
+        break;
+
+    case 'usuaris':
+        foreach (usuaris_llista($pdo) as $u) printf("  %-20s %-8s des de %s\n", $u['nom'], $u['rol'], $u['creat']);
+        break;
+
+    case 'treu-usuari':
+        try {
+            app_escriu($pdo, $cfg, $ara, function () use ($pdo, $args, $ara) {
+                usuari_treu($pdo, $args[1] ?? '', '');
+                registre_afegeix($pdo, $ara, 'terminal', 'admin.usuari_treu', null, $args[1] ?? '');
+            });
+        } catch (ErrorPessebre $e) {
+            surt($e->getMessage());
+        }
+        echo "Compte tret.\n";
         break;
 
     case 'enllac':
-        $quina = $args[1] ?? surt('Ús: php eines/gestio.php enllac ETAPA|totes|claustre  (etapes: ' . implode(', ', array_keys(ETAPES)) . ')');
-        if ($quina === 'claustre') {
-            $t = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $ara);
-            registre_afegeix($pdo, $ara, 'terminal', 'admin.enllac', null, 'claustre');
-            echo "Enllaç nou del claustre (es mostra UN SOL COP; l'anterior deixa de funcionar):\n\n  {$cfg['url_base']}#k=$t\n\n";
-            break;
+        if (($args[1] ?? 'claustre') !== 'claustre') surt('Ús: php eines/gestio.php enllac claustre   (les classes ara tenen codi: «codis-classe»)');
+        $t = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $ara);
+        registre_afegeix($pdo, $ara, 'terminal', 'admin.enllac', null, 'claustre');
+        echo "Enllaç nou del claustre per a la torronada (es mostra UN SOL COP; l'anterior deixa de funcionar):\n\n  {$cfg['url_base']}#k=$t\n\n";
+        break;
+
+    case 'codis-classe':
+        $quines = $args[1] ?? 'pendents';
+        if ($quines !== 'pendents' && $quines !== 'totes') surt('Ús: php eines/gestio.php codis-classe pendents|totes');
+        try {
+            $pdo->beginTransaction();
+            $r = admin_codis_classe($pdo, $cfg, $quines, $ara);
+            $pdo->commit();
+        } catch (ErrorPessebre $e) {
+            $pdo->rollBack();
+            surt($e->getMessage());
         }
-        $etapes = $quina === 'totes' ? array_keys(ETAPES) : [$quina];
-        foreach ($etapes as $e) if (!isset(ETAPES[$e])) surt("Etapa desconeguda: $e");
-        echo "Enllaços nous (es mostren UN SOL COP; els anteriors deixen de funcionar):\n\n";
-        foreach ($etapes as $e) {
-            $t = enllac_crea($pdo, $cfg['pebre'], 'etapa', $e, $ara);
-            registre_afegeix($pdo, $ara, 'terminal', 'admin.enllac', null, "etapa $e");
-            printf("  %-26s %sclasses.html#e=%s\n", ETAPES[$e], $cfg['url_base'], $t);
-        }
-        echo "\n";
+        $fitxer = dirname($cfg['bloqueig']) . '/codis-classe.html';
+        file_put_contents($fitxer, etiquetes_html(array_column($r['codis'], 'codi'), $cfg['url_base'], 0, 1, array_column($r['codis'], 'classe')));
+        echo count($r['codis']) . " codis de classe (es mostren UN SOL COP). Full per imprimir: $fitxer (esborra'l després d'imprimir)\n";
+        foreach ($r['codis'] as $c) printf("  %-10s %s\n", $c['classe'], $c['codi']);
         break;
 
     case 'codis':
@@ -176,11 +202,11 @@ switch ($ordre) {
         echo "Retencions actives ara: " . $ret->fetchColumn() . "\n";
         $mad = function ($clau) use ($pdo) { return (new DateTimeImmutable(calendari($pdo, $clau), new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Madrid'))->format('Y-m-d H:i'); };
         echo "Famílies: " . $mad('families_des') . " → " . $mad('families_fins') . " · figures per codi " . codi_usos_permesos($pdo) . "\n";
-        echo "Claustre: " . $mad('claustre_des') . " → " . $mad('claustre_tanca') . " · " . claustre_estat($pdo, $ara)['fetes'] . " de " . config_llegeix($pdo, 'claustre_limit', '50') . "\n";
+        echo "Claustre: " . $mad('claustre_des') . " → " . $mad('claustre_tanca') . " · " . claustre_estat($pdo, $ara)['fetes'] . " figures\n";
         $cod = $pdo->query('SELECT COUNT(*) AS n, SUM(CASE WHEN usos > 0 THEN 1 ELSE 0 END) AS usats FROM codis')->fetch();
         echo "Codis: {$cod['n']} creats, " . (int)$cod['usats'] . " usats · zones obertes: " . implode(', ', zones_obertes($pdo)) . "\n";
         break;
 
     default:
-        surt("Ordres: installa, classes, enllac, codis, usos, calendari, contrasenya, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
+        surt("Ordres: installa, classes, enllac, codis-classe, codis, usos, usuari, usuaris, treu-usuari, calendari, allibera, tanca, aturada, estat. Mira la capçalera d'eines/gestio.php.");
 }

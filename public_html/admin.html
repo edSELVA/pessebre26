@@ -33,11 +33,13 @@
 <section id="entrada" class="entrada">
   <form id="form-entrada" class="caixa-entrada">
     <h2>Administració del pessebre</h2>
+    <label for="usuari">Usuari</label>
+    <input id="usuari" type="text" class="camp" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     <label for="contrasenya">Contrasenya</label>
     <input id="contrasenya" type="password" class="camp" autocomplete="current-password" required>
     <button type="submit" class="boto primari">Entrar</button>
     <p id="error-entrada" class="error" role="alert"></p>
-    <p class="suau">La contrasenya només es guarda mentre la pàgina és oberta. No es fan servir cookies.</p>
+    <p class="suau">Cada persona té el seu compte. La contrasenya només es guarda mentre la pàgina és oberta. No es fan servir cookies.</p>
   </form>
 </section>
 
@@ -46,10 +48,11 @@
     <button type="button" role="tab" data-p="lloc">Lloc</button>
     <button type="button" role="tab" data-p="estat">Estat</button>
     <button type="button" role="tab" data-p="codis">Codis</button>
-    <button type="button" role="tab" data-p="enllacos">Enllaços</button>
+    <button type="button" role="tab" data-p="enllacos">Claustre i classes</button>
     <button type="button" role="tab" data-p="config">Configuració</button>
     <button type="button" role="tab" data-p="fites">Fites</button>
     <button type="button" role="tab" data-p="registre">Registre</button>
+    <button type="button" role="tab" data-p="comptes">Comptes</button>
   </nav>
   <div id="contingut" class="contingut-admin"></div>
 </aside>

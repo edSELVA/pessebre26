@@ -41,7 +41,7 @@ function bd_esquema(PDO $pdo): void
     $taules = [
         "llocs (id VARCHAR(8) NOT NULL PRIMARY KEY, tipus VARCHAR(10) NOT NULL, zona VARCHAR(2) NOT NULL,
                 grup VARCHAR(10) NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, codi VARCHAR(30) NULL, mirall INTEGER NOT NULL DEFAULT 0)",
-        "classes (id $auto, etapa VARCHAR(12) NOT NULL, nom VARCHAR(40) NOT NULL UNIQUE, ordre INTEGER NOT NULL)",
+        "classes (id $auto, etapa VARCHAR(12) NOT NULL, nom VARCHAR(40) NOT NULL UNIQUE, ordre INTEGER NOT NULL, codi_hash CHAR(64) NULL UNIQUE)",
         "enllacos (id $auto, tipus VARCHAR(10) NOT NULL, etapa VARCHAR(12) NULL, hash CHAR(64) NOT NULL UNIQUE,
                    activa INTEGER NOT NULL DEFAULT 1, creat VARCHAR(19) NOT NULL)",
         // lloc_id és la clau: la base de dades mateixa impedeix dues ocupacions del mateix lloc;
@@ -58,11 +58,19 @@ function bd_esquema(PDO $pdo): void
         "fites (numero INTEGER NOT NULL PRIMARY KEY, moment VARCHAR(10) NOT NULL, base VARCHAR(15) NOT NULL, increment INTEGER NOT NULL,
                 data_limit VARCHAR(19) NOT NULL, llindar INTEGER NULL, assolida VARCHAR(19) NULL, per VARCHAR(10) NULL)",
         "intents (empremta CHAR(64) NOT NULL PRIMARY KEY, finestra VARCHAR(19) NOT NULL, fallades INTEGER NOT NULL)",
+        // Comptes d'administració personals (§31): nom, password_hash i nivell ('admin' o 'lectura')
+        "usuaris (id $auto, nom VARCHAR(30) NOT NULL UNIQUE, hash VARCHAR(255) NOT NULL, rol VARCHAR(10) NOT NULL, creat VARCHAR(19) NOT NULL)",
     ];
     foreach ($taules as $t) $pdo->exec("CREATE TABLE IF NOT EXISTS $t$fi");
     // Bases de dades creades abans d'afegir les finestres (11 nov)
     try { $pdo->query('SELECT finestres FROM ocupacions LIMIT 1'); }
     catch (PDOException $e) { $pdo->exec('ALTER TABLE ocupacions ADD COLUMN finestres INTEGER NULL'); }
+    // … i abans dels codis de classe (14 nov)
+    try { $pdo->query('SELECT codi_hash FROM classes LIMIT 1'); }
+    catch (PDOException $e) {
+        $pdo->exec('ALTER TABLE classes ADD COLUMN codi_hash CHAR(64) NULL');
+        $pdo->exec('CREATE UNIQUE INDEX classes_codi ON classes (codi_hash)');
+    }
 }
 
 /** Hora UTC en format de base de dades. */
@@ -85,8 +93,17 @@ function config_desa(PDO $pdo, string $clau, string $valor): void
     $pdo->prepare('INSERT INTO config (clau, valor) VALUES (?, ?)')->execute([$clau, $valor]);
 }
 
+/** Qui fa les accions d'administració d'aquesta petició (el nom del compte), perquè el registre ho digui. */
+function registre_qui(?string $nom = null, bool $posa = false): ?string
+{
+    static $qui = null;
+    if ($posa) $qui = $nom;
+    return $qui;
+}
+
 function registre_afegeix(PDO $pdo, DateTimeImmutable $ara, string $qui, string $accio, ?string $lloc = null, ?string $detall = null): void
 {
+    if ($qui === 'administració' && registre_qui() !== null) $qui = 'administració · ' . registre_qui();
     $pdo->prepare('INSERT INTO registre (hora, qui, accio, lloc_id, detall) VALUES (?, ?, ?, ?, ?)')
         ->execute([bd_hora($ara), mb_substr($qui, 0, 60), $accio, $lloc, $detall === null ? null : mb_substr($detall, 0, 200)]);
 }

@@ -37,7 +37,7 @@ try {
             respon($e->estat, ['ok' => false, 'error' => $e->getMessage(), 'codi' => $e->codi]);
         }
     }
-    $e = demo_estat($cfg) ?? demo_munta($pdo, $cfg, 1);
+    $e = demo_estat_al_dia($pdo, $cfg);
     [$estat, $resposta] = app_executa($pdo, $cfg, $p, (string)($_SERVER['REMOTE_ADDR'] ?? ''), demo_ara($e));
     respon($estat, $resposta);
 } catch (Throwable $e) {

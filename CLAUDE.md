@@ -129,8 +129,8 @@ proves/    proves automàtiques PHP
 **Protecció**
 - **Codis de família:** 10 caràcters d'un alfabet de 31 sense ambigus (`23456789ABCDEFGHJKMNPQRSTUVWXYZ`), 9 aleatoris amb generador criptogràfic + 1 de control; s'imprimeixen com `K7M-QX4-P9TR`. La BD només desa un **HMAC** amb el pebre de `config.php`. El QR porta el codi **després del `#`** (`https://…/#c=K7MQX4P9TR`): el navegador no l'envia mai al servidor, i no queda als registres d'accés. Els errors de transcripció detectats pel caràcter de control no compten com a intents.
 - **Límit d'intents:** empremta = HMAC de la IP amb una sal que canvia cada hora (la vella s'esborra). 10 fallades en 15 min → espera. Fre global si hi ha moltes fallades per minut. **No es desa la IP.**
-- **Enllaços d'etapa i del claustre:** testimoni aleatori de 128 bits després del `#`, desat com a hash, regenerable.
-- **Administració:** dues contrasenyes (admin i només lectura) amb `password_hash`. Sense cookies no hi ha sessió: la pàgina demana la contrasenya a cada càrrega, la guarda només a memòria i l'envia a cada acció. 5 fallades → espera 15 min. HTTPS obligatori. Cada acció queda al registre.
+- **Enllaç del claustre:** testimoni aleatori de 128 bits després del `#`, desat com a hash, regenerable. **Codis de classe:** mateix format i protecció que els de família (§30).
+- **Administració:** comptes personals (§31: usuari i contrasenya, `password_hash` a la taula `usuaris`). Sense cookies no hi ha sessió: la pàgina demana usuari i contrasenya a cada càrrega, els guarda només a memòria i els envia a cada acció. 5 fallades → espera 15 min. HTTPS obligatori. Cada acció queda al registre amb el nom del compte.
 
 ## 8. Privacitat i tancament
 - No hi ha cap cookie, anàlisi ni recurs extern. Línia al peu: «Aquest pessebre no fa servir cookies ni demana noms ni dades personals. [Privacitat]». El text complet i el revisa la DPD (esborrany al document de decisions del 9 nov, §5). **(pendent)** enllaç de la política i correu de contacte.
@@ -220,7 +220,7 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 ## 21. Mode demostració (12 nov 2026, decidit)
 - **Per ensenyar el pessebre** des de l'ordinador i des del mòbil (mateixa wifi o compartint internet del mòbil): `sh eines/demo.sh` i `http://…:8027/demo`. No cal Claude ni internet.
 - **Mai a l'hosting:** tot és a `demo/` (servidor `demo/router.php`, API amb rellotge simulat `demo/api.php`, panell `demo/panell.js`). `public_html/` i `pessebre/` no en saben res (ho comprova `proves/prova-demo.php`). L'API de la demo només funciona amb `'demo' => true` a la seva configuració (`demo/dades/config.php`, creada sola i ignorada pel git), i el servidor només respon a adreces de la xarxa local.
-- **Base de dades pròpia** a `demo/dades/` (la de proves no es toca). Les classes són les reals de `classes.csv` si el fitxer local hi és (ignorat pel git); si no, unes d'inventades (65), que són les que fan servir les proves. Contrasenya d'administració de la demo: `demo`.
+- **Base de dades pròpia** a `demo/dades/` (la de proves no es toca). Les classes són les reals de `classes.csv` si el fitxer local hi és (ignorat pel git); si no, unes d'inventades (65), que són les que fan servir les proves. Administració de la demo: usuari `demo`, contrasenya `demo-pessebre` (§31). Una demo d'abans es torna a muntar sola a la mateixa fase.
 - **Fases:** 1 Inici (1 des) · 2 Tutories en marxa (16 des, 34 cases) · 3 Torronada del claustre (21 des 18:30; posta per participació el 18 des) · 4 Famílies (24 des) · 5 Fites per data (27 des 01:30: la nit salta per data i comencen les automàtiques) · 6 Tancat (6 gen: neu per data, Reis arribats). Cada fase es munta des de zero amb les funcions reals del servidor i un atzar amb llavor fixa (sempre surt igual).
 - **Panell:** fase, dia i hora simulats, «Veure com» (públic, tutor, claustre, família i administració, segons la fase), +1 hora / +1 dia (fites per data i automàtiques, sense participació), reiniciar la fase, les famílies o tot (amb confirmació). En engegar, el rellotge torna a l'hora de la fase més les hores fetes passar amb els botons.
 
@@ -235,10 +235,10 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Infantil:** codis tipus «I3A». **Batxibac:** «1r BB» i «2n BB», sense lletra de grup. **Cicles:** sigla del cicle precedida del curs («1r TAPSD»). Són 64 grups en total, dels 74 llocs de classe: en queden 10 de lliures per a cases sense placa.
 - **La llista real és a `classes.csv`** (ignorat pel git, no es puja mai). Es carrega a l'hosting enganxant-la a l'administració o amb `php eines/gestio.php classes classes.csv`.
 
-## 24. Pendent abans de l'hosting: codis en lloc d'enllaços i comptes d'administració (12 nov 2026, acordat; NO implementat)
+## 24. Codis en lloc d'enllaços i comptes d'administració (12 nov 2026, acordat; FET el 14 nov: vegeu §30 i §31)
 - **Es farà quan es faci el pas cap a l'hosting**, no abans (primer s'ensenya la versió actual a la direcció i a l'equip de valors).
 - **Un sol enllaç públic** per a tothom (mirar i, amb codi, participar). Desapareixen els enllaços d'etapa dels tutors i l'enllaç del claustre.
-- **Un codi per classe** (identifica la classe: el tutor ja no la tria d'una llista; un cop confirmada la casa, queda gastat i només es pot mirar; també pot anar en un enllaç `#c=CODI`; l'administració el pot regenerar). **Claustre:** codi comú (proposta; pendent de confirmar si comú o un per persona).
+- **Un codi per classe** (identifica la classe: el tutor ja no la tria d'una llista; un cop confirmada la casa, queda gastat i només es pot mirar; també pot anar en un enllaç `#c=CODI`; l'administració el pot regenerar). **Claustre:** finalment, un enllaç propi amb QR (§30).
 - **Administració:** pàgina pròpia amb **comptes personals** (usuari i contrasenya, nivell administrador o només lectura) en lloc de contrasenyes compartides, perquè el registre digui qui ha fet cada canvi i es pugui donar de baixa una persona. No cal perfil de moderador (no hi ha text lliure).
 - La demo s'haurà d'adaptar. Quan es faci, actualitzar el §7 i el §13.
 
@@ -266,3 +266,14 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Com es veu a la família:** «Amb aquest codi pots posar 3 figures» → després de cada una, «Amb aquest codi encara pots posar N figures» i el botó «Posar-ne una altra» → a l'última, l'avís «Aquesta serà l'última figura d'aquest codi» i el missatge final. Es pot posar la segona i la tercera en qualsevol moment: tornant a entrar amb el mateix codi o enllaç.
 - **Anònim com abans:** del codi només es desa quantes vegades s'ha fet servir. «Reactivar» un codi li torna una figura. Les etiquetes diuen «Pots posar-hi fins a 3 figures» (nombre segons l'opció en generar-les).
 - **Efecte sobre els llocs:** amb 874 llocs per a famílies i 3 per codi, 292 famílies ja podrien ocupar-ho tot. Les automàtiques, el ritme i la regla de fites no canvien (compten participacions, no codis).
+
+## 30. Tutors amb codi de classe i claustre amb un enllaç per a la torronada (14 nov 2026, decidit i fet)
+- **Un sol enllaç públic** per a famílies i tutors: tothom escriu el seu codi al botó «Participar» (o escaneja el QR) i la pàgina sap si és d'una família o d'una classe. Desapareixen els 5 enllaços d'etapa.
+- **Codi de classe:** mateix format que els de família (10 caràcters, control, HMAC a `classes.codi_hash`). Identifica la classe: `classes.html#c=CODI` va directament a triar la casa, sense cap llista (ja no es pot triar per error una altra classe). Amb la casa confirmada, el codi només deixa mirar. Es generen a l'administració («Claustre i classes» → «Generar els codis que falten», es mostren un sol cop amb QR i un full A4 per imprimir) o amb `php eines/gestio.php codis-classe pendents|totes`; se'n pot regenerar un. Mateix límit d'intents que els de família. En tancar (Reis) s'esborren.
+- **Claustre (torronada):** l'únic enllaç a part, **amb QR** per imprimir o projectar (administració o `gestio.php enllac claustre`). Qui entra hi veu «Torronada» i el missatge que la gràcia és omplir l'escena dels pastors i l'anunciació. **Sense límit de figures** (desapareix `claustre_limit`). Llocs: els del claustre (encara que la zona sigui tancada) i qualsevol lloc lliure de les famílies d'una zona oberta. Horari: `claustre_des` – `claustre_tanca` (21 des, fins a les 22:00).
+
+## 31. Comptes personals d'administració (14 nov 2026, decidit i fet)
+- Taula `usuaris` (nom, `password_hash`, nivell `admin` o `lectura`). S'entra amb **usuari i contrasenya**; el registre diu «administració · nom».
+- Pestanya **«Comptes»**: tothom pot canviar la seva contrasenya; l'administració crea comptes (o en canvia la contrasenya i el nivell) i en treu. No et pots treure a tu mateix i sempre ha de quedar un compte d'administració. Contrasenyes de 10 caràcters com a mínim.
+- El primer compte es crea amb `php eines/gestio.php usuari NOM admin` (o, si l'hosting no té terminal, amb l'instal·lador web que caldrà fer). `config.php` ja no porta contrasenyes.
+- **Demo:** usuari `demo`, contrasenya `demo-pessebre` (el panell hi entra sol).

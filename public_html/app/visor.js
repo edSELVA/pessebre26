@@ -223,7 +223,7 @@ var Visor = (function () {
   // Marca a terra (persona o animal lliure) només en mode participar i als llocs que pot triar aquest grup.
   // El lloc és dels que pot triar el grup que participa (famílies o claustre)?
   function llocDelGrup(l, s) {
-    if (op.mode === 'claustre') return l.grup === 'claustre' && s.claustre;
+    if (op.mode === 'claustre') return !!s.claustre && (l.grup === 'claustre' || l.grup === 'general');   // la torronada: també els llocs de les famílies
     // L'administració pot afegir figures als mateixos llocs que les famílies
     if (op.mode === 'familia' || op.mode === 'admin') return l.grup === 'general' || (l.grup === 'claustre' && !!s.claustre_alliberat);
     return false;

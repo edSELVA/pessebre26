@@ -32,7 +32,8 @@ foreach (['pessebre/config.php', 'dades/', '*.sqlite', '*.csv', 'public_html/sna
 comprova(is_file("$ARREL/eines/comprova-secrets.sh"), 'hi ha eines/comprova-secrets.sh');
 comprova(strpos((string)@file_get_contents("$ARREL/.githooks/pre-commit"), 'comprova-secrets.sh') !== false, 'el hook pre-commit crida el comprovador');
 $cfg = include "$ARREL/pessebre/config.exemple.php";
-foreach (['pebre', 'llavor', 'hash_admin', 'hash_lectura'] as $k) igual('CANVIA-AIXO', $cfg[$k], "config.exemple.php: $k és un valor fals");
+foreach (['pebre', 'llavor'] as $k) igual('CANVIA-AIXO', $cfg[$k], "config.exemple.php: $k és un valor fals");
+comprova(!isset($cfg['hash_admin']) && !isset($cfg['hash_lectura']), 'config.exemple.php ja no porta contrasenyes: els comptes són a la base de dades (§31)');
 
 if (is_dir("$ARREL/.git")) {
     exec('cd ' . escapeshellarg($ARREL) . ' && sh eines/comprova-secrets.sh --tot 2>&1', $sortida, $codi);
