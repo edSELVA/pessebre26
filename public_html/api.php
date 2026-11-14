@@ -2,8 +2,10 @@
 // Punt d'entrada únic de totes les escriptures: POST amb JSON {"a": "acció", …}. Les lectures són estàtiques (snapshot.json).
 declare(strict_types=1);
 
-// On és la carpeta pessebre/ (millor fora de l'arrel web). Si a l'hosting és en un altre lloc, canvia només aquesta línia.
-$PESSEBRE = __DIR__ . '/../pessebre';
+// On és la carpeta pessebre/: fora de l'arrel web (recomanat, al costat de public_html/) o, si l'hosting no ho permet,
+// dins de public_html/ (protegida amb el seu .htaccess). Si fos en un altre lloc, canvia només aquesta línia.
+$PESSEBRE = is_dir(__DIR__ . '/../pessebre/src') ? __DIR__ . '/../pessebre' : __DIR__ . '/pessebre';
+ini_set('display_errors', '0');          // mai rutes ni errors interns a la resposta (van al registre del servidor)
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

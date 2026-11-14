@@ -21,9 +21,9 @@ sk-[A-Za-z0-9_-]{20,}
 
 mode=${1:-}
 case "$mode" in
-  --tot) llista=$(git ls-files) ;;
+  --tot) llista=$(git -c core.quotepath=off ls-files) ;;
   --fitxer) llista=$2 ;;
-  *) llista=$(git diff --cached --name-only --diff-filter=ACMR) ;;
+  *) llista=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMR) ;;
 esac
 
 error=0

@@ -27,3 +27,6 @@ public_html/snapshot.json.tmp
 # Logo de l escola: només en local i a l hosting, mai al repositori públic (CLAUDE.md §9)
 disseny-propi/logo/
 public_html/disseny/logo.svg
+
+# Paquets per pujar a l hosting (porten la clau d instal·lació i el logo)
+paquet/

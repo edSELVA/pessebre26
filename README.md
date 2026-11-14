@@ -35,18 +35,16 @@ Obre `http://localhost:8027/demo` (o, des del mòbil a la mateixa wifi, l'adreç
 
 Logo de l'escola al cel (no es puja mai al repositori): posa el PNG a `disseny-propi/logo/` i `php eines/logo.php` (genera `public_html/disseny/logo.svg`).
 
-## Instal·lació (hosting, a partir de la Fase B)
+## Instal·lació a l'hosting
 
-1. Puja `public_html/` a l'arrel web i `pessebre/` (i `eines/`) fora de l'arrel web. Si `pessebre/` és en un altre lloc, canvia la línia `$PESSEBRE` d'`api.php`.
-2. Copia `pessebre/config.exemple.php` a `pessebre/config.php` i canvia-hi tots els `CANVIA-AIXO` i les rutes.
-3. `php eines/gestio.php installa` i `usuari NOM admin`. La resta (classes, codis, comptes de l'equip) es fa des d'`admin.html`.
-4. Cal PHP 7.4 o superior amb PDO SQLite (o MySQL) i HTTPS.
+Guia d'una pàgina: **[INSTAL·LACIO.md](INSTAL·LACIO.md)**. En resum: `php eines/paquet.php` (prepara el paquet i la clau d'instal·lació), pujar-lo, obrir `installa.php`, esborrar-lo i acabar des d'`admin.html`. Cal PHP 7.4 o més nou amb PDO SQLite (o MySQL) i HTTPS.
+Per provar el paquet en un Apache de veritat (macOS amb MAMP): `sh eines/prova-apache.sh`.
 
 ## Estructura
 
 - `disseny-origen/` paquet de disseny v2 (no s'edita) → `php eines/converteix.php` → `public_html/disseny/`
 - `public_html/` visor (`index.html`, `app/`), disseny convertit, exemples · `pessebre/` servidor (a partir de la Fase B)
-- `eines/` conversió, dades d'exemple, servidor de proves, comprovador de secrets · `proves/` proves automàtiques
+- `eines/` conversió, dades d'exemple, servidor de proves, comprovador de secrets, paquet per a l'hosting · `proves/` proves automàtiques
 - `demo/` mode demostració (només en local, mai a l'hosting)
 
 ## Repositori públic: secrets

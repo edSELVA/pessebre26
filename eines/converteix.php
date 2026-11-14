@@ -3,6 +3,7 @@
 // Ús:  php eines/converteix.php [paquet.zip] [directori de sortida]
 // Per defecte: disseny-origen/pessebre-disseny-v2.zip → public_html/disseny/
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }      // eina de terminal: mai des del web
 require __DIR__ . '/conversio.php';
 
 $arrel = dirname(__DIR__);

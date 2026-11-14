@@ -3,6 +3,7 @@
 // Ús:  php eines/dades-exemple.php
 // Els noms de placa són inventats a propòsit: la llista real de classes no va mai al repositori.
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }      // eina de terminal: mai des del web
 require __DIR__ . '/../pessebre/src/snapshot.php';
 
 $arrel = dirname(__DIR__);

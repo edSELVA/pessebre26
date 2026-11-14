@@ -30,6 +30,16 @@ foreach (['pessebre/config.php', 'dades/', '*.sqlite', '*.csv', 'public_html/sna
     comprova(strpos($gi, $p) !== false, ".gitignore inclou $p");
 }
 comprova(is_file("$ARREL/eines/comprova-secrets.sh"), 'hi ha eines/comprova-secrets.sh');
+// Preparació de l'hosting (§32)
+comprova(strpos($gi, 'paquet/') !== false, '.gitignore inclou paquet/ (porta la clau d\'instal·lació)');
+$inst = (string)file_get_contents("$ARREL/public_html/installa.php");
+comprova(strpos($inst, 'hash_equals($clau') !== false && strpos($inst, '@unlink($fitxer_clau)') !== false, 'installa.php demana la clau i l\'esborra en acabar (un sol ús)');
+comprova(strpos($inst, "if (!is_file(\$fitxer_clau))") !== false, 'sense la clau, installa.php no fa res');
+foreach (['gestio.php', 'paquet.php', 'logo.php', 'converteix.php', 'dades-exemple.php'] as $f) {
+    comprova(strpos((string)file_get_contents("$ARREL/eines/$f"), "PHP_SAPI !== 'cli'") !== false, "eines/$f només funciona des del terminal");
+}
+comprova(strpos((string)file_get_contents("$ARREL/pessebre/.htaccess"), 'Require all denied') !== false, 'pessebre/.htaccess bloqueja la carpeta si és dins de l\'arrel web');
+comprova(strpos((string)file_get_contents("$ARREL/public_html/api.php"), "ini_set('display_errors', '0')") !== false, 'l\'API no mostra mai errors interns');
 comprova(strpos((string)@file_get_contents("$ARREL/.githooks/pre-commit"), 'comprova-secrets.sh') !== false, 'el hook pre-commit crida el comprovador');
 $cfg = include "$ARREL/pessebre/config.exemple.php";
 foreach (['pebre', 'llavor'] as $k) igual('CANVIA-AIXO', $cfg[$k], "config.exemple.php: $k és un valor fals");

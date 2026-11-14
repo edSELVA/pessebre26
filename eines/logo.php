@@ -14,6 +14,7 @@
 // del cor i el traç fosc del cor. El visor les pinta amb un sol color que canvia amb el moment del dia i les
 // distingeix amb dos nivells de transparència (estil.css).
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }      // eina de terminal: mai des del web
 
 $arrel = dirname(__DIR__);
 $opc = ['cel' => '100', 'bloc' => '4', 'fi' => '2', 'x' => '278', 'y' => '40', 'png' => '', 'sortida' => "$arrel/public_html/disseny/logo.svg"];

@@ -17,6 +17,7 @@
 //
 // Opció: --config=CAMÍ (per defecte pessebre/config.php)
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }      // eina de terminal: mai des del web
 require __DIR__ . '/../pessebre/src/app.php';
 require __DIR__ . '/../pessebre/src/etiquetes.php';
 
