@@ -231,14 +231,30 @@ function admin_ocupacio(PDO $pdo, array $cfg, array $p, DateTimeImmutable $ara, 
     return ['lloc' => $l['id']];
 }
 
+/** Data «AAAA-MM-DD hh:mm» en hora de Barcelona, estricta: «2026-12-32» o «2026-21-12» no es converteixen en una altra data. */
+function data_local_estricta($text): ?DateTimeImmutable
+{
+    $v = str_replace('T', ' ', trim(is_scalar($text) ? (string)$text : ''));
+    $v = preg_replace('/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}):\d{2}(\.\d+)?$/', '$1', $v);     // alguns navegadors hi posen segons
+    $t = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $v, new DateTimeZone('Europe/Madrid'));
+    return $t && $t->format('Y-m-d H:i') === $v ? $t : null;
+}
+
 /** Desa una opció de configuració de la llista permesa. Les dates arriben en hora de Barcelona («AAAA-MM-DD hh:mm»). */
 function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
 {
     $v = is_scalar($valor) ? trim((string)$valor) : '';
     if (in_array($clau, CLAUS_CALENDARI, true)) {
-        $t = DateTimeImmutable::createFromFormat('!Y-m-d H:i', str_replace('T', ' ', $v), new DateTimeZone('Europe/Madrid'));
-        if (!$t) throw new ErrorPessebre('La data ha de tenir el format AAAA-MM-DD hh:mm.', 400, 'valor');
+        $t = data_local_estricta($v);
+        if (!$t) throw new ErrorPessebre('La data no és vàlida (format AAAA-MM-DD hh:mm).', 400, 'valor');
         $desat = bd_hora($t);
+        // Coherència: cada obertura abans del seu tancament
+        $parells = ['claustre_des' => 'claustre_tanca', 'families_des' => 'families_fins'];
+        foreach ($parells as $des => $fins) {
+            $a = $clau === $des ? $desat : calendari($pdo, $des);
+            $b = $clau === $fins ? $desat : calendari($pdo, $fins);
+            if (in_array($clau, [$des, $fins], true) && $a >= $b) throw new ErrorPessebre('L\'obertura ha de ser abans del tancament (' . $des . ' < ' . $fins . ').', 400, 'valor');
+        }
     } elseif ($clau === 'aturada') {
         if ($v !== '0' && $v !== '1') throw new ErrorPessebre('Valor no vàlid.', 400, 'valor');
         $desat = $v;
@@ -269,15 +285,12 @@ function admin_fita(PDO $pdo, $numero, $data, $increment, DateTimeImmutable $ara
     $f = $st->fetch();
     if (!$f) throw new ErrorPessebre('Aquesta fita no existeix.', 400, 'fita');
     if ($f['assolida'] !== null) throw new ErrorPessebre('Aquesta fita ja s\'ha assolit i no es desfà.', 409, 'assolida');
-    $t = DateTimeImmutable::createFromFormat('!Y-m-d H:i', str_replace('T', ' ', (string)$data), new DateTimeZone('Europe/Madrid'));
-    if (!$t) throw new ErrorPessebre('La data ha de tenir el format AAAA-MM-DD hh:mm.', 400, 'valor');
+    $t = data_local_estricta($data);
+    if (!$t) throw new ErrorPessebre('La data no és vàlida (format AAAA-MM-DD hh:mm).', 400, 'valor');
     if (!is_int($increment) || $increment < 1 || $increment > 100) throw new ErrorPessebre('L\'increment és un percentatge entre 1 i 100.', 400, 'valor');
     $pdo->prepare('UPDATE fites SET data_limit = ?, increment = ? WHERE numero = ?')->execute([bd_hora($t), $increment, $f['numero']]);
     // La posta es mesura en cases de classe: el seu llindar es pot recalcular; les altres, quan salti l'anterior
-    if ($f['base'] === 'classes') {
-        $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
-        $pdo->prepare('UPDATE fites SET llindar = ? WHERE numero = ?')->execute([(int)ceil($poble * $increment / 100), $f['numero']]);
-    }
+    if ($f['base'] === 'classes') fites_recalcula_posta($pdo);      // sobre les classes carregades, no sobre les 74 cases
     registre_afegeix($pdo, $ara, 'administració', 'admin.fita', null, "{$f['moment']}: $data, $increment %");
     return ['numero' => (int)$f['numero']];
 }

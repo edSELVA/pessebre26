@@ -25,8 +25,10 @@ function pagina(string $titol, string $cos): void
     exit;
 }
 
-// Ja instal·lat (o sense clau): no fa res més
-if (!is_file($fitxer_clau)) {
+// Ja instal·lat (o sense clau): no fa res més. Si ja hi ha config.php NO es torna a instal·lar mai, encara que hi hagi una clau:
+// tornar a instal·lar canviaria el pebre i invalidaria TOTS els codis impresos a les postals, els d'etapa i l'enllaç del claustre.
+if (is_file($cami_config) || !is_file($fitxer_clau)) {
+    if (is_file($cami_config) && is_file($fitxer_clau)) @unlink($fitxer_clau);
     http_response_code(403);
     pagina('Instal·lació', '<p>' . (is_file($cami_config)
         ? 'El pessebre ja està instal·lat. <strong>Esborra <code>installa.php</code> de l\'hosting.</strong>'
@@ -58,7 +60,8 @@ $comp = [
     ['Disseny del pessebre', is_file(__DIR__ . '/disseny/mapa.json') && is_file(__DIR__ . '/disseny/peces.svg'), '', true],
     ['Logo de l\'escola (disseny/logo.svg)', is_file(__DIR__ . '/disseny/logo.svg'), is_file(__DIR__ . '/disseny/logo.svg') ? 'sí' : 'no hi és: el pessebre funciona sense', false],
     ['HTTPS', $https, $https ? 'sí' : 'no: demana el certificat abans d\'obrir-lo a les famílies', false],
-    ['pessebre/ fora de l\'arrel web', !$dins, $dins ? 'és dins: comprova que no es pot obrir pessebre/config.exemple.php des del navegador' : 'sí', false],
+    ['pessebre/ fora de l\'arrel web', !$dins, $dins ? 'és dins: després d\'instal·lar, comprova que https://ADREÇA/pessebre/config.exemple.php dona error 403 (no una pàgina en blanc)' : 'sí', false],
+    ['Zona horària i rellotge', true, gmdate('Y-m-d H:i') . ' UTC · ' . (new DateTimeImmutable('now', new DateTimeZone('Europe/Madrid')))->format('H:i') . ' a Barcelona', false],
 ];
 $pot = !in_array(false, array_map(function ($c) { return !$c[3] || $c[1]; }, $comp), true);
 $taula = '<table class="taula"><tbody>';
@@ -74,7 +77,9 @@ if (isset($p['installa']) && $pot) {
     $usuari = mb_strtolower(trim((string)($p['usuari'] ?? '')));
     $c1 = (string)($p['contrasenya'] ?? '');
     $url = trim((string)($p['url_base'] ?? ''));
-    if (!preg_match('#^https?://[^\s"\'<>]+/$#', $url)) $errors[] = 'L\'adreça ha de començar per https:// i acabar amb «/».';
+    $host_url = (string)parse_url($url, PHP_URL_HOST);
+    $local = in_array($host_url, ['localhost', '127.0.0.1'], true);
+    if (!preg_match('#^https://[^\s"\'<>\#?]+/$#', $url) && !($local && preg_match('#^http://[^\s"\'<>\#?]+/$#', $url))) $errors[] = 'L\'adreça ha de començar per https:// i acabar amb «/» (va dins dels QR: ha de ser la definitiva).';
     if (!preg_match('/^[a-z0-9][a-z0-9._-]{1,29}$/', $usuari)) $errors[] = 'Usuari: de 2 a 30 lletres sense accents, xifres, punts o guions.';
     if (mb_strlen($c1) < 10) $errors[] = 'La contrasenya ha de tenir com a mínim 10 caràcters.';
     if ($c1 !== (string)($p['contrasenya2'] ?? '')) $errors[] = 'Les dues contrasenyes no coincideixen.';
@@ -82,7 +87,8 @@ if (isset($p['installa']) && $pot) {
     if (!$errors) {
         $cfg = [
             'bd_tipus' => $bd,
-            'bd_sqlite' => "$PESSEBRE/dades/pessebre.sqlite",
+            // Nom imprevisible: si pessebre/ quedés dins de l'arrel web i l'hosting ignorés el .htaccess, no es podria endevinar
+            'bd_sqlite' => "$PESSEBRE/dades/pessebre-" . bin2hex(random_bytes(12)) . '.sqlite',
             'bd_mysql' => ['dsn' => 'mysql:host=' . trim((string)($p['mysql_host'] ?? 'localhost')) . ';dbname=' . trim((string)($p['mysql_bd'] ?? '')) . ';charset=utf8mb4',
                            'usuari' => (string)($p['mysql_usuari'] ?? ''), 'clau' => (string)($p['mysql_clau'] ?? '')],
             'pebre' => bin2hex(random_bytes(32)),
@@ -95,6 +101,8 @@ if (isset($p['installa']) && $pot) {
         ];
         try {
             if (!is_dir("$PESSEBRE/dades")) mkdir("$PESSEBRE/dades", 0700, true);
+            // Segona barrera per a Apache (per si el .htaccess de pessebre/ no es llegís per algun motiu)
+            @file_put_contents("$PESSEBRE/dades/.htaccess", "Require all denied\n");
             require "$PESSEBRE/src/app.php";
             $pdo = bd_connecta($cfg);                       // si MySQL falla, ho diu aquí, abans d'escriure res
             $ara = new DateTimeImmutable('now', new DateTimeZone('UTC'));

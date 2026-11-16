@@ -25,6 +25,8 @@ function auto_aplica(PDO $pdo, array $cfg, DateTimeImmutable $ara): int
     $objectiu = (int)config_llegeix($pdo, "auto_$fase", (string)(AUTO_OBJECTIU_DEFECTE[$fase] ?? 0));
     $max_zona = (int)config_llegeix($pdo, 'auto_max_zona', '40');
     $zones = zones_obertes($pdo);
+    // Amb totes les zones obertes la participació ja és alta: no es treuen més llocs a les famílies amb figures automàtiques
+    if (count($zones) >= count(ORDRE_ZONES)) { config_desa($pdo, 'auto_hora', $hora); return 0; }
     $llavor = (string)($cfg['llavor'] ?? 'llavor');
 
     // Estat de les zones obertes (sense les cases de classe)
@@ -85,6 +87,7 @@ function auto_previsio(PDO $pdo, string $moment): int
     $objectiu = (int)config_llegeix($pdo, "auto_$moment", (string)(AUTO_OBJECTIU_DEFECTE[$moment] ?? 0));
     $max_zona = (int)config_llegeix($pdo, 'auto_max_zona', '40');
     $zones = zones_obertes($pdo);
+    if (count($zones) >= count(ORDRE_ZONES)) return 0;
     $marques = implode(',', array_fill(0, count($zones), '?'));
     $st = $pdo->prepare("SELECT l.zona, COUNT(*) AS total, SUM(CASE WHEN o.lloc_id IS NULL THEN 0 ELSE 1 END) AS ocupats,
                                 SUM(CASE WHEN o.origen = 'auto' THEN 1 ELSE 0 END) AS auto,

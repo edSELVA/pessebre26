@@ -152,7 +152,7 @@ body {
   background: #FFF8EA;
   box-shadow: 0 -8px 8px -8px #0003;
 }
-.full .botons { flex-wrap: nowrap; }
+.full .botons { flex-wrap: wrap; }   /* abans nowrap: a mòbils de 320–360 px el tercer botó quedava tallat */
 .full .botons .boto { padding: 8px 12px; white-space: nowrap; }
 @media (max-height: 520px) { .full .botons { position: static; margin-bottom: 0; box-shadow: none; } }
 .columna-casa { flex: 0 0 auto; width: 136px; }

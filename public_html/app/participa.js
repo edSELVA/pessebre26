@@ -76,8 +76,10 @@
     filtre = null;
     Visor.filtre(null);
     if (mode === 'claustre') setTimeout(function () { Visor.centra(345, 380, 520); }, 0);
+    var total = 0;
     var botons = TIPUS.map(function (t) {
       var n = Visor.lliures(t.t).length;
+      total += n;
       var mini = UI.previsualitzacio(D().peces);
       mini.pinta(t.peca, {}, false);
       var b = h('button', { type: 'button', class: 'boto-tipus' }, [mini.svg, h('span', { class: 'nom', text: t.nom }),
@@ -92,6 +94,7 @@
       mode === 'familia' && permesos > 1
         ? h('p', { class: 'suau', text: 'Amb aquest codi pots posar ' + (queden === permesos ? permesos + ' figures.' : queden === 1 ? 'una figura més.' : 'encara ' + queden + ' figures.') })
         : null,
+      total === 0 ? h('p', { class: 'error', text: 'Ara mateix el pessebre és ple: no queda cap lloc lliure. El codi no s\'ha gastat: torna-ho a provar més endavant.' }) : null,
       h('div', { class: 'tipus' }, botons)
     ]);
   }
@@ -152,26 +155,47 @@
       .then(function () { return Visor.refresca(); }).catch(function () {});
   }
 
+  // Mentre s'envia una confirmació, els botons del panell queden desactivats (evita el doble toc i les confirmacions repetides)
+  var enviant = false;
+  function ocupat(si) {
+    enviant = si;
+    Array.prototype.forEach.call(document.querySelectorAll('#full button'), function (b) { b.disabled = si; });
+  }
+
   function confirma() {
+    if (enviant || !tria) return;
     var avisConf = mode === 'familia' && queden === 1
       ? 'Confirmes? Aquesta serà l\'última figura d\'aquest codi.'
       : 'Confirmes aquesta figura per al pessebre?';
     if (!window.confirm(avisConf)) return;
-    api(prefix + 'confirmar', { lloc: tria.lloc.id, retencio: tria.retencio, peca: tria.peca, mirall: tria.mirall, colors: tria.colors, finestres: tria.finestres })
+    var t = tria, id = t.lloc.id, usosAbans = permesos - queden;
+    ocupat(true);
+    api(prefix + 'confirmar', { lloc: id, retencio: t.retencio, peca: t.peca, mirall: t.mirall, colors: t.colors, finestres: t.finestres })
       .then(function (r) {
-        var id = tria.lloc.id;
         if (aturaCompte) aturaCompte();
-        return Visor.refresca().then(function () {
+        return Visor.refresca().catch(function () {}).then(function () {
           Visor.treu(id);
           tria = null;
           Visor.redibuixa();
           if (mode === 'familia') queden = r.queden;
+          ocupat(false);
           pasFet(r.zona_nova);
         });
       })
       .catch(function (e) {
-        UI.avis(e.message);
-        if (e.codi === 'retencio') { neteja(); Visor.refresca().catch(function () {}); pasInici(); }
+        if (e.codi !== 'retencio') { ocupat(false); UI.avis(e.message); return; }
+        // La reserva ja no hi és: pot ser que la confirmació anterior SÍ que arribés però es perdés la resposta (cobertura).
+        // Es comprova abans de dir que ha fallat, per no fer pensar a la família que no ha funcionat.
+        var comprova = mode === 'familia'
+          ? api('codi.validar').then(function (v) { queden = v.permesos - v.usos; return v.usos > usosAbans; })
+          : Visor.refresca().then(function (s) { return !!s.o[id]; });
+        return comprova.catch(function () { return false; }).then(function (desada) {
+          neteja();
+          ocupat(false);
+          Visor.refresca().catch(function () {});
+          if (desada) { UI.avis('La figura ja s\'havia desat correctament.'); pasFet(null); }
+          else { UI.avis(e.message); pasInici(); }
+        });
       });
   }
 

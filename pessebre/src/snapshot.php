@@ -149,7 +149,7 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
         'claustre_alliberat' => claustre_alliberat($pdo, $ara),
         'tancat' => config_llegeix($pdo, 'tancat', '0') === '1' || bd_hora($ara) >= calendari($pdo, 'families_fins'),
         'comptador' => $classes
-            ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => $poble]
+            ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => function_exists('cases_objectiu') ? cases_objectiu($pdo) : $poble]
             : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita],
         'o' => (object)$o,
         'r' => $ret,

@@ -6,7 +6,10 @@ declare(strict_types=1);
 
 const LIMIT_FALLADES = 10;
 const LIMIT_FINESTRA = 900;        // 15 min
-const LIMIT_GLOBAL_MINUT = 300;    // fallades per minut a tot el servidor
+// Fre global: 300/min el podia activar una sola persona amb IPv6 (cada adreça d'un /64 compta com una IP diferent) i
+// aleshores es bloquejava la participació de TOTHOM. Amb codis de 10 caràcters (31^9 ≈ 2,6·10^13 combinacions) el fre global
+// no cal per evitar endevinar-ne: només és una xarxa de seguretat contra un atac massiu.
+const LIMIT_GLOBAL_MINUT = 3000;
 
 function limit_empremta(PDO $pdo, string $ip, DateTimeImmutable $ara): string
 {
@@ -18,7 +21,16 @@ function limit_empremta(PDO $pdo, string $ip, DateTimeImmutable $ara): string
         config_desa($pdo, 'sal_hora', $hora);
         $pdo->exec('DELETE FROM intents');     // les empremtes amb la sal vella ja no serveixen
     }
-    return hash_hmac('sha256', $ip, $sal);
+    return hash_hmac('sha256', ip_xarxa($ip), $sal);
+}
+
+/** IPv4 tal qual; IPv6, el prefix /64 (una sola connexió domèstica o mòbil en té milers d'adreces). */
+function ip_xarxa(string $ip): string
+{
+    if (strpos($ip, ':') === false) return $ip;
+    $bin = @inet_pton($ip);
+    if ($bin === false || strlen($bin) !== 16) return $ip;
+    return bin2hex(substr($bin, 0, 8)) . '::/64';
 }
 
 /** Llança una excepció si aquesta empremta (o el servidor sencer) ha fallat massa. */

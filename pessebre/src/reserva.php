@@ -366,12 +366,16 @@ function zones_actualitza(PDO $pdo, DateTimeImmutable $ara): ?array
     $canvi = false;
     while (count($obertes) < count(ORDRE_ZONES)) {
         $marques = implode(',', array_fill(0, count($obertes), '?'));
-        $st = $pdo->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN o.estat = 'confirmat' AND o.origen <> 'auto' THEN 1 ELSE 0 END) AS reals
+        // Els llocs ocupats per figures automàtiques no compten al total: si no, amb un 40 % d'automàtiques la participació
+        // real no podria arribar mai al 75 % i les zones noves no s'obririen mai (bloqueig comprovat en simulació).
+        $st = $pdo->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN o.estat = 'confirmat' AND o.origen <> 'auto' THEN 1 ELSE 0 END) AS reals,
+                                    SUM(CASE WHEN o.estat = 'confirmat' AND o.origen = 'auto' THEN 1 ELSE 0 END) AS auto
                              FROM llocs l LEFT JOIN ocupacions o ON o.lloc_id = l.id
                              WHERE l.grup <> 'poble' AND l.zona IN ($marques)");
         $st->execute($obertes);
         $r = $st->fetch();
-        if (!$r['total'] || (int)$r['reals'] * 100 < $llindar * (int)$r['total']) break;
+        $disponibles = (int)$r['total'] - (int)$r['auto'];
+        if ($disponibles <= 0 || (int)$r['reals'] * 100 < $llindar * $disponibles) break;
         $seguent = ORDRE_ZONES[count($obertes)];
         $obertes[] = $seguent;
         config_desa($pdo, 'zones', implode(',', $obertes));

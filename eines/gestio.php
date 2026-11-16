@@ -190,9 +190,9 @@ switch ($ordre) {
             $st = $pdo->prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN o.estat = 'confirmat' THEN 1 ELSE 0 END) AS fetes FROM classes c LEFT JOIN ocupacions o ON o.classe_id = c.id WHERE c.etapa = ?");
             $st->execute([$e]);
             $r = $st->fetch();
-            $enl = $pdo->prepare("SELECT COUNT(*) FROM enllacos WHERE tipus = 'etapa' AND etapa = ? AND activa = 1");
-            $enl->execute([$e]);
-            printf("  %-26s %2d classes, %2d amb casa · enllaç %s\n", $nom, $r['n'], (int)$r['fetes'], (int)$enl->fetchColumn() ? 'actiu' : 'NO');
+            $actiu = false;     // codi d'etapa actiu (§30); abans eren enllaços d'etapa
+            foreach ($pdo->query('SELECT etapes FROM codis_etapa WHERE activa = 1')->fetchAll(PDO::FETCH_COLUMN) as $ets) if (in_array($e, explode(',', $ets), true)) $actiu = true;
+            printf("  %-26s %2d classes, %2d amb casa · codi d'etapa %s\n", $nom, $r['n'], (int)$r['fetes'], $actiu ? 'actiu' : 'NO');
         }
         $ret = $pdo->prepare("SELECT COUNT(*) FROM ocupacions WHERE estat = 'retingut' AND caduca > ?");
         $ret->execute([bd_hora($ara)]);

@@ -189,12 +189,22 @@
       .then(function () { return Visor.refresca(); }).catch(function () {});
   }
 
+  var enviant = false;
+  function ocupat(si) {
+    enviant = si;
+    Array.prototype.forEach.call(full.querySelectorAll('button'), function (b) { b.disabled = si; });
+  }
+
   function confirma() {
+    if (enviant || !estat.lloc) return;
     if (!window.confirm('Confirmes la casa de ' + estat.classe.nom + '? Després només la coordinació la pot canviar.')) return;
+    ocupat(true);
+    var classe = estat.classe;
     api('classes.confirmar', { classe: estat.classe.id, lloc: estat.lloc.id, retencio: estat.retencio, colors: estat.colors,
                                mirall: estat.mirall, finestres: estat.finestres })
       .then(function () {
         var nom = estat.classe.nom;
+        ocupat(false);
         clearInterval(rellotge);
         estat.retencio = null;
         estat.classe.feta = true;
@@ -206,8 +216,22 @@
         });
       })
       .catch(function (e) {
-        avis(e.message);
-        if (e.codi === 'retencio' || e.codi === 'tancat') { netejaTria(); Visor.refresca().catch(function () {}); pasCasa(); }
+        ocupat(false);
+        if (e.codi !== 'retencio') {
+          avis(e.message);
+          if (e.codi === 'tancat') { netejaTria(); Visor.refresca().catch(function () {}); pasCasa(); }
+          return;
+        }
+        // Pot ser que la confirmació sí que arribés però es perdés la resposta: es comprova abans de dir que ha fallat
+        api('classes.estat').then(function (r) {
+          estat.classes = r.classes;
+          return r.classes.some(function (c) { return c.id === classe.id && c.feta; });
+        }).catch(function () { return false; }).then(function (feta) {
+          netejaTria();
+          Visor.refresca().catch(function () {});
+          if (feta) { classe.feta = true; avis('La casa ja s\'havia desat correctament.'); pasFet(classe.nom); }
+          else { avis(e.message); pasCasa(); }
+        });
       });
   }
 

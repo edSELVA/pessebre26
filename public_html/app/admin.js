@@ -15,6 +15,19 @@
   var cont = document.getElementById('contingut');
 
   function admin() { return estat && estat.rol === 'admin'; }
+
+  // La contrasenya viatja a cada acció: sense HTTPS aniria en clar per la xarxa (p. ex. la wifi de l'escola)
+  var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if (location.protocol !== 'https:' && !local) {
+    document.getElementById('error-entrada').textContent = 'Atenció: aquesta pàgina no va per HTTPS. No hi escriguis la contrasenya fins que l\'adreça comenci per https://.';
+  }
+
+  // Sortida automàtica després de 30 minuts sense tocar res (ordinadors compartits de l'escola)
+  var INACTIVITAT = 30 * 60 * 1000, darreraActivitat = Date.now();
+  ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { darreraActivitat = Date.now(); }, true); });
+  setInterval(function () {
+    if (contrasenya && Date.now() - darreraActivitat > INACTIVITAT) location.reload();
+  }, 60000);
   function D() { return Visor.disseny(); }
 
   function api(accio, dades) {
@@ -327,7 +340,10 @@
         h('h2', { text: 'Lot ' + r.lot + ' a punt' }),
         h('p', { text: r.codis.length + ' codis. Imprimeix les etiquetes ara: un cop surtis d\'aquí no es poden tornar a veure.' }),
         h('p', { class: 'suau', text: 'Al diàleg d\'impressió tria mida real (100 %) i sense marges.' }),
-        h('div', { class: 'botons' }, [boto('Imprimir les etiquetes', function () { window.print(); }, 'primari'), boto('Tornar', pCodis, 'suau')])
+        h('p', { class: 'suau', text: 'Recomanat: desa també el full (fitxer HTML) en una carpeta segura per si la impressió falla. Conté codis vàlids: esborra\'l quan les postals estiguin fetes.' }),
+        h('div', { class: 'botons' }, [boto('Imprimir les etiquetes', function () { window.print(); }, 'primari'),
+                                       boto('Desar el full', function () { desaFull(r.lot); }),
+                                       boto('Tornar', pCodis, 'suau')])
       ]);
     }).catch(function (e) { UI.avis(e.message); });
   }
@@ -349,6 +365,21 @@
       });
       zona.appendChild(full);
     }
+  }
+
+  // Desa el full d'etiquetes com a fitxer HTML independent (es pot obrir i imprimir més tard, sense connexió)
+  var CSS_FULL = '@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0}'
+    + '.full-etiquetes{width:210mm;height:297mm;padding:.5mm 0 0 0;display:grid;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(8,37mm);break-after:page;page-break-after:always}'
+    + '.etiqueta{display:flex;align-items:center;gap:2.5mm;padding:2.5mm 3mm;overflow:hidden;color:#000;font-family:system-ui,sans-serif}'
+    + '.etiqueta svg{width:31mm;height:31mm;flex:0 0 auto}.t{font-size:8.5pt;font-weight:700;margin:0 0 1mm}'
+    + '.c{font:700 12.5pt/1 ui-monospace,Menlo,monospace;margin:0 0 1.2mm;white-space:nowrap}.p{font-size:6.5pt;line-height:1.25;margin:0}';
+  function desaFull(lot) {
+    var html = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><title>Etiquetes · lot ' + lot + '</title><style>' + CSS_FULL
+      + '</style></head><body>' + document.getElementById('impressio').innerHTML + '</body></html>';
+    var a = h('a', { href: URL.createObjectURL(new Blob([html], { type: 'text/html' })), download: 'etiquetes-lot-' + lot + '.html' });
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
 
   // ── Enllaços

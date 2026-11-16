@@ -43,10 +43,15 @@ function app_installa(PDO $pdo, array $cfg): int
 }
 
 /** Executa $feina amb el bloqueig d'escriptura i dins d'una transacció; després regenera el snapshot. */
-function app_escriu(PDO $pdo, array $cfg, DateTimeImmutable $ara, callable $feina)
+function app_escriu(PDO $pdo, array $cfg, DateTimeImmutable $ara, callable $feina, bool $espera = true)
 {
     $f = fopen($cfg['bloqueig'], 'c');
-    if (!$f || !flock($f, LOCK_EX)) throw new RuntimeException('No es pot obtenir el bloqueig d\'escriptura');
+    if (!$f) throw new RuntimeException('No es pot obrir el fitxer de bloqueig d\'escriptura');
+    if (!flock($f, $espera ? LOCK_EX : LOCK_EX | LOCK_NB)) {
+        fclose($f);
+        if (!$espera) return false;                  // (tick) algú altre ja està escrivint: el snapshot es regenerarà igualment
+        throw new RuntimeException('No es pot obtenir el bloqueig d\'escriptura');
+    }
     try {
         $pdo->beginTransaction();
         try {
@@ -117,6 +122,7 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
     try {
         registre_qui(null, true);           // cada petició diu qui és (comptes d'administració)
         $a = $p['a'] ?? '';
+        if (!is_string($a)) return [400, ['ok' => false, 'error' => 'Acció desconeguda.', 'codi' => 'accio']];
         // Després de «Tancar i esborrar» (Reis) ja no es pot escriure res: el pessebre queda com a pàgina estàtica
         if (config_llegeix($pdo, 'tancat', '0') === '1' && !in_array($a, ['admin.estat', 'admin.lloc', 'admin.registre'], true)) {
             if ($a === 'tick') return [200, ['ok' => true, 'fet' => false]];
@@ -127,8 +133,9 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 clearstatcache();
                 $edat = is_file($cfg['snapshot']) ? $ara->getTimestamp() - filemtime($cfg['snapshot']) : PHP_INT_MAX;
                 if ($edat > SNAPSHOT_EDAT_TICK) {
-                    app_escriu($pdo, $cfg, $ara, function () { return null; });
-                    return [200, ['ok' => true, 'fet' => true]];
+                    // Sense esperar el bloqueig: si molts visitants arriben alhora amb el snapshot vell, només un el regenera
+                    $fet = app_escriu($pdo, $cfg, $ara, function () { return true; }, false);
+                    return [200, ['ok' => true, 'fet' => $fet === true]];
                 }
                 return [200, ['ok' => true, 'fet' => false]];
 
