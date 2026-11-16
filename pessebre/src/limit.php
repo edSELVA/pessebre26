@@ -4,7 +4,9 @@
 // Fre global: si hi ha massa fallades en un minut, s'aturen totes les comprovacions un moment.
 declare(strict_types=1);
 
-const LIMIT_FALLADES = 10;
+// 30 fallades en 15 minuts per IP: a la wifi de l'escola (torronada, reunions) moltes persones comparteixen IP, i 10 eren massa
+// poques. Amb 31^9 combinacions de codi, 30 intents cada 15 minuts no permeten endevinar-ne cap.
+const LIMIT_FALLADES = 30;
 const LIMIT_FINESTRA = 900;        // 15 min
 // Fre global (xarxa de seguretat contra un atac massiu). Abans una sola persona amb IPv6 el podia activar canviant d'adreça
 // dins del seu /64; ara les IPv6 s'agrupen per /64 (ip_xarxa), i el fre es pot mantenir ajustat.

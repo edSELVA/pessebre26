@@ -78,7 +78,7 @@ function codi_nou(): string
 function codi_normalitza($text): ?string
 {
     if (!is_string($text)) return null;
-    $c = strtoupper(preg_replace('/[\s\-.]/', '', $text));
+    $c = strtoupper((string)preg_replace('/[\s\-.\x{2010}-\x{2015}\x{2212}_]/u', '', $text));   // també guions llargs (Word, correu)
     return preg_match('/^[' . ALFABET_CODIS . ']{10}$/', $c) ? $c : null;
 }
 

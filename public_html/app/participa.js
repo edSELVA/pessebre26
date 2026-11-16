@@ -219,7 +219,7 @@
       h('p', { class: 'suau', text: mode === 'familia'
         ? (queden > 0 ? 'Amb aquest codi encara pots posar ' + (queden === 1 ? 'una figura més.' : queden + ' figures més.')
                       : 'Ja heu posat totes les figures d\'aquest codi. Si cal canviar alguna cosa, demaneu-ho a porteria o per correu.')
-        : 'Pots posar-ne tantes com vulguis, fins que s\'acabi la torronada.' }),
+        : 'Podeu posar-ne tantes com vulgueu, fins que s\'acabi la torronada.' }),
       h('div', { class: 'botons' }, [h('a', { class: 'boto', href: './', text: 'Veure el pessebre' })])
     ];
     if (altra) { pot = true; fills[3].insertBefore(h('button', { type: 'button', class: 'boto primari', text: 'Posar-ne una altra', clic: pasInici }), fills[3].firstChild); }
@@ -236,10 +236,10 @@
 
   function demanaCodi(error) {
     var camp = h('input', { type: 'text', id: 'camp-codi', class: 'camp', autocomplete: 'off', autocapitalize: 'characters',
-                            spellcheck: 'false', maxlength: '14', placeholder: 'K7M-QX4-P9TR', 'aria-describedby': 'ajuda-codi' });
+                            spellcheck: 'false', maxlength: '24', placeholder: 'K7M-QX4-P9TR', 'aria-describedby': 'ajuda-codi' });
     var enviar = function (e) {
       e.preventDefault();
-      var c = camp.value.toUpperCase().replace(/[\s.\-]/g, '');
+      var c = camp.value.toUpperCase().replace(/[\s.\-\u2010-\u2015\u2212_]/g, '');
       UI.api({ a: 'codi.validar', c: c }).then(function (r) {
         if (r.tipus === 'etapa') { location.href = 'classes.html#c=' + c; return; }      // codi d'etapa: pàgina dels tutors
         location.hash = 'c=' + c;
@@ -290,7 +290,7 @@
   var boto = document.getElementById('participar');
   if (mode) {
     var avisMode = document.getElementById('avis-mode');
-    avisMode.textContent = mode === 'claustre' ? 'Torronada · claustre' : 'Participar';
+    avisMode.textContent = mode === 'claustre' ? 'Torronada · claustre' : 'Amb el teu codi';     // no ha de semblar el botó «Participar»
     avisMode.hidden = false;
     boto.hidden = true;
     Promise.all([api(mode === 'familia' ? 'codi.validar' : 'claustre.estat'), carregat]).then(function (r) {

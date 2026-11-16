@@ -96,6 +96,8 @@ function app_etapes(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutabl
     if ($c === null) throw new ErrorPessebre('El codi té 10 caràcters (lletres i xifres), com K7M-QX4-P9TR. Revisa\'l.', 400, 'format');
     if (!codi_control_ok($c)) throw new ErrorPessebre('Sembla que hi ha un caràcter mal copiat. Revisa el codi.', 400, 'control');
     $etapes = etapes_per_codi($pdo, $cfg['pebre'], $c);
+    // Un codi de família obert a la pàgina dels tutors és un error de camí, no un intent d'endevinar: no compta per al límit
+    if (!$etapes && codi_busca($pdo, $cfg['pebre'], $c)) throw new ErrorPessebre('Aquest és un codi de família. Escriu-lo al botó «Participar» del pessebre.', 400, 'codi_familia');
     if (!$etapes) throw new ErrorPessebre('Aquest codi no és de cap etapa, o ja s\'ha canviat. Demana\'l a la coordinació.', 403, 'codi');
     return $etapes;
 }

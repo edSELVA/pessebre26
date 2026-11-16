@@ -32,8 +32,9 @@ function etapa_estat(PDO $pdo, array $etapes, DateTimeImmutable $ara): array
                          WHERE c.etapa IN ($marques) ORDER BY c.ordre, c.nom");
     $st->execute($etapes);
     $classes = array_map(function ($c) { return ['id' => (int)$c['id'], 'nom' => $c['nom'], 'feta' => $c['estat'] === 'confirmat']; }, $st->fetchAll());
-    $obert = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00') && config_llegeix($pdo, 'aturada', '0') !== '1';
-    return ['etapa' => etapes_nom($etapes), 'classes' => $classes, 'obert' => $obert];
+    $aturada = config_llegeix($pdo, 'aturada', '0') === '1';
+    $obert = bd_hora($ara) < config_llegeix($pdo, 'classes_tanca', '2026-12-21 22:59:00') && !$aturada;
+    return ['etapa' => etapes_nom($etapes), 'classes' => $classes, 'obert' => $obert, 'aturada' => $aturada];
 }
 
 /** La classe triada, si és d'alguna de les etapes del codi. */
@@ -202,7 +203,7 @@ function codi_estat(PDO $pdo, array $codi, DateTimeImmutable $ara): array
     $missatge = null;
     if ($f === 'abans') $missatge = 'Les famílies podran participar a partir del 21 de desembre. Guarda el codi!';
     elseif ($f === 'tancat') $missatge = 'La participació ja s\'ha tancat. Moltes gràcies!';
-    elseif ((int)$codi['usos'] >= $permesos) $missatge = 'Aquest codi ja s\'ha fet servir. Moltes gràcies per participar!';
+    elseif ((int)$codi['usos'] >= $permesos) $missatge = ($permesos === 1 ? 'Amb aquest codi ja s\'ha posat la figura.' : 'Amb aquest codi ja s\'han posat les ' . $permesos . ' figures.') . ' Moltes gràcies per participar!';
     elseif (config_llegeix($pdo, 'aturada', '0') === '1') $missatge = 'Ara mateix la participació està aturada. Torna-ho a provar més tard.';
     return ['pot' => $missatge === null, 'missatge' => $missatge, 'usos' => (int)$codi['usos'], 'permesos' => $permesos];
 }
@@ -264,7 +265,7 @@ function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, Da
     $st->execute([is_string($lloc_id) ? $lloc_id : '', $origen]);
     $o = $st->fetch();
     if (!$o || !testimoni_format_ok($t) || !hash_equals($o['hash_retencio'], testimoni_hash($cfg['pebre'], $t)) || $o['caduca'] <= bd_hora($ara)) {
-        throw new ErrorPessebre('La reserva temporal ha caducat o no és vàlida. Torna a triar el lloc.', 409, 'retencio');
+        throw new ErrorPessebre('La reserva temporal ha caducat, o s\'ha fet servir el mateix codi en un altre mòbil. Torna a triar el lloc.', 409, 'retencio');
     }
     return $o;
 }

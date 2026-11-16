@@ -273,7 +273,7 @@
       var avisMode = document.getElementById('avis-mode');
       avisMode.textContent = 'Tutors · ' + r[0].etapa;
       avisMode.hidden = false;
-      if (!r[0].obert) { errorEnllac('El període per triar les cases de classe ja s\'ha tancat.'); return; }
+      if (!r[0].obert) { errorEnllac(r[0].aturada ? 'Ara mateix les reserves estan aturades. Torna-ho a provar més tard.' : 'El període per triar les cases de classe ja s\'ha tancat.'); return; }
       pasClasse();
     }).catch(function (e) { errorEnllac(e.message); });
   }
