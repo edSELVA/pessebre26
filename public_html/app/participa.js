@@ -46,7 +46,7 @@
     if (!pot || tria) return;
     if (!l) return;
     if (s.o[l.id]) { UI.avis('Aquest lloc ja és ocupat. Tria un lloc lliure.'); return; }
-    if ((s.r || []).indexOf(l.id) >= 0) { UI.avis('Algú altre està triant aquest lloc ara mateix.'); return; }
+    // Un lloc que surt com a retingut pot ser la pròpia reserva caducada (el snapshot no s'actualitza sol): ho decideix el servidor
     api(prefix + 'retenir', { lloc: l.id }).then(function (r) {
       var peces = UI.pecesPossibles(D(), l);
       var primera = peces.indexOf(l.codi) >= 0 ? l.codi : peces[0];     // als arbres, comença amb l'espècie del mapa

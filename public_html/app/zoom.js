@@ -12,6 +12,16 @@ var Zoom = (function () {
   var opc = {}, toc = null;        // toc: on i quan ha començat un toc d'un sol dit
 
   function mida() { return { w: cont.clientWidth, h: cont.clientHeight }; }
+
+  // Alçada de l'escena que queda a la vista: si un panell ocupa la part de baix de la pantalla (mòbil), fins on comença
+  function altVisible() {
+    var m = mida(), r0 = cont.getBoundingClientRect();
+    var panell = document.querySelector('#full:not([hidden]), #panell:not([hidden])');
+    if (!panell) return m.h;
+    var r = panell.getBoundingClientRect();
+    if (r.left > r0.left + 10 || r.top <= r0.top || r.top >= r0.top + m.h) return m.h;     // panell lateral (ordinador) o fora
+    return Math.max(80, r.top - r0.top);
+  }
   function kMin() { var m = mida(); return Math.min(m.w / AMPLE, m.h / ALT); }
 
   function limita() {
@@ -19,7 +29,8 @@ var Zoom = (function () {
     v.k = Math.max(kMin(), Math.min(K_MAX, v.k));
     var w = AMPLE * v.k, h = ALT * v.k;
     v.x = w <= m.w ? (m.w - w) / 2 : Math.min(0, Math.max(m.w - w, v.x));
-    v.y = h <= m.h ? (m.h - h) / 2 : Math.min(0, Math.max(m.h - h, v.y));
+    // Amb un panell a baix es pot pujar l'escena fins que el seu final arribi al panell (si no, el que hi ha a baix quedaria tapat)
+    v.y = h <= m.h ? (m.h - h) / 2 : Math.min(0, Math.max(Math.min(m.h, altVisible()) - h, v.y));
   }
 
   function aplica() {
@@ -61,10 +72,9 @@ var Zoom = (function () {
   // Si el panell inferior és obert, el punt queda a la part de dalt (30 %) perquè no quedi tapat.
   function centra(x, y, amplada) {
     var m = mida();
-    var alcada = document.body.classList.contains('amb-full') ? 0.3 : 0.5;
     if (amplada) v.k = Math.max(m.h / ALT, m.w / amplada);
     v.x = m.w / 2 - x * v.k;
-    v.y = m.h * alcada - y * v.k;
+    v.y = altVisible() * 0.55 - y * v.k;          // el punt queda al mig de la part visible (per sobre del panell, si n'hi ha)
     aplica();
     fixa();
   }
