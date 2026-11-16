@@ -107,7 +107,14 @@
       h('h2', { text: t.nom }),
       h('p', { text: t.on }),
       h('p', { class: 'suau', text: 'Pots moure el pessebre amb el dit i apropar-t\'hi amb dos dits.' }),
-      h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: '← Una altra cosa', clic: pasInici })])
+      h('div', { class: 'botons' }, [
+        // Alternativa al toc sobre l'escena: per a qui no pot fer servir bé la pantalla tàctil o el ratolí (teclat, lectors de pantalla) i per a pantalles petites
+        h('button', { type: 'button', class: 'boto', text: 'Tria\'m un lloc', clic: function () {
+          var ls = Visor.lliures(t.t);
+          if (!ls.length) { UI.avis('Ara no queda cap lloc lliure d\'aquest tipus.'); return; }
+          enToc(ls[Math.floor(Math.random() * ls.length)], Visor.snapshot());
+        } }),
+        h('button', { type: 'button', class: 'boto suau', text: '← Una altra cosa', clic: pasInici })])
     ]);
   }
 

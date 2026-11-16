@@ -1,7 +1,8 @@
 <?php
 // Generador de codis QR (ISO/IEC 18004) sense dependències: mode byte, correcció d'errors M, versions 1–9 (fins a 180 bytes).
 // N'hi ha prou per a una adreça curta amb el codi de família (uns 45 caràcters → versió 4).
-// Basat en l'algorisme de referència de Project Nayuki (domini públic de l'estàndard).
+// Basat en l'algorisme de referència de Project Nayuki. Si aquest codi n'és una adaptació, cal conservar-ne l'avís de llicència:
+// «QR Code generator library — Copyright (c) Project Nayuki (https://www.nayuki.io/page/qr-code-generator-library). MIT License.»
 declare(strict_types=1);
 
 const QR_ECC_PER_BLOC = [1 => 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];   // nivell M
