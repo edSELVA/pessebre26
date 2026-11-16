@@ -2,9 +2,11 @@
 
 **Cal:** PHP 7.4 o més nou amb PDO SQLite (o MySQL/MariaDB), **HTTPS** i Apache (amb nginx, vegeu el final). Res més: ni Composer ni Node.
 
+**Calendari recomanat:** fes primer la instal·lació en un **subdomini de prova** (o al definitiu, abans d'anunciar-lo) i deixa-ho tot **provat abans del 14 de desembre**, quan comencen les tutories. Si a la prova surt alguna cosa, es corregeix i es prepara un paquet nou.
+
 ## 1. Preparar el paquet (a l'ordinador)
 1. Si vols el logo al cel: `php eines/logo.php` (el PNG és a `disseny-propi/logo/`).
-2. `php eines/paquet.php` → crea `paquet/pessebre-AAAAMMDD-HHMM/` (i un `.zip`). **Apunta la clau d'instal·lació** que escriu.
+2. `php eines/paquet.php` → crea `paquet/pessebre-AAAAMMDD-HHMM/` (i un `.zip`). **Apunta la clau d'instal·lació** que escriu (també és a `pessebre/clau-installacio.txt` dins del paquet).
 
 ## 2. Pujar-lo
 - El contingut de `public_html/` va a l'**arrel web** del subdomini (on hi ha d'haver `index.html`).
@@ -18,20 +20,29 @@
 
 *Amb terminal (SSH), en lloc del pas 3:* copia `pessebre/config.exemple.php` a `pessebre/config.php`, canvia-hi els `CANVIA-AIXO` (valors aleatoris: `php -r 'echo bin2hex(random_bytes(32)), "\n";'`), les rutes i `url_base`, i fes `php eines/gestio.php installa` i `php eines/gestio.php usuari NOM admin`. Esborra `installa.php` i `pessebre/clau-installacio.txt`.
 
-## 4. Posar-lo en marxa (a `admin.html`)
-1. **Configuració**: revisa les dates (classes, torronada, famílies) i les figures per codi (3).
+## 4. HTTPS i privacitat (abans d'obrir-lo)
+1. **HTTPS:** quan el subdomini tingui certificat, a `public_html/.htaccess` treu els `#` de les **tres línies del final** (redirigeixen sempre a https) i de la línia `Strict-Transport-Security`. Comprova que `http://ADREÇA` porta sol a `https://ADREÇA`.
+2. **Privacitat:** a `public_html/privacitat.html`, posa-hi el **correu de contacte** i el text revisat per la **DPD** (i treu l'avís d'esborrany). No l'obris a les famílies fins que la DPD hi hagi donat el vistiplau.
+
+## 5. Posar-lo en marxa (a `admin.html`)
+1. **Configuració**: revisa les dates (classes, torronada, famílies) i les figures per codi (3). **Fites**: revisa les dates i els llindars.
 2. **Configuració → Classes**: enganxa el contingut de `classes.csv`.
 3. **Comptes**: crea els de l'equip (administració o només lectura).
 4. **Claustre i tutors**: un **codi per etapa** per als tutors (o un de sol per a llar + infantil) i l'**enllaç de la torronada** amb el QR.
-5. **Codis**: els lots de codis de les famílies i les etiquetes (A4 de 24).
-6. Prova-ho amb un mòbil: mirar, un codi d'etapa i un codi de família.
+5. **Codis**: els lots de codis de les famílies i les etiquetes (A4 de 24). Imprimeix-los **només quan l'adreça sigui la definitiva** (va dins dels QR).
+
+## 6. Prova completa (amb un mòbil i l'ordinador)
+1. **Mirar:** obre l'adreça al mòbil; el pessebre es veu, es mou i fa zoom. Prova el botó «Cerca el caganer».
+2. **Tutor:** escriu un codi d'etapa a «Participar» → tria una classe → tria una casa → pinta-la → confirma. Surt amb el nom a la placa.
+3. **Torronada:** obre l'enllaç (o el QR) del claustre → posa un parell de figures, també fora de la zona dels pastors. *(Només funciona en l'horari de la torronada: per provar-ho abans, canvia temporalment la data a Configuració i torna-la a posar després.)*
+4. **Família:** escaneja una etiqueta (o escriu el codi a «Participar») → posa una figura → «Posar-ne una altra» fins a 3 → el codi ja no en deixa posar més. *(Les famílies comencen el 21 de desembre: per provar-ho abans, igual que la torronada.)*
+5. **Administració:** comprova a «Estat» i «Registre» que tot hi surt, i **allibera** les cases i figures de prova (i reactiva el codi de prova o fes-ne servir un de llençar).
+6. **Seguretat:** `http://` porta a `https://`, i **no** es pot obrir `https://ADREÇA/pessebre/config.exemple.php` (si `pessebre/` és dins de l'arrel web).
 
 ## Seguretat i manteniment
-- **HTTPS obligatori.** Quan funcioni, activa la línia `Strict-Transport-Security` de `public_html/.htaccess`.
-- Comprova que **no** es pot obrir `https://ADREÇA/pessebre/config.exemple.php` (si `pessebre/` és dins de l'arrel web).
 - Còpia de seguretat: el fitxer `pessebre/dades/pessebre.sqlite` (o la base de dades MySQL). **Mai** al repositori.
 - Si una contrasenya o un codi s'ha filtrat: canvia'l des de l'administració (comptes, codis d'etapa, enllaç de la torronada).
 - Després de Reis: **Fites → Tancar i esborrar**.
 
 ## nginx (si no és Apache)
-Els `.htaccess` no hi funcionen. Cal, dins del `server { … }`: bloquejar `pessebre/` si és dins de l'arrel web (`location ^~ /pessebre/ { deny all; }`), els fitxers ocults (`location ~ /\. { deny all; }`), afegir les capçaleres de `public_html/.htaccess` (`add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" always;` i les altres) i `Cache-Control: no-cache` per a `snapshot.json`.
+Els `.htaccess` no hi funcionen. Cal, dins del `server { … }`: bloquejar `pessebre/` si és dins de l'arrel web (`location ^~ /pessebre/ { deny all; }`), els fitxers ocults (`location ~ /\. { deny all; }`), afegir les capçaleres de `public_html/.htaccess` (`add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'" always;` i les altres), `Cache-Control: no-cache` per a `snapshot.json` i la redirecció de http a https.
