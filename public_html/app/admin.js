@@ -567,7 +567,7 @@
       var inc = h('input', { type: 'number', class: 'camp curt', min: '1', max: '100', value: String(f.increment), 'aria-label': 'Increment ' + f.moment });
       var editable = admin() && !f.assolida;
       if (!editable) { data.disabled = true; inc.disabled = true; }
-      var que = f.base === 'classes' ? '% de les cases de classe' : '% de l\'objectiu, a sumar a la participació quan salta l\'anterior';
+      var que = f.base === 'classes' ? '% de les classes carregades' : '% de l\'objectiu, a sumar a la participació quan salta l\'anterior (com a molt, el 90 % del que es pot omplir)';
       return h('div', { class: 'fita' + (f.assolida ? ' assolida' : '') }, [
         h('h4', { text: f.numero + '. ' + NOM_MOMENT[f.moment] + (f.assolida ? ' · assolida ' + f.assolida + (f.per === 'data' ? ' (per data)' : ' (per participació)') : '') }),
         h('div', { class: 'fila-config' }, [h('span', { class: 'etiqueta', text: 'Llindar' }),

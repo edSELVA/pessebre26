@@ -253,7 +253,12 @@ function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
         foreach ($parells as $des => $fins) {
             $a = $clau === $des ? $desat : calendari($pdo, $des);
             $b = $clau === $fins ? $desat : calendari($pdo, $fins);
-            if (in_array($clau, [$des, $fins], true) && $a >= $b) throw new ErrorPessebre('L\'obertura ha de ser abans del tancament (' . $des . ' < ' . $fins . ').', 400, 'valor');
+            if (in_array($clau, [$des, $fins], true) && $a >= $b) {
+                $noms = ['claustre_des' => 'l\'obertura del claustre', 'claustre_tanca' => 'el tancament del claustre',
+                         'families_des' => 'l\'inici de les famílies', 'families_fins' => 'el final de la participació'];
+                throw new ErrorPessebre('La data de ' . $noms[$des] . ' ha de ser anterior a la de ' . $noms[$fins] . ' (ara és ' . hora_local($b) . ').'
+                    . ' Per moure-ho tot més tard, canvia primer ' . $noms[$fins] . '.', 400, 'valor');
+            }
         }
     } elseif ($clau === 'aturada') {
         if ($v !== '0' && $v !== '1') throw new ErrorPessebre('Valor no vàlid.', 400, 'valor');

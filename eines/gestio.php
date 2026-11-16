@@ -62,11 +62,9 @@ switch ($ordre) {
         $text = @file_get_contents($fitxer);
         if ($text === false) surt("No es pot llegir $fitxer");
         try {
-            $pdo->beginTransaction();
-            [$n, $avisos] = classes_carrega($pdo, $text);
-            $pdo->commit();
+            // Com des de l'administració: dins del bloqueig, i després es recalculen les fites i es regenera el snapshot
+            [$n, $avisos] = app_escriu($pdo, $cfg, $ara, function () use ($pdo, $text) { return classes_carrega($pdo, $text); });
         } catch (ErrorPessebre $e) {
-            $pdo->rollBack();
             surt($e->getMessage());
         }
         foreach ($avisos as $a) echo "Avís: $a\n";
@@ -159,8 +157,11 @@ switch ($ordre) {
     case 'calendari':
         $clau = $args[1] ?? '';
         if (!isset(DEFECTES_CALENDARI[$clau]) || !isset($args[2])) surt('Ús: php eines/gestio.php calendari ' . implode('|', array_keys(DEFECTES_CALENDARI)) . ' "AAAA-MM-DD hh:mm"');
-        $t = DateTimeImmutable::createFromFormat('Y-m-d H:i', $args[2], new DateTimeZone('Europe/Madrid')) ?: surt('Format: AAAA-MM-DD hh:mm');
-        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $clau, $t) { config_desa($pdo, $clau, bd_hora($t)); });
+        try {
+            app_escriu($pdo, $cfg, $ara, function () use ($pdo, $clau, $args, $ara) { admin_config($pdo, $clau, $args[2], $ara); });
+        } catch (ErrorPessebre $e) {
+            surt($e->getMessage());
+        }
         echo "$clau = {$args[2]} (hora de Barcelona).\n";
         break;
 
@@ -172,8 +173,11 @@ switch ($ordre) {
 
     case 'tanca':
         $local = $args[1] ?? surt('Ús: php eines/gestio.php tanca "2026-12-21 23:59"  (hora de Barcelona)');
-        $t = DateTimeImmutable::createFromFormat('Y-m-d H:i', $local, new DateTimeZone('Europe/Madrid')) ?: surt('Format: AAAA-MM-DD hh:mm');
-        app_escriu($pdo, $cfg, $ara, function () use ($pdo, $t) { config_desa($pdo, 'classes_tanca', bd_hora($t)); });
+        try {
+            app_escriu($pdo, $cfg, $ara, function () use ($pdo, $local, $ara) { admin_config($pdo, 'classes_tanca', $local, $ara); });
+        } catch (ErrorPessebre $e) {
+            surt($e->getMessage());
+        }
         echo "Les classes es tanquen el $local (hora de Barcelona).\n";
         break;
 
