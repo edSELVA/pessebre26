@@ -135,7 +135,8 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                 if ($edat > SNAPSHOT_EDAT_TICK) {
                     // Sense esperar el bloqueig: si molts visitants arriben alhora amb el snapshot vell, només un el regenera
                     $fet = app_escriu($pdo, $cfg, $ara, function () { return true; }, false);
-                    return [200, ['ok' => true, 'fet' => $fet === true]];
+                    // ocupat: una altra petició l'està regenerant ara mateix; el visitant el torna a demanar d'aquí a un moment
+                    return [200, ['ok' => true, 'fet' => $fet === true, 'ocupat' => $fet !== true]];
                 }
                 return [200, ['ok' => true, 'fet' => false]];
 

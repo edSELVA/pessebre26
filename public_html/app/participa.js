@@ -94,7 +94,9 @@
       mode === 'familia' && permesos > 1
         ? h('p', { class: 'suau', text: 'Amb aquest codi pots posar ' + (queden === permesos ? permesos + ' figures.' : queden === 1 ? 'una figura més.' : 'encara ' + queden + ' figures.') })
         : null,
-      total === 0 ? h('p', { class: 'error', text: 'Ara mateix el pessebre és ple: no queda cap lloc lliure. El codi no s\'ha gastat: torna-ho a provar més endavant.' }) : null,
+      total === 0 ? h('p', { class: 'error', text: mode === 'familia'
+        ? 'Ara mateix el pessebre és ple: no queda cap lloc lliure. El codi no s\'ha gastat: torna-ho a provar més endavant.'
+        : 'Ara mateix no queda cap lloc lliure.' }) : null,
       h('div', { class: 'tipus' }, botons)
     ]);
   }
@@ -272,7 +274,10 @@
   // «Tick»: si fa més de 15 minuts que el pessebre no s'actualitza, el servidor aplica fites, automàtiques i retencions
   // caducades. Si l'hosting no té PHP (p. ex. la pàgina de prova de GitHub), no passa res.
   if (!hash.s) {
-    UI.api({ a: 'tick' }).then(function (r) { if (r.fet) return carregat.then(function () { return Visor.refresca(); }); }).catch(function () {});
+    UI.api({ a: 'tick' }).then(function (r) {
+      if (r.fet) return carregat.then(function () { return Visor.refresca(); });
+      if (r.ocupat) setTimeout(function () { carregat.then(function () { return Visor.refresca(); }).catch(function () {}); }, 2000);
+    }).catch(function () {});
   }
 
   // Pessebre tancat (Reis): ja no s'ofereix participar
