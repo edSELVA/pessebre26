@@ -26,7 +26,9 @@
   var INACTIVITAT = 30 * 60 * 1000, darreraActivitat = Date.now();
   ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { darreraActivitat = Date.now(); }, true); });
   setInterval(function () {
-    if (contrasenya && Date.now() - darreraActivitat > INACTIVITAT) location.reload();
+    // Amb un lot de codis a punt d'imprimir no es recarrega: els codis no es poden tornar a veure i es perdrien
+    var lotPendent = document.getElementById('impressio').childElementCount > 0 && /Lot \d+ a punt/.test(cont.textContent);
+    if (contrasenya && !lotPendent && Date.now() - darreraActivitat > INACTIVITAT) location.reload();
   }, 60000);
   function D() { return Visor.disseny(); }
 
