@@ -27,7 +27,7 @@
 2. **Privacitat:** a `public_html/privacitat.html`, posa-hi el **correu de contacte** i el text revisat per la **DPD** (i treu l'avís d'esborrany). No l'obris a les famílies fins que la DPD hi hagi donat el vistiplau.
 
 ## 5. Posar-lo en marxa (a `admin.html`)
-1. **Configuració**: revisa les dates (classes, torronada, famílies). Per defecte la torronada és el **21 de desembre de 00:00 a 22:00**: posa-hi el dia i l'hora reals. **Figures per codi**: el pessebre té **924 llocs per a famílies** (+50 del claustre). Calcula *famílies que participaran × figures per codi* i que no passi d'uns **850**; si no, posa 2 o 1 figures per codi **abans d'imprimir** (l'etiqueta diu el número). **Fites**: revisa les dates i l'**objectiu** (amb 3 figures per codi, 600 s'assoleix en un o dos dies).
+1. **Configuració**: revisa les dates (classes, torronada, famílies). Per defecte la torronada és el **21 de desembre de 00:00 a 22:00**: posa-hi el dia i l'hora reals. **Figures per codi**: el pessebre té **874 llocs per a famílies** (+ els 50 del claustre que quedin lliures després de la torronada). Calcula *famílies que participaran × figures per codi* i que no passi d'uns **800**; si no, posa 2 o 1 figures per codi **abans d'imprimir** (l'etiqueta diu el número). **Fites**: revisa les dates i l'**objectiu** (amb 3 figures per codi, 600 s'assoleix en un o dos dies).
 2. **Configuració → Classes**: enganxa el contingut de `classes.csv`.
 3. **Comptes**: crea els de l'equip (administració o només lectura).
 4. **Claustre i tutors**: un **codi per etapa** per als tutors (o un de sol per a llar + infantil) i l'**enllaç de la torronada** amb el QR.
