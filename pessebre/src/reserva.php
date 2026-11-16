@@ -101,12 +101,14 @@ function finestres_valides(array $cfg, string $peca, $finestres): bool
 /** Confirma la casa amb els colors triats (façana, teulada, porta i flors), les finestres tapades i si va girada. */
 function classes_confirmar(PDO $pdo, array $cfg, array $c, $lloc_id, $t, $colors, DateTimeImmutable $ara, $mirall = null, $finestres = 0): array
 {
+    $ja = confirmacio_ja_feta($pdo, $cfg, $lloc_id, $t, 'classe');
+    if ($ja && (int)$ja['classe_id'] === (int)$c['id']) return ['lloc' => $ja['lloc_id'], 'classe' => $c['nom'], 'repetida' => true];
     classes_obertes($pdo, $ara);
     $o = retencio_valida($pdo, $cfg, $c, $lloc_id, $t, $ara);
     if (!colors_valids($cfg, $o['peca'], $colors)) throw new ErrorPessebre('Els colors triats no són vàlids.', 400, 'colors');
     if (!finestres_valides($cfg, $o['peca'], $finestres)) throw new ErrorPessebre('Les finestres triades no són vàlides.', 400, 'finestres');
     $m = $mirall === null ? (int)$o['mirall'] : ($mirall === 1 || $mirall === true ? 1 : 0);
-    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', colors = ?, mirall = ?, finestres = ?, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', colors = ?, mirall = ?, finestres = ?, caduca = NULL, hora = ? WHERE lloc_id = ?")
         ->execute([json_encode($colors), $m, $finestres ?: null, bd_hora($ara), $o['lloc_id']]);
     registre_afegeix($pdo, $ara, 'classe: ' . $c['nom'], 'classes.confirmar', $o['lloc_id'], json_encode($colors));
     return ['lloc' => $o['lloc_id'], 'classe' => $c['nom']];
@@ -267,11 +269,23 @@ function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, Da
     return $o;
 }
 
+/** Si aquest testimoni ja va confirmar aquest lloc (reintent després de perdre la resposta), retorna l'ocupació; si no, null. */
+function confirmacio_ja_feta(PDO $pdo, array $cfg, $lloc_id, $t, string $origen): ?array
+{
+    if (!is_string($lloc_id) || !testimoni_format_ok($t)) return null;
+    $st = $pdo->prepare("SELECT * FROM ocupacions WHERE lloc_id = ? AND estat = 'confirmat' AND origen = ? AND hash_retencio = ?");
+    $st->execute([$lloc_id, $origen, testimoni_hash($cfg['pebre'], $t)]);
+    $o = $st->fetch();
+    return $o ?: null;
+}
+
 /** Confirma una figura de família o del claustre. Participació anònima: el vincle amb el codi (codi_id) s'esborra aquí. */
 function confirma_ocupacio(PDO $pdo, string $lloc_id, array $peca, DateTimeImmutable $ara): void
 {
     [$p, $m, $c, $f] = $peca;
-    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, finestres = ?, codi_id = NULL, hash_retencio = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
+    // hash_retencio es conserva (és un testimoni aleatori, no identifica ningú) perquè un reintent de la mateixa confirmació
+    // —quan s'ha perdut la resposta per la cobertura— sigui reconegut com a fet; s'esborra a «Tancar i esborrar».
+    $pdo->prepare("UPDATE ocupacions SET estat = 'confirmat', peca = ?, mirall = ?, colors = ?, finestres = ?, codi_id = NULL, caduca = NULL, hora = ? WHERE lloc_id = ?")
         ->execute([$p, $m, $c, $f, bd_hora($ara), $lloc_id]);
 }
 
@@ -291,6 +305,9 @@ function codi_retenir(PDO $pdo, array $cfg, array $codi, $lloc_id, DateTimeImmut
 
 function codi_confirmar(PDO $pdo, array $cfg, array $codi, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara, $finestres = 0): array
 {
+    if ($ja = confirmacio_ja_feta($pdo, $cfg, $lloc_id, $t, 'familia')) {
+        return ['lloc' => $ja['lloc_id'], 'zona_nova' => null, 'queden' => max(0, codi_usos_permesos($pdo) - (int)$codi['usos']), 'repetida' => true];
+    }
     $e = codi_estat($pdo, $codi, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'codi_no');
     $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'familia', $ara);
@@ -340,6 +357,7 @@ function claustre_retenir(PDO $pdo, array $cfg, $lloc_id, DateTimeImmutable $ara
 
 function claustre_confirmar(PDO $pdo, array $cfg, $lloc_id, $t, $peca, $mirall, $colors, DateTimeImmutable $ara, $finestres = 0): array
 {
+    if ($ja = confirmacio_ja_feta($pdo, $cfg, $lloc_id, $t, 'claustre')) return ['lloc' => $ja['lloc_id'], 'zona_nova' => null, 'repetida' => true];
     $e = claustre_estat($pdo, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
     $o = retencio_de_lloc($pdo, $cfg, $lloc_id, $t, 'claustre', $ara);

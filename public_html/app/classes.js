@@ -208,7 +208,7 @@
         clearInterval(rellotge);
         estat.retencio = null;
         estat.classe.feta = true;
-        return Visor.refresca().then(function () {
+        return Visor.refresca().catch(function () {}).then(function () {
           if (estat.lloc) Visor.treu(estat.lloc.id);
           estat.lloc = null;
           Visor.redibuixa();
@@ -222,15 +222,14 @@
           if (e.codi === 'tancat') { netejaTria(); Visor.refresca().catch(function () {}); pasCasa(); }
           return;
         }
-        // Pot ser que la confirmació sí que arribés però es perdés la resposta: es comprova abans de dir que ha fallat
-        api('classes.estat').then(function (r) {
-          estat.classes = r.classes;
-          return r.classes.some(function (c) { return c.id === classe.id && c.feta; });
-        }).catch(function () { return false; }).then(function (feta) {
-          netejaTria();
-          Visor.refresca().catch(function () {});
-          if (feta) { classe.feta = true; avis('La casa ja s\'havia desat correctament.'); pasFet(classe.nom); }
-          else { avis(e.message); pasCasa(); }
+        // La reserva ja no és vàlida (caducada o substituïda des d'un altre dispositiu). Un reintent d'una confirmació que sí
+        // que havia arribat el servidor ja el dona per bo; aquí es torna a la tria amb la llista de classes al dia.
+        avis(e.message);
+        netejaTria();
+        Visor.refresca().catch(function () {});
+        api('classes.estat').then(function (r) { estat.classes = r.classes; }).catch(function () {}).then(function () {
+          var feta = estat.classes.some(function (c) { return c.id === classe.id && c.feta; });
+          if (feta) pasClasse(); else pasCasa();
         });
       });
   }

@@ -175,7 +175,7 @@
       ? 'Confirmes? Aquesta serà l\'última figura d\'aquest codi.'
       : 'Confirmes aquesta figura per al pessebre?';
     if (!window.confirm(avisConf)) return;
-    var t = tria, id = t.lloc.id, usosAbans = permesos - queden;
+    var t = tria, id = t.lloc.id;
     ocupat(true);
     api(prefix + 'confirmar', { lloc: id, retencio: t.retencio, peca: t.peca, mirall: t.mirall, colors: t.colors, finestres: t.finestres })
       .then(function (r) {
@@ -190,19 +190,19 @@
         });
       })
       .catch(function (e) {
-        if (e.codi !== 'retencio') { ocupat(false); UI.avis(e.message); return; }
-        // La reserva ja no hi és: pot ser que la confirmació anterior SÍ que arribés però es perdés la resposta (cobertura).
-        // Es comprova abans de dir que ha fallat, per no fer pensar a la família que no ha funcionat.
-        var comprova = mode === 'familia'
-          ? api('codi.validar').then(function (v) { queden = v.permesos - v.usos; return v.usos > usosAbans; })
-          : Visor.refresca().then(function (s) { return !!s.o[id]; });
-        return comprova.catch(function () { return false; }).then(function (desada) {
-          neteja();
-          ocupat(false);
-          Visor.refresca().catch(function () {});
-          if (desada) { UI.avis('La figura ja s\'havia desat correctament.'); pasFet(null); }
-          else { UI.avis(e.message); pasInici(); }
-        });
+        ocupat(false);
+        UI.avis(e.message);
+        if (e.codi !== 'retencio' && e.codi !== 'codi_no') return;
+        // La reserva ja no és vàlida (ha caducat o l'ha substituïda un altre mòbil amb el mateix codi). Un reintent d'una
+        // confirmació que sí que havia arribat el servidor ja el dona per bo, així que aquí es torna a començar.
+        neteja();
+        Visor.refresca().catch(function () {});
+        if (mode === 'familia') {
+          api('codi.validar').then(function (v) {
+            queden = v.permesos - v.usos;
+            if (v.pot) pasInici(); else noPot(v.missatge);
+          }).catch(function () { pasInici(); });
+        } else pasInici();
       });
   }
 
