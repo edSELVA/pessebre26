@@ -146,6 +146,15 @@ const DEFECTES_CALENDARI = [
     'claustre_tanca' => '2026-12-21 21:00:00',  // 21 des 22:00
 ];
 
+/** «21 de desembre» (o «1 de gener», «dilluns 4 d'abril» no) a partir d'una hora UTC de la base de dades, en hora de Barcelona. */
+function data_en_catala(string $utc): string
+{
+    $d = (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Madrid'));
+    $mesos = [1 => 'gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre'];
+    $mes = $mesos[(int)$d->format('n')];
+    return $d->format('j') . (in_array($mes[0], ['a', 'o'], true) ? " d'" : ' de ') . $mes;
+}
+
 function calendari(PDO $pdo, string $clau): string
 {
     return (string)config_llegeix($pdo, $clau, DEFECTES_CALENDARI[$clau]);
@@ -201,7 +210,7 @@ function codi_estat(PDO $pdo, array $codi, DateTimeImmutable $ara): array
     $f = finestra($pdo, 'families_des', 'families_fins', $ara);
     $permesos = codi_usos_permesos($pdo);
     $missatge = null;
-    if ($f === 'abans') $missatge = 'Les famílies podran participar a partir del 21 de desembre. Guarda el codi!';
+    if ($f === 'abans') $missatge = 'Les famílies podran participar a partir del ' . data_en_catala(calendari($pdo, 'families_des')) . '. Guarda el codi!';
     elseif ($f === 'tancat') $missatge = 'La participació ja s\'ha tancat. Moltes gràcies!';
     elseif ((int)$codi['usos'] >= $permesos) $missatge = ($permesos === 1 ? 'Amb aquest codi ja s\'ha posat la figura.' : 'Amb aquest codi ja s\'han posat les ' . $permesos . ' figures.') . ' Moltes gràcies per participar!';
     elseif (config_llegeix($pdo, 'aturada', '0') === '1') $missatge = 'Ara mateix la participació està aturada. Torna-ho a provar més tard.';
@@ -389,7 +398,9 @@ function zones_actualitza(PDO $pdo, DateTimeImmutable $ara): ?array
     $obertes = zones_obertes($pdo);
     $llindar = (int)config_llegeix($pdo, 'llindar_zona', '75');
     $canvi = false;
-    while (count($obertes) < count(ORDRE_ZONES)) {
+    // Si l'administració ha endarrerit zones, no s'obren soles per sobre d'aquest sostre fins que ho torni a canviar
+    $sostre = (int)config_llegeix($pdo, 'zones_sostre', (string)count(ORDRE_ZONES));
+    while (count($obertes) < min(count(ORDRE_ZONES), $sostre)) {
         $marques = implode(',', array_fill(0, count($obertes), '?'));
         // Els llocs ocupats per figures automàtiques no compten al total: si no, amb un 40 % d'automàtiques la participació
         // real no podria arribar mai al 75 % i les zones noves no s'obririen mai (bloqueig comprovat en simulació).

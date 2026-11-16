@@ -144,6 +144,7 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
         'automatiques' => (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'auto'")->fetchColumn(),
         'pot_tancar' => bd_hora($ara) >= calendari($pdo, 'families_fins'),
         'config' => $config,
+        'classes_versio' => classes_versio($pdo),
         'url_base' => $cfg['url_base'] ?? '',
     ];
 }
@@ -281,6 +282,9 @@ function admin_config(PDO $pdo, $clau, $valor, DateTimeImmutable $ara): array
             throw new ErrorPessebre('Les zones s\'obren en ordre: Z0, després Z1, Z2 i Z3.', 400, 'valor');
         }
         $desat = implode(',', $triades);
+        // Endarrerir (menys zones que ara) fixa un sostre perquè no es tornin a obrir soles; obrir-ne més el treu
+        if (count($triades) < count(zones_obertes($pdo))) config_desa($pdo, 'zones_sostre', (string)count($triades));
+        else $pdo->prepare('DELETE FROM config WHERE clau = ?')->execute(['zones_sostre']);
     } else {
         throw new ErrorPessebre('Aquesta opció no es pot canviar.', 400, 'clau');
     }
@@ -356,6 +360,13 @@ function admin_tancar(PDO $pdo, DateTimeImmutable $ara): array
     foreach (['sal', 'sal_hora', 'global_minut', 'global_fallades', 'auto_fase', 'auto_hora'] as $k) $pdo->prepare('DELETE FROM config WHERE clau = ?')->execute([$k]);
     config_desa($pdo, 'tancat', '1');
     return ['tancat' => true];
+}
+
+/** Empremta de la llista de classes actual (per detectar si ha canviat mentre algú l'editava). */
+function classes_versio(PDO $pdo): string
+{
+    return substr(sha1(implode("\n", array_map(function ($c) { return $c['etapa'] . ';' . $c['nom']; },
+        $pdo->query('SELECT etapa, nom FROM classes ORDER BY id')->fetchAll()))), 0, 12);
 }
 
 /** Carrega la llista de classes (línies «etapa;nom»). Retorna [quantes, avisos]. */
@@ -447,6 +458,9 @@ function admin_accio(PDO $pdo, array $cfg, string $a, array $p, string $ip, Date
                 return ['lot' => $lot['lot'], 'url_base' => $cfg['url_base'], 'usos' => codi_usos_permesos($pdo),
                         'codis' => array_map(function ($c) use ($cfg) { return ['codi' => codi_impres($c), 'qr' => qr_svg($cfg['url_base'] . '#c=' . $c)]; }, $lot['codis'])];
             case 'admin.classes':
+                if (isset($p['versio']) && $p['versio'] !== classes_versio($pdo)) {
+                    throw new ErrorPessebre('Algú altre ha canviat la llista de classes mentre l\'editaves. Torna a obrir «Configuració» i repeteix el canvi.', 409, 'classes_canviades');
+                }
                 [$n, $avisos] = classes_carrega($pdo, (string)($p['text'] ?? ''));
                 registre_afegeix($pdo, $ara, 'administració', 'admin.classes', null, "$n classes");
                 return ['classes' => $n, 'avisos' => $avisos];

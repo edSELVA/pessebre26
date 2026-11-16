@@ -16,7 +16,7 @@ var Visor = (function () {
     var out = {};
     location.hash.replace(/^#/, '').split('&').forEach(function (p) {
       var i = p.indexOf('=');
-      if (i > 0) out[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+      if (i > 0) { try { out[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1)); } catch (e) { out[p.slice(0, i)] = p.slice(i + 1); } }   // «%» solt no penja la pàgina
     });
     return out;
   }
@@ -117,7 +117,8 @@ var Visor = (function () {
     });
     // El caganer: cada dia en un amagatall diferent (com els Reis, segons la data del pessebre)
     var cg = llocCaganer(s);
-    if (cg) llista.push({ y: cg.y, node: usa(D.caganer.peca, cg.x, cg.y, false, null, 'caganer') });
+    // El caganer es dibuixa per sobre de tot: amb el pessebre ple, els arbres de les famílies el tapaven del tot molts dies
+    if (cg) llista.push({ y: cg.y, ordre: 1e9, node: usa(D.caganer.peca, cg.x, cg.y, false, null, 'caganer') });
 
     var poble = 0, ocupades = 0;
     D.mapa.llocs.forEach(function (l) {

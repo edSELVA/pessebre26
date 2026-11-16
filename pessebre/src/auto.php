@@ -7,6 +7,8 @@
 declare(strict_types=1);
 
 const AUTO_PER_HORA = 12;
+const AUTO_ESPERA_HORES = 48;   // les automàtiques no comencen fins 48 h després que s'obrin les famílies (si no, la posta per data
+                               // les posava la mateixa nit del 21/12, abans que la torronada i les primeres famílies triessin lloc)
 const AUTO_OBJECTIU_DEFECTE = ['posta' => 35, 'nit' => 50, 'neu' => 60];
 
 /** Nombre pseudoaleatori reproduïble a partir de la llavor (0 … $n-1). */
@@ -20,6 +22,8 @@ function auto_aplica(PDO $pdo, array $cfg, DateTimeImmutable $ara): int
 {
     $fase = config_llegeix($pdo, 'auto_fase');
     if ($fase === null || config_llegeix($pdo, 'tancat', '0') === '1' || bd_hora($ara) >= calendari($pdo, 'families_fins')) return 0;
+    $inici = (new DateTimeImmutable(calendari($pdo, 'families_des'), new DateTimeZone('UTC')))->modify('+' . AUTO_ESPERA_HORES . ' hours');
+    if ($ara < $inici) return 0;
     $hora = $ara->format('YmdH');
     if (config_llegeix($pdo, 'auto_hora') === $hora) return 0;                // com a molt un pas per hora
     $objectiu = (int)config_llegeix($pdo, "auto_$fase", (string)(AUTO_OBJECTIU_DEFECTE[$fase] ?? 0));

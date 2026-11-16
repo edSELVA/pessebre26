@@ -319,6 +319,8 @@ body.admin .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom:
   .full-etiquetes .t { font-size: 8.5pt; font-weight: 700; margin: 0 0 1mm; }
   .full-etiquetes .c { font: 700 11pt/1 ui-monospace, Menlo, monospace; margin: 0 0 1.2mm; white-space: nowrap; }
   .full-etiquetes .p { font-size: 6.5pt; line-height: 1.25; margin: 0; }
+  .full-etiquetes .host { white-space: nowrap; }   /* el domini no es parteix pel guionet */
+  .full-etiquetes .host.llarg { font-size: 5.5pt; }
 }
 
 /* Pàgina de privacitat */

@@ -148,7 +148,8 @@ function snapshot_genera(PDO $pdo, array $cfg, DateTimeImmutable $ara): array
         'claustre' => finestra($pdo, 'claustre_des', 'claustre_tanca', $ara) === 'obert',
         'claustre_alliberat' => claustre_alliberat($pdo, $ara),
         'tancat' => config_llegeix($pdo, 'tancat', '0') === '1' || bd_hora($ara) >= calendari($pdo, 'families_fins'),
-        'comptador' => $classes
+        // Comptador de cases només mentre les famílies encara no participen; després, el de participacions
+        'comptador' => $classes && bd_hora($ara) < calendari($pdo, 'families_des')
             ? ['tipus' => 'classes', 'fet' => $classes_fetes, 'total' => function_exists('cases_objectiu') ? cases_objectiu($pdo) : $poble]
             : ['tipus' => 'participacions', 'fet' => $reals, 'fita' => $fita],
         'o' => (object)$o,

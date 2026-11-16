@@ -362,7 +362,7 @@
         full.appendChild(h('div', { class: 'etiqueta' }, [document.importNode(qr, true), h('div', { class: 'tx' }, [
           h('p', { class: 't', text: 'Pessebre de l\'escola' }),
           h('p', { class: 'c', text: c.codi }),
-          h('p', { class: 'p', text: 'Escaneja el QR o entra a ' + host + ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.') })
+          h('p', { class: 'p' }, ['Escaneja el QR o entra a ', h('span', { class: 'host' + (host.length > 24 ? ' llarg' : ''), text: host }), ', toca «Participar» i escriu el codi. Pots posar-hi fins a ' + r.usos + (r.usos === 1 ? ' figura.' : ' figures.')])
         ])]));
       });
       zona.appendChild(full);
@@ -374,7 +374,7 @@
     + '.full-etiquetes{width:210mm;height:297mm;padding:.5mm 0 0 0;display:grid;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(8,37mm);break-after:page;page-break-after:always}'
     + '.etiqueta{display:flex;align-items:center;gap:2.5mm;padding:2.5mm 3mm;overflow:hidden;color:#000;font-family:system-ui,sans-serif}'
     + '.etiqueta svg{width:30mm;height:30mm;flex:0 0 auto}.t{font-size:8.5pt;font-weight:700;margin:0 0 1mm}'
-    + '.c{font:700 11pt/1 ui-monospace,Menlo,monospace;margin:0 0 1.2mm;white-space:nowrap}.p{font-size:6.5pt;line-height:1.25;margin:0}';
+    + '.c{font:700 11pt/1 ui-monospace,Menlo,monospace;margin:0 0 1.2mm;white-space:nowrap}.p{font-size:6.5pt;line-height:1.25;margin:0}.host{white-space:nowrap}.host.llarg{font-size:5.5pt}';
   function desaFull(lot) {
     var html = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><title>Etiquetes · lot ' + lot + '</title><style>' + CSS_FULL
       + '</style></head><body>' + document.getElementById('impressio').innerHTML + '</body></html>';
@@ -422,7 +422,10 @@
   }
 
   function codiEtapa(f, sortida) {
-    if (!window.confirm('Crear un codi nou per a «' + f[1] + '»? L\'anterior deixarà de funcionar.')) return;
+    // Un codi nou d'una etapa desactiva qualsevol codi actiu que la inclogui (també el compartit de llar i infantil): s'avisa
+    var et = f[0] === 'llar+infantil' ? ['llar', 'infantil'] : [f[0]];
+    var afectats = estat.codis_etapa.filter(function (c) { return c.etapes.some(function (e) { return et.indexOf(e) >= 0; }); }).map(function (c) { return '«' + c.nom + '»'; });
+    if (!window.confirm('Crear un codi nou per a «' + f[1] + '»?' + (afectats.length ? ' Deixarà de funcionar el codi de ' + afectats.join(' i ') + ': caldrà fer arribar el nou a tots aquests tutors.' : ''))) return;
     api('admin.codi_etapa', { etapa: f[0] }).then(function (r) {
       mostraCodi(sortida, 'Codi de ' + r.etapa + ':', r.codi, r.url, r.qr, 'Codi dels tutors de ' + r.etapa);
       return api('admin.estat').then(function (e) { estat = e; });
@@ -519,7 +522,7 @@
       admin() ? h('div', { class: 'botons' }, [boto('Carregar la llista', function () {
         var n = classes.value.split('\n').filter(function (x) { return x.trim() && x.trim()[0] !== '#'; }).length;
         if (!window.confirm('Carregar aquesta llista de ' + n + ' classes? Substitueix l\'anterior: les classes que no hi siguin i encara no tinguin casa s\'esborraran.')) return;
-        api('admin.classes', { text: classes.value }).then(function (r) {
+        api('admin.classes', { text: classes.value, versio: estat.classes_versio }).then(function (r) {
           UI.avis(r.classes + ' classes carregades.' + (r.avisos.length ? ' ' + r.avisos.join(' ') : ''));
           return refresca();
         }).catch(function (e) { UI.avis(e.message); });
@@ -547,7 +550,7 @@
     barra.lastChild.style.setProperty('left', Math.min(100, 100 * r.esperat / r.llindar) + '%');
     fills.push(barra);
     fills.push(fila('Ara', r.fet + unitat + ' · avui en tocarien ' + r.esperat + (r.percent !== null ? ' (' + r.percent + ' % del previst des del ' + r.inici.slice(0, 10) + ')' : '')));
-    if (r.falten_fita > 0) fills.push(fila('Per arribar-hi', 'en falten ' + r.falten_fita + (r.necessari_dia ? ', unes ' + r.necessari_dia + ' al dia' : '')));
+    if (r.falten_fita > 0) fills.push(fila('Per arribar-hi', 'en falten ' + r.falten_fita + (r.necessari_dia ? (r.necessari_dia === 1 ? ', una al dia' : ', unes ' + r.necessari_dia + ' al dia') : '')));
     fills.push(fila('Ritme', (r.per_dia !== null ? r.per_dia + ' al dia de mitjana · ' : '') + r.darreres_24h + ' les darreres 24 hores'));
     fills.push(h('p', { class: 'previsio', text: r.falten_fita === 0 ? 'Ja s\'ha arribat al llindar: la fita saltarà aviat.'
       : r.previsio === 'llindar' ? 'Al ritme d\'ara, saltarà per participació cap al ' + r.data_prevista + '.'

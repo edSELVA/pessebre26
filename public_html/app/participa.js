@@ -94,9 +94,9 @@
       mode === 'familia' && permesos > 1
         ? h('p', { class: 'suau', text: 'Amb aquest codi pots posar ' + (queden === permesos ? permesos + ' figures.' : queden === 1 ? 'una figura més.' : 'encara ' + queden + ' figures.') })
         : null,
-      total === 0 ? h('p', { class: 'error', text: mode === 'familia'
-        ? 'Ara mateix el pessebre és ple: no queda cap lloc lliure. El codi no s\'ha gastat: torna-ho a provar més endavant.'
-        : 'Ara mateix no queda cap lloc lliure.' }) : null,
+      total === 0 ? h('p', { class: 'error', text: Visor.snapshot().zones.length >= 4
+        ? 'El pessebre és ple: ja no queda cap lloc lliure. Moltes gràcies per voler-hi participar!'
+        : 'Ara mateix no queda cap lloc lliure. Quan s\'ompli aquesta part se n\'obrirà una de nova' + (mode === 'familia' ? ': el codi no s\'ha gastat, torna-ho a provar més endavant.' : '.') }) : null,
       h('div', { class: 'tipus' }, botons)
     ]);
   }
@@ -218,7 +218,7 @@
       zonaNova ? h('p', { text: 'Amb la vostra participació s\'ha obert una zona nova del pessebre!' }) : null,
       h('p', { class: 'suau', text: mode === 'familia'
         ? (queden > 0 ? 'Amb aquest codi encara pots posar ' + (queden === 1 ? 'una figura més.' : queden + ' figures més.')
-                      : 'Ja heu posat totes les figures d\'aquest codi. Si cal canviar alguna cosa, demaneu-ho a porteria o per correu.')
+                      : 'Ja heu posat totes les figures d\'aquest codi. Si cal canviar alguna cosa, demaneu-ho a l\'escola.')
         : 'Podeu posar-ne tantes com vulgueu, fins que s\'acabi la torronada.' }),
       h('div', { class: 'botons' }, [h('a', { class: 'boto', href: './', text: 'Veure el pessebre' })])
     ];
@@ -265,7 +265,7 @@
     font: /^[a-z0-9-]{1,30}$/.test(hash.s || '') ? 'exemples/' + hash.s + '.json' : 'snapshot.json',
     mode: mode,
     vista: mode === 'claustre' ? { x: 345, y: 390, amplada: 520 } : null,   // el claustre comença a la clariana dels pastors
-    refresc: mode ? 30000 : 0,
+    refresc: mode ? 30000 : 120000,                     // el visor públic també s'actualitza (pantalles que es queden obertes)
     esCandidat: mode ? esCandidat : null,
     enToc: mode ? enToc : null
   });

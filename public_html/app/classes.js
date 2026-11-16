@@ -112,6 +112,7 @@
       Visor.centra(l.x, l.y - 30, 260);              // després d'obrir el panell, perquè la casa quedi per sobre
       return Visor.refresca();
     }).catch(function (e) {
+      if (e.codi === 'codi' || e.codi === 'codi_antic') { errorEnllac(e.message); return; }
       avis(e.message);
       Visor.refresca().catch(function () {});
       if (e.codi === 'classe_feta') classesAlDia();     // un altre tutor ja l'ha feta
@@ -223,6 +224,7 @@
       })
       .catch(function (e) {
         ocupat(false);
+        if (e.codi === 'codi' || e.codi === 'codi_antic') { netejaTria(); errorEnllac(e.message); return; }   // codi d'etapa canviat
         if (e.codi !== 'retencio') {
           avis(e.message);
           if (e.codi === 'tancat') { netejaTria(); Visor.refresca().catch(function () {}); pasCasa(); }
