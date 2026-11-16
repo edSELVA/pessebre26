@@ -366,13 +366,15 @@ function classes_carrega(PDO $pdo, string $text): array
     $noves = [];
     foreach (preg_split('/\R/', $text) as $i => $linia) {
         $linia = trim(preg_replace('/^\xEF\xBB\xBF/', '', $linia));
-        if ($linia === '' || $linia[0] === '#' || $linia === 'etapa;nom') continue;
-        $parts = array_map('trim', explode(';', $linia));
+        if ($linia === '' || $linia[0] === '#' || preg_match('/^etapa[;\t,]\s*nom$/i', $linia)) continue;
+        $parts = array_map('trim', preg_split('/[;\t,]/', $linia));      // també enganxat d'un full de càlcul (tabulador) o amb comes
+        if (isset($parts[0])) $parts[0] = strtr(mb_strtolower($parts[0]), ['à' => 'a', 'á' => 'a', 'è' => 'e', 'é' => 'e', 'í' => 'i', 'ï' => 'i', 'ò' => 'o', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u']);
         if (count($parts) !== 2 || !isset(ETAPES[$parts[0]])) throw new ErrorPessebre('Línia ' . ($i + 1) . ': cal «etapa;nom» amb etapa ' . implode(', ', array_keys(ETAPES)) . '.', 400, 'classes');
         if (!preg_match(NOM_CLASSE, $parts[1])) throw new ErrorPessebre('Línia ' . ($i + 1) . ": el nom «{$parts[1]}» ha de tenir com a molt 8 caràcters (lletres, xifres, espais, punts o guions).", 400, 'classes');
         if (isset($noves[$parts[1]])) throw new ErrorPessebre('Línia ' . ($i + 1) . ": el nom «{$parts[1]}» està repetit.", 400, 'classes');
         $noves[$parts[1]] = ['etapa' => $parts[0], 'ordre' => count($noves)];
     }
+    if (!$noves) throw new ErrorPessebre('La llista és buida. Hi ha d\'haver totes les classes (la llista substitueix l\'anterior).', 400, 'classes');
     $poble = (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup = 'poble'")->fetchColumn();
     if (count($noves) > $poble) throw new ErrorPessebre('Hi ha ' . count($noves) . " classes i només $poble cases de classe.", 400, 'classes');
     $avisos = [];

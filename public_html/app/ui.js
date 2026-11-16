@@ -34,7 +34,7 @@ var UI = (function () {
     a.textContent = text;
     a.hidden = false;
     clearTimeout(temporitzador);
-    temporitzador = setTimeout(function () { a.hidden = true; }, 4500);
+    temporitzador = setTimeout(function () { a.hidden = true; }, Math.max(4500, text.length * 70));   // els avisos llargs, més estona
   }
 
   // POST a api.php. Rebutja amb un Error que porta el missatge per a l'usuari i el codi d'error.

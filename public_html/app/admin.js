@@ -498,7 +498,9 @@
         desaConfig('zones', noves.join(','));
       }) : h('span', { text: z + (oberta ? ' oberta ' : ' tancada ') });
     });
-    var classes = h('textarea', { class: 'camp area', rows: '6', placeholder: 'primaria;3r A\nsecundaria;1r ESO B', 'aria-label': 'Llista de classes' });
+    var classes = h('textarea', { class: 'camp area', rows: '8', placeholder: 'primaria;3r A\nsecundaria;1r ESO B', 'aria-label': 'Llista de classes' });
+    // La llista substitueix l'anterior: es mostra la que hi ha ara perquè només calgui afegir-hi o corregir-hi línies
+    classes.value = Object.keys(estat.etapes).map(function (et) { return (estat.classes[et] || []).map(function (c) { return et + ';' + c.nom; }).join('\n'); }).filter(Boolean).join('\n');
     mostra([
       h('h2', { text: 'Configuració' }),
       h('h3', { text: 'Dates (hora de Barcelona)' })
@@ -510,9 +512,11 @@
       h('p', { class: 'suau', text: 'S\'obren soles en arribar al llindar; aquí es poden forçar o endarrerir (sempre en ordre).' }),
       h('div', { class: 'botons' }, zones),
       admin() ? h('h3', { text: 'Llista de classes' }) : null,
-      admin() ? h('p', { class: 'suau', text: 'Una línia per classe: etapa;nom (llar, infantil, primaria, secundaria, cicles; nom de 8 caràcters com a molt).' }) : null,
+      admin() ? h('p', { class: 'suau', text: 'Una línia per classe: etapa;nom (llar, infantil, primaria, secundaria, cicles; nom de 8 caràcters com a molt). Aquesta és la llista actual: afegeix-hi o corregeix-hi línies.' }) : null,
       admin() ? classes : null,
       admin() ? h('div', { class: 'botons' }, [boto('Carregar la llista', function () {
+        var n = classes.value.split('\n').filter(function (x) { return x.trim() && x.trim()[0] !== '#'; }).length;
+        if (!window.confirm('Carregar aquesta llista de ' + n + ' classes? Substitueix l\'anterior: les classes que no hi siguin i encara no tinguin casa s\'esborraran.')) return;
         api('admin.classes', { text: classes.value }).then(function (r) {
           UI.avis(r.classes + ' classes carregades.' + (r.avisos.length ? ' ' + r.avisos.join(' ') : ''));
           return refresca();
