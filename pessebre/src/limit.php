@@ -6,10 +6,9 @@ declare(strict_types=1);
 
 const LIMIT_FALLADES = 10;
 const LIMIT_FINESTRA = 900;        // 15 min
-// Fre global: 300/min el podia activar una sola persona amb IPv6 (cada adreça d'un /64 compta com una IP diferent) i
-// aleshores es bloquejava la participació de TOTHOM. Amb codis de 10 caràcters (31^9 ≈ 2,6·10^13 combinacions) el fre global
-// no cal per evitar endevinar-ne: només és una xarxa de seguretat contra un atac massiu.
-const LIMIT_GLOBAL_MINUT = 3000;
+// Fre global (xarxa de seguretat contra un atac massiu). Abans una sola persona amb IPv6 el podia activar canviant d'adreça
+// dins del seu /64; ara les IPv6 s'agrupen per /64 (ip_xarxa), i el fre es pot mantenir ajustat.
+const LIMIT_GLOBAL_MINUT = 600;
 
 function limit_empremta(PDO $pdo, string $ip, DateTimeImmutable $ara): string
 {
@@ -30,6 +29,9 @@ function ip_xarxa(string $ip): string
     if (strpos($ip, ':') === false) return $ip;
     $bin = @inet_pton($ip);
     if ($bin === false || strlen($bin) !== 16) return $ip;
+    // IPv4 en format IPv6 (::ffff:a.b.c.d, servidors de doble pila): és una IPv4 i es tracta sencera.
+    // Sense això, totes les IPv4 d'internet compartirien el mateix /64 i el límit d'intents bloquejaria tothom.
+    if (substr($bin, 0, 12) === "\0\0\0\0\0\0\0\0\0\0\xff\xff") return (string)inet_ntop(substr($bin, 12));
     return bin2hex(substr($bin, 0, 8)) . '::/64';
 }
 
