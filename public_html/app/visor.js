@@ -187,12 +187,13 @@ var Visor = (function () {
     capes.pista.textContent = '';
     var cg = llocCaganer(darrer);
     if (!cg || !nivell) return;
-    var esq = cg.x < AMPLE / 2, dalt = cg.y < 500;
+    var esq = cg.x < AMPLE / 2, dalt = cg.y - 10 < 500;
+    var ratlla = Math.abs(cg.y - 10 - 500) < 30 ? (dalt ? cg.y + 15 : cg.y - 40) : 500;   // que la figura sencera quedi dins del tros il·luminat
     if (nivell === 1) {
       el('rect', { x: esq ? AMPLE / 2 : 0, y: 0, width: AMPLE / 2, height: ALT, class: 'pista-fosc' }, capes.pista);
       Zoom.centra(AMPLE / 2, ALT / 2, AMPLE);
     } else if (nivell === 2 || nivell === 3) {
-      var qx = esq ? 0 : AMPLE / 2, qy = dalt ? 0 : 500, qh = dalt ? 500 : ALT - 500;
+      var qx = esq ? 0 : AMPLE / 2, qy = dalt ? 0 : ratlla, qh = dalt ? ratlla : ALT - ratlla;
       el('path', { d: 'M0 0H' + AMPLE + 'V' + ALT + 'H0Z M' + qx + ' ' + qy + 'h' + AMPLE / 2 + 'v' + qh + 'h-' + AMPLE / 2 + 'z',
                    'fill-rule': 'evenodd', class: 'pista-fosc' }, capes.pista);
       if (nivell === 2) Zoom.centra(qx + AMPLE / 4, qy + qh / 2, AMPLE / 2);

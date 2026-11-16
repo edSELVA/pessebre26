@@ -373,8 +373,8 @@
   var CSS_FULL = '@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0}'
     + '.full-etiquetes{width:210mm;height:297mm;padding:.5mm 0 0 0;display:grid;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(8,37mm);break-after:page;page-break-after:always}'
     + '.etiqueta{display:flex;align-items:center;gap:2.5mm;padding:2.5mm 3mm;overflow:hidden;color:#000;font-family:system-ui,sans-serif}'
-    + '.etiqueta svg{width:31mm;height:31mm;flex:0 0 auto}.t{font-size:8.5pt;font-weight:700;margin:0 0 1mm}'
-    + '.c{font:700 12.5pt/1 ui-monospace,Menlo,monospace;margin:0 0 1.2mm;white-space:nowrap}.p{font-size:6.5pt;line-height:1.25;margin:0}';
+    + '.etiqueta svg{width:30mm;height:30mm;flex:0 0 auto}.t{font-size:8.5pt;font-weight:700;margin:0 0 1mm}'
+    + '.c{font:700 11pt/1 ui-monospace,Menlo,monospace;margin:0 0 1.2mm;white-space:nowrap}.p{font-size:6.5pt;line-height:1.25;margin:0}';
   function desaFull(lot) {
     var html = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><title>Etiquetes · lot ' + lot + '</title><style>' + CSS_FULL
       + '</style></head><body>' + document.getElementById('impressio').innerHTML + '</body></html>';
@@ -439,7 +439,9 @@
     if (codi) sortida.appendChild(h('p', { class: 'codi-gran', text: codi }));
     sortida.appendChild(h('div', { class: 'form-codi' }, [camp, boto('Copiar', function () {
       camp.select();
-      if (navigator.clipboard) navigator.clipboard.writeText(codi ? codi + '  ·  ' + url : url).then(function () { UI.avis('Copiat.'); });
+      var noCopiat = function () { UI.avis('No s\'ha pogut copiar automàticament: el text ja està seleccionat, copia\'l amb Ctrl+C.'); };
+      if (navigator.clipboard) navigator.clipboard.writeText(codi ? codi + '  ·  ' + url : url).then(function () { UI.avis('Copiat.'); }, noCopiat);
+      else noCopiat();
     })]));
     sortida.appendChild(qr);
     sortida.appendChild(h('div', { class: 'botons' }, [boto('Imprimir', function () { imprimeixQR(qrSvg, titolImpres, codi); window.print(); })]));

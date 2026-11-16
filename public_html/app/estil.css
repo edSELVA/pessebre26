@@ -315,9 +315,9 @@ body.admin .zoom { top: calc(max(8px, env(safe-area-inset-top)) + 44px); bottom:
   .full-etiquetes { width: 210mm; height: 297mm; padding: .5mm 0 0 0; display: grid; grid-template-columns: repeat(3, 70mm);
     grid-template-rows: repeat(8, 37mm); break-after: page; page-break-after: always; }
   .full-etiquetes .etiqueta { display: flex; align-items: center; gap: 2.5mm; padding: 2.5mm 3mm; overflow: hidden; color: #000; font-family: system-ui, sans-serif; }
-  .full-etiquetes svg { width: 31mm; height: 31mm; flex: 0 0 auto; }
+  .full-etiquetes svg { width: 30mm; height: 30mm; flex: 0 0 auto; }
   .full-etiquetes .t { font-size: 8.5pt; font-weight: 700; margin: 0 0 1mm; }
-  .full-etiquetes .c { font: 700 12.5pt/1 ui-monospace, Menlo, monospace; margin: 0 0 1.2mm; white-space: nowrap; }
+  .full-etiquetes .c { font: 700 11pt/1 ui-monospace, Menlo, monospace; margin: 0 0 1.2mm; white-space: nowrap; }
   .full-etiquetes .p { font-size: 6.5pt; line-height: 1.25; margin: 0; }
 }
 

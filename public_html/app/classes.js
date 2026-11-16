@@ -80,20 +80,25 @@
     ]);
   }
 
+  // Torna a demanar la llista (un altre tutor pot haver fet la casa d'una classe mentrestant)
+  function classesAlDia() {
+    return api('classes.estat').then(function (r) { estat.classes = r.classes; }).catch(function () {}).then(pasClasse);
+  }
+
   // ── pas 2: tocar una casa
 
   function pasCasa() {
     mostra([
       h('h2', { text: estat.classe.nom + ': tria una casa' }),
       h('p', { text: 'Toca una casa transparent del poble, al mig del pessebre. Pots apropar-t\'hi amb dos dits.' }),
-      h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: 'Canviar de classe', clic: pasClasse })])
+      h('div', { class: 'botons' }, [h('button', { type: 'button', class: 'boto suau', text: 'Canviar de classe', clic: classesAlDia })])
     ]);
     Visor.centra(1130, 400, 620);
   }
 
   function enToc(l, s) {
     if (!estat.classe || estat.retencio) return;          // primer cal triar la classe; durant la tria de colors no
-    if (!l) return;
+    if (!l) { avis('Toca una de les cases transparents del poble, al mig del pessebre.'); return; }
     if (s.o[l.id]) { avis('Aquesta casa ja és d\'una altra classe.'); return; }
     // Si la casa és retinguda, ho decideix el servidor: pot ser la mateixa classe que torna (p. ex. després de recarregar).
     api('classes.retenir', { classe: estat.classe.id, lloc: l.id }).then(function (r) {
@@ -109,6 +114,7 @@
     }).catch(function (e) {
       avis(e.message);
       Visor.refresca().catch(function () {});
+      if (e.codi === 'classe_feta') classesAlDia();     // un altre tutor ja l'ha feta
     });
   }
 
@@ -241,7 +247,7 @@
       h('h2', { text: 'Fet! La casa de ' + nom + ' ja és al pessebre.' }),
       h('p', { class: 'suau', text: 'Gràcies. Si cal canviar alguna cosa, demaneu-ho a la coordinació.' }),
       h('div', { class: 'botons' }, [
-        h('button', { type: 'button', class: 'boto', text: 'Fer la casa d\'una altra classe', clic: pasClasse }),
+        h('button', { type: 'button', class: 'boto', text: 'Fer la casa d\'una altra classe', clic: classesAlDia }),
         h('a', { class: 'boto suau', href: './', text: 'Veure el pessebre' })
       ])
     ]);

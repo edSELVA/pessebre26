@@ -265,7 +265,8 @@ function retencio_de_lloc(PDO $pdo, array $cfg, $lloc_id, $t, string $origen, Da
     $st->execute([is_string($lloc_id) ? $lloc_id : '', $origen]);
     $o = $st->fetch();
     if (!$o || !testimoni_format_ok($t) || !hash_equals($o['hash_retencio'], testimoni_hash($cfg['pebre'], $t)) || $o['caduca'] <= bd_hora($ara)) {
-        throw new ErrorPessebre('La reserva temporal ha caducat, o s\'ha fet servir el mateix codi en un altre mòbil. Torna a triar el lloc.', 409, 'retencio');
+        throw new ErrorPessebre($origen === 'familia' ? 'La reserva temporal ha caducat, o s\'ha fet servir el mateix codi en un altre mòbil. Torna a triar el lloc.'
+                                                  : 'La reserva temporal ha caducat o no és vàlida. Torna a triar el lloc.', 409, 'retencio');
     }
     return $o;
 }
