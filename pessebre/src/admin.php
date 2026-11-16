@@ -86,9 +86,7 @@ function usuari_treu(PDO $pdo, $nom, string $jo): array
 
 function admin_apunta_fallada(PDO $pdo, string $ip, DateTimeImmutable $ara): void
 {
-    $pdo->beginTransaction();
-    limit_fallada($pdo, hash('sha256', 'admin:' . limit_empremta($pdo, $ip, $ara)), $ara);
-    $pdo->commit();
+    app_transaccio($pdo, function () use ($pdo, $ip, $ara) { limit_fallada($pdo, hash('sha256', 'admin:' . limit_empremta($pdo, $ip, $ara)), $ara); });
 }
 
 function hora_local(?string $utc): ?string

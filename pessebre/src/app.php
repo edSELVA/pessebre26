@@ -79,12 +79,29 @@ function app_progressa(PDO $pdo, array $cfg, DateTimeImmutable $ara): void
     auto_aplica($pdo, $cfg, $ara);
 }
 
-/** Transacció curta sense bloqueig ni snapshot (per a lectures que només toquen el límit d'intents). */
+/** Camí del fitxer de bloqueig d'escriptura (el fixa app_executa). */
+function app_cami_bloqueig(?string $cami = null): ?string
+{
+    static $c = null;
+    if ($cami !== null) $c = $cami;
+    return $c;
+}
+
+/** Transacció curta sense snapshot (comprovacions de codis i límit d'intents). Agafa el mateix bloqueig que les escriptures:
+ *  sense ell, una transacció SQLite que llegeix i després escriu (comptador d'intents, sal horària) topava amb una escriptura en
+ *  curs i fallava a l'instant amb «database is locked» (error 500, comprovat amb 30 peticions concurrents). */
 function app_transaccio(PDO $pdo, callable $feina)
 {
-    $pdo->beginTransaction();
-    try { $res = $feina(); $pdo->commit(); return $res; }
-    catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    $cami = app_cami_bloqueig();
+    $f = $cami ? fopen($cami, 'c') : false;
+    if ($f) flock($f, LOCK_EX);
+    try {
+        $pdo->beginTransaction();
+        try { $res = $feina(); $pdo->commit(); return $res; }
+        catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    } finally {
+        if ($f) { flock($f, LOCK_UN); fclose($f); }
+    }
 }
 
 /** Les etapes del codi d'etapa de la petició (i el límit d'intents). La fallada s'apunta a app_executa, fora de la transacció.
@@ -98,6 +115,7 @@ function app_etapes(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutabl
     $etapes = etapes_per_codi($pdo, $cfg['pebre'], $c);
     // Un codi de família obert a la pàgina dels tutors és un error de camí, no un intent d'endevinar: no compta per al límit
     if (!$etapes && codi_busca($pdo, $cfg['pebre'], $c)) throw new ErrorPessebre('Aquest és un codi de família. Escriu-lo al botó «Participar» del pessebre.', 400, 'codi_familia');
+    if (!$etapes && codi_etapa_antic($pdo, $cfg['pebre'], $c)) throw new ErrorPessebre('Aquest codi d\'etapa s\'ha canviat per un de nou. Demana\'l a la coordinació.', 403, 'codi_antic');
     if (!$etapes) throw new ErrorPessebre('Aquest codi no és de cap etapa, o ja s\'ha canviat. Demana\'l a la coordinació.', 403, 'codi');
     return $etapes;
 }
@@ -113,7 +131,11 @@ function app_codi(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable 
 function app_claustre(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutable $ara): void
 {
     limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
-    if (!enllac_valida($pdo, $cfg['pebre'], $p['k'] ?? null, 'claustre')) {
+    $t = testimoni_neteja($p['k'] ?? null);
+    if ($t === null) throw new ErrorPessebre('L\'enllaç del claustre està incomplet. Torna a obrir-lo des del QR o des del missatge original.', 400, 'enllac_format');
+    if (!enllac_valida($pdo, $cfg['pebre'], $t, 'claustre')) {
+        // Un enllaç antic (regenerat) és real, no un intent d'endevinar: no compta per al límit (a la wifi de l'escola bloquejaria tothom)
+        if (enllac_existeix($pdo, $cfg['pebre'], $t, 'claustre')) throw new ErrorPessebre('Aquest enllaç del claustre ja no funciona: se n\'ha fet un de nou. Demana\'l a la coordinació.', 403, 'enllac_antic');
         throw new ErrorPessebre('Aquest enllaç del claustre no és vàlid o ja no està actiu.', 403, 'enllac');
     }
 }
@@ -123,10 +145,11 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
 {
     try {
         registre_qui(null, true);           // cada petició diu qui és (comptes d'administració)
+        app_cami_bloqueig($cfg['bloqueig']);
         $a = $p['a'] ?? '';
         if (!is_string($a)) return [400, ['ok' => false, 'error' => 'Acció desconeguda.', 'codi' => 'accio']];
         // Després de «Tancar i esborrar» (Reis) ja no es pot escriure res: el pessebre queda com a pàgina estàtica
-        if (config_llegeix($pdo, 'tancat', '0') === '1' && !in_array($a, ['admin.estat', 'admin.lloc', 'admin.registre'], true)) {
+        if (config_llegeix($pdo, 'tancat', '0') === '1' && !in_array($a, ['admin.estat', 'admin.lloc', 'admin.registre', 'admin.contrasenya_propia', 'admin.usuari', 'admin.usuari_treu'], true)) {
             if ($a === 'tick') return [200, ['ok' => true, 'fet' => false]];
             throw new ErrorPessebre('El pessebre d\'aquest any ja s\'ha tancat. Moltes gràcies per participar!', 403, 'tancat');
         }
@@ -164,6 +187,7 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
                     limit_comprova($pdo, limit_empremta($pdo, $ip, $ara), $ara);
                     $c = codi_normalitza($p['c'] ?? null);
                     if ($c !== null && codi_control_ok($c) && etapes_per_codi($pdo, $cfg['pebre'], $c)) return null;
+                    if ($c !== null && codi_control_ok($c) && codi_etapa_antic($pdo, $cfg['pebre'], $c)) throw new ErrorPessebre('Aquest codi d\'etapa s\'ha canviat per un de nou. Demana\'l a la coordinació.', 403, 'codi_antic');
                     return codi_comprova($pdo, $cfg, $p['c'] ?? null);
                 });
                 if ($codi === null) return [200, ['ok' => true, 'tipus' => 'etapa', 'pot' => true]];
@@ -211,7 +235,5 @@ function app_executa(PDO $pdo, array $cfg, array $p, string $ip, DateTimeImmutab
 
 function app_apunta_fallada(PDO $pdo, string $ip, DateTimeImmutable $ara): void
 {
-    $pdo->beginTransaction();
-    limit_fallada($pdo, limit_empremta($pdo, $ip, $ara), $ara);
-    $pdo->commit();
+    app_transaccio($pdo, function () use ($pdo, $ip, $ara) { limit_fallada($pdo, limit_empremta($pdo, $ip, $ara), $ara); });
 }

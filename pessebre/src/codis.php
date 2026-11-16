@@ -39,6 +39,22 @@ function enllac_crea(PDO $pdo, string $pebre, string $tipus, ?string $etapa, Dat
     return $t;
 }
 
+/** Testimoni net: treu el que no hi pot ser (un punt o un espai final copiat d'un correu). null si no en queda un de complet. */
+function testimoni_neteja($t): ?string
+{
+    if (!is_string($t)) return null;
+    $t = (string)preg_replace('/[^A-Za-z0-9_-]/', '', $t);
+    return strlen($t) === 22 ? $t : null;
+}
+
+/** L'enllaç existeix, encara que estigui desactivat (n'hi ha un de més nou). */
+function enllac_existeix(PDO $pdo, string $pebre, string $t, string $tipus): bool
+{
+    $st = $pdo->prepare('SELECT COUNT(*) FROM enllacos WHERE hash = ? AND tipus = ?');
+    $st->execute([testimoni_hash($pebre, $t), $tipus]);
+    return (int)$st->fetchColumn() > 0;
+}
+
 /** Retorna l'enllaç actiu que correspon al testimoni (o null). */
 function enllac_valida(PDO $pdo, string $pebre, $t, string $tipus): ?array
 {
@@ -153,6 +169,14 @@ function etapes_per_codi(PDO $pdo, string $pebre, string $c): ?array
     $st->execute([codi_hash($pebre, $c)]);
     $e = $st->fetchColumn();
     return $e === false ? null : explode(',', (string)$e);
+}
+
+/** El codi és d'una etapa però s'ha substituït per un de nou. */
+function codi_etapa_antic(PDO $pdo, string $pebre, string $c): bool
+{
+    $st = $pdo->prepare('SELECT COUNT(*) FROM codis_etapa WHERE hash = ? AND activa = 0');
+    $st->execute([codi_hash($pebre, $c)]);
+    return (int)$st->fetchColumn() > 0;
 }
 
 /** Nom de les etapes per a la pantalla: «Llar d'infants i Infantil». */
