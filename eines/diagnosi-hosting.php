@@ -17,7 +17,7 @@ function fila(string $que, ?bool $ok, string $detall, string $consell = ''): voi
 $h = function ($t) { return htmlspecialchars((string)$t, ENT_QUOTES, 'UTF-8'); };
 
 // 1. PHP i extensions
-fila('Versió de PHP', version_compare(PHP_VERSION, '8.1', '>='), PHP_VERSION, 'Tria PHP 8.2 o 8.3 al panell (PHP 7.4 ja no té actualitzacions de seguretat).');
+fila('Versió de PHP', version_compare(PHP_VERSION, '8.2', '>='), PHP_VERSION, 'Tria PHP 8.2 o 8.3 al panell (PHP 7.4 ja no té actualitzacions de seguretat).');
 foreach (['pdo_sqlite' => 'SQLite', 'pdo_mysql' => 'MySQL', 'mbstring' => 'mbstring', 'json' => 'json'] as $ext => $nom) {
     fila("Extensió $nom", extension_loaded($ext), extension_loaded($ext) ? 'sí' : 'no');
 }
@@ -27,8 +27,9 @@ fila('OPcache', function_exists('opcache_get_status') ? true : null, function_ex
 $cap = [];
 foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CF_CONNECTING_IP', 'HTTP_FORWARDED'] as $k) if (!empty($_SERVER[$k])) $cap[] = "$k=" . $_SERVER[$k];
 $remota = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-$privada = !filter_var($remota, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
-fila('IP que veu PHP (REMOTE_ADDR)', !$privada && !$cap, $remota . ($cap ? ' · capçaleres de proxy: ' . implode('; ', $cap) : ' · sense proxy'),
+$mapejada = stripos($remota, '::ffff:') === 0;   // IPv4 en format IPv6: l'app ja la tracta bé, però que es vegi
+$privada = !filter_var($mapejada ? substr($remota, 7) : $remota, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+fila('IP que veu PHP (REMOTE_ADDR)', !$privada && !$cap, $remota . ($mapejada ? ' (IPv4 en format IPv6)' : '') . ($cap ? ' · capçaleres de proxy: ' . implode('; ', $cap) : ' · sense proxy'),
      'Ha de coincidir amb la IP pública del teu mòbil o ordinador (busca «quina és la meva IP»). Si és una IP privada o surten capçaleres de proxy, TOTS els usuaris semblarien el mateix i el límit d\'intents bloquejaria tothom: cal avisar-ho abans d\'obrir.');
 
 // 3. HTTPS
@@ -55,13 +56,14 @@ fila('Espai lliure', $lliure === false ? null : $lliure > 200e6, $lliure === fal
 
 // 5. Bloqueig de fitxers i SQLite (en una carpeta temporal que s'esborra)
 $tmp = $arrel . '/diag-' . bin2hex(random_bytes(4));
-@mkdir($tmp, 0700);
-@file_put_contents("$tmp/.htaccess", "Require all denied\n");
-$f = @fopen("$tmp/prova.lock", 'c');
+$tmp_ok = @mkdir($tmp, 0700);
+if (!$tmp_ok) fila('Carpeta temporal per a les proves', false, 'no s\'ha pogut crear', 'No es poden fer les proves de bloqueig, SQLite i .htaccess: revisa els permisos d\'escriptura de l\'arrel web.');
+@file_put_contents("$tmp/.htaccess", "<IfModule mod_authz_core.c>\n  Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n  Order deny,allow\n  Deny from all\n</IfModule>\n");
+$f = $tmp_ok ? @fopen("$tmp/prova.lock", 'c') : false;
 $flock = $f && flock($f, LOCK_EX | LOCK_NB);
-fila('Bloqueig de fitxers (flock)', $flock, $flock ? 'funciona' : 'NO funciona', 'L\'app serialitza les escriptures amb flock: si no funciona, cal MySQL i revisar-ho.');
+if ($tmp_ok) fila('Bloqueig de fitxers (flock)', $flock, $flock ? 'funciona' : 'NO funciona', 'L\'app serialitza les escriptures amb flock: si no funciona, cal MySQL i revisar-ho.');
 if ($f) { flock($f, LOCK_UN); fclose($f); }
-if (extension_loaded('pdo_sqlite')) {
+if ($tmp_ok && extension_loaded('pdo_sqlite')) {
     try {
         $pdo = new PDO("sqlite:$tmp/prova.sqlite", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $pdo->exec('PRAGMA busy_timeout = 5000');
@@ -82,9 +84,10 @@ $host = $_SERVER['HTTP_HOST'] ?? '';
 $url = ($https ? 'https' : 'http') . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/') . '/' . basename($tmp) . '/secret.txt';
 $ctx = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
 $resp = @file_get_contents($url, false, $ctx);
-$codi = isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m) ? (int)$m[1] : 0;
+$codi = 0;   // l'última línia d'estat (si hi ha redireccions, la primera seria el 301/302)
+foreach ($http_response_header ?? [] as $lin) if (preg_match('#^HTTP/\S+\s+(\d{3})#', $lin, $m)) $codi = (int)$m[1];
 if ($codi === 0) fila('El .htaccess bloqueja carpetes', null, 'no s\'ha pogut comprovar des del servidor', 'Comprova-ho a mà després d\'instal·lar (https://ADREÇA/pessebre/config.exemple.php ha de donar 403).');
-else fila('El .htaccess bloqueja carpetes', $codi === 403 || $codi === 404, "resposta $codi" . ($resp === 'secret' ? ': EL FITXER ES POT LLEGIR' : ''), 'Si es pot llegir, pessebre/ ha d\'anar obligatòriament fora de l\'arrel web.');
+else fila('El .htaccess bloqueja carpetes', $codi !== 200 && $resp !== 'secret', "resposta $codi" . ($resp === 'secret' ? ': EL FITXER ES POT LLEGIR' : ''), 'Si es pot llegir, pessebre/ ha d\'anar obligatòriament fora de l\'arrel web.');
 foreach (['secret.txt', 'prova.lock', 'prova.sqlite', 'prova.sqlite-journal', '.htaccess'] as $x) @unlink("$tmp/$x");
 @rmdir($tmp);
 
