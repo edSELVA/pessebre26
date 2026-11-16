@@ -51,8 +51,8 @@
       var peces = UI.pecesPossibles(D(), l);
       var primera = peces.indexOf(l.codi) >= 0 ? l.codi : peces[0];     // als arbres, comença amb l'espècie del mapa
       tria = { lloc: l, retencio: r.retencio, fins: Date.now() + r.segons * 1000, peca: primera, mirall: l.mirall ? 1 : 0, colors: null, finestres: 0 };
-      Visor.centra(l.x, l.y - 20, 240);
       pasTria();
+      Visor.centra(l.x, l.y - 20, 240);              // després d'obrir el panell, perquè la figura quedi per sobre
       return Visor.refresca();
     }).catch(function (e) {
       UI.avis(e.message);

@@ -103,8 +103,8 @@
       estat.colors = Visor.disseny().peces[l.codi].pers.map(function () { return 0; });
       estat.mirall = l.mirall ? 1 : 0;
       estat.finestres = 0;
-      Visor.centra(l.x, l.y - 30, 260);
       pasColors();
+      Visor.centra(l.x, l.y - 30, 260);              // després d'obrir el panell, perquè la casa quedi per sobre
       return Visor.refresca();
     }).catch(function (e) {
       avis(e.message);

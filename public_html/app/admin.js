@@ -230,7 +230,6 @@
       Visor.redibuixa();
     });
     var tanca = function () { Visor.treu(l.id); Visor.redibuixa(); if (nova && afegint) sel = null; pLloc(); };
-    if (nova) Visor.centra(l.x, l.y - 20, 240);
     mostra([
       h('h2', { text: nova ? 'Afegir una figura · ' + l.id : sensePlaca ? 'Casa sense placa · ' + l.id : 'Canviar · ' + l.id }),
       ed.galeria, ed.tria,
@@ -248,6 +247,7 @@
         boto('Cancel·lar', tanca, 'suau')
       ])
     ]);
+    if (nova) Visor.centra(l.x, l.y - 20, 240);
   }
 
   // ── Estat
