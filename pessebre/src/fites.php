@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 const FITES_DEFECTE = [
     // numero => [moment, base, increment (%), data límit UTC]
-    1 => ['posta', 'classes', 70, '2026-12-20 23:00:00'],          // 52 de 74 cases, o el 21 des (00:00 Barcelona)
+    1 => ['posta', 'classes', 70, '2026-12-20 23:00:00'],          // 70 % de les classes carregades (35 de 50), o el 21 des (00:00 Barcelona)
     2 => ['nit', 'participacions', 25, '2026-12-26 23:00:00'],     // +150 (25 % de 600), o el 27 des
     3 => ['neu', 'participacions', 25, '2026-12-31 23:00:00'],     // +150, o l'1 de gener
 ];
@@ -53,7 +53,9 @@ function cases_objectiu(PDO $pdo): int
 /** Participació real màxima possible (classes + tots els llocs que no són del poble). Els llindars no la poden superar. */
 function participacio_maxima(PDO $pdo): int
 {
-    return cases_objectiu($pdo) + (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup <> 'poble'")->fetchColumn();
+    // Els llocs ocupats per automàtiques no poden comptar com a participació real mentre no es retirin
+    return cases_objectiu($pdo) + (int)$pdo->query("SELECT COUNT(*) FROM llocs WHERE grup <> 'poble'")->fetchColumn()
+        - (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'auto'")->fetchColumn();
 }
 
 /** El llindar de la posta es calcula sobre les classes de veritat (no sobre les 74 cases): amb 50 classes, el 70 % de 74 (52) no s'assoliria mai. */
@@ -85,7 +87,8 @@ function fites_aplica(PDO $pdo, DateTimeImmutable $ara): ?array
         $objectiu = (int)config_llegeix($pdo, 'objectiu', '600');
         // Llindar de la fita següent, sense passar del 90 % del que és possible omplir (si no, només podria saltar per data)
         $seguent = $p['reals'] + (int)round($objectiu * (int)fita_increment($pdo, (int)$f['numero'] + 1) / 100);
-        $seguent = max($p['reals'] + 1, min($seguent, (int)floor(participacio_maxima($pdo) * 0.9)));
+        $sostre = (int)floor(participacio_maxima($pdo) * 0.9);
+        if ($sostre > $p['reals']) $seguent = min($seguent, $sostre);      // si ja s'és a prop del màxim, salta per data
         $pdo->prepare('UPDATE fites SET llindar = ? WHERE numero = ? AND assolida IS NULL')->execute([$seguent, (int)$f['numero'] + 1]);
         registre_afegeix($pdo, $ara, 'automàtic', 'fita', null, $f['moment'] . ($per === 'data' ? ' (per data)' : ' (per participació)'));
         if ($per === 'data') config_desa($pdo, 'auto_fase', $f['moment']);     // la participació automàtica omplirà aquesta fase

@@ -25,8 +25,8 @@ function auto_aplica(PDO $pdo, array $cfg, DateTimeImmutable $ara): int
     $objectiu = (int)config_llegeix($pdo, "auto_$fase", (string)(AUTO_OBJECTIU_DEFECTE[$fase] ?? 0));
     $max_zona = (int)config_llegeix($pdo, 'auto_max_zona', '40');
     $zones = zones_obertes($pdo);
-    // Amb totes les zones obertes la participació ja és alta: no es treuen més llocs a les famílies amb figures automàtiques
-    if (count($zones) >= count(ORDRE_ZONES)) { config_desa($pdo, 'auto_hora', $hora); return 0; }
+    // No es treuen llocs a les famílies: si a les zones obertes ja queda menys d'un 25 % de llocs de famílies lliures, no se n'afegeixen
+    if (auto_reserva_families($pdo, $zones)) { config_desa($pdo, 'auto_hora', $hora); return 0; }
     $llavor = (string)($cfg['llavor'] ?? 'llavor');
 
     // Estat de les zones obertes (sense les cases de classe)
@@ -81,13 +81,25 @@ function auto_aplica(PDO $pdo, array $cfg, DateTimeImmutable $ara): int
     return $afegides;
 }
 
+/** Queden pocs llocs de famílies lliures a les zones obertes (menys del 25 %)? Aleshores no s'hi posen automàtiques. */
+function auto_reserva_families(PDO $pdo, array $zones): bool
+{
+    if (!$zones) return true;
+    $marques = implode(',', array_fill(0, count($zones), '?'));
+    $st = $pdo->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN o.lloc_id IS NULL THEN 1 ELSE 0 END) AS lliures
+                         FROM llocs l LEFT JOIN ocupacions o ON o.lloc_id = l.id WHERE l.grup = 'general' AND l.zona IN ($marques)");
+    $st->execute($zones);
+    $r = $st->fetch();
+    return !$r['total'] || (int)$r['lliures'] * 4 < (int)$r['total'];
+}
+
 /** Quantes automàtiques s'afegirien (en total, a poc a poc) si la fita d'aquest moment salta per data ara. Aproximat. */
 function auto_previsio(PDO $pdo, string $moment): int
 {
     $objectiu = (int)config_llegeix($pdo, "auto_$moment", (string)(AUTO_OBJECTIU_DEFECTE[$moment] ?? 0));
     $max_zona = (int)config_llegeix($pdo, 'auto_max_zona', '40');
     $zones = zones_obertes($pdo);
-    if (count($zones) >= count(ORDRE_ZONES)) return 0;
+    if (auto_reserva_families($pdo, $zones)) return 0;
     $marques = implode(',', array_fill(0, count($zones), '?'));
     $st = $pdo->prepare("SELECT l.zona, COUNT(*) AS total, SUM(CASE WHEN o.lloc_id IS NULL THEN 0 ELSE 1 END) AS ocupats,
                                 SUM(CASE WHEN o.origen = 'auto' THEN 1 ELSE 0 END) AS auto,
