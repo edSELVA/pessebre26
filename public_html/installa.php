@@ -81,7 +81,7 @@ if (isset($p['installa']) && $pot) {
     $local = in_array($host_url, ['localhost', '127.0.0.1'], true);
     if (!preg_match('#^https://[^\s"\'<>\#?]+/$#', $url) && !($local && preg_match('#^http://[^\s"\'<>\#?]+/$#', $url))) $errors[] = 'L\'adreça ha de començar per https:// i acabar amb «/» (va dins dels QR: ha de ser la definitiva).';
     if (!preg_match('/^[a-z0-9][a-z0-9._-]{1,29}$/', $usuari)) $errors[] = 'Usuari: de 2 a 30 lletres sense accents, xifres, punts o guions.';
-    if (mb_strlen($c1) < 10) $errors[] = 'La contrasenya ha de tenir com a mínim 10 caràcters.';
+    // (la longitud i la fortalesa les comprova usuari_desa(), igual que a l'administració)
     if ($c1 !== (string)($p['contrasenya2'] ?? '')) $errors[] = 'Les dues contrasenyes no coincideixen.';
     if ($bd === 'mysql' && (trim((string)($p['mysql_host'] ?? '')) === '' || trim((string)($p['mysql_bd'] ?? '')) === '')) $errors[] = 'Falten les dades de MySQL.';
     if (!$errors) {
@@ -102,12 +102,13 @@ if (isset($p['installa']) && $pot) {
         try {
             if (!is_dir("$PESSEBRE/dades")) mkdir("$PESSEBRE/dades", 0700, true);
             // Segona barrera per a Apache (per si el .htaccess de pessebre/ no es llegís per algun motiu)
-            @file_put_contents("$PESSEBRE/dades/.htaccess", "Require all denied\n");
+            @file_put_contents("$PESSEBRE/dades/.htaccess", "<IfModule mod_authz_core.c>\n  Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n  Order deny,allow\n  Deny from all\n</IfModule>\n");
             require "$PESSEBRE/src/app.php";
             $pdo = bd_connecta($cfg);                       // si MySQL falla, ho diu aquí, abans d'escriure res
             $ara = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             $n = app_installa($pdo, $cfg);
-            usuari_desa($pdo, $usuari, $c1, 'admin', $ara);
+            try { usuari_desa($pdo, $usuari, $c1, 'admin', $ara); }
+            catch (ErrorPessebre $ex) { $pdo = null; if (is_file($cfg['bd_sqlite'])) @unlink($cfg['bd_sqlite']); throw new RuntimeException($ex->getMessage()); }
             registre_afegeix($pdo, $ara, 'instal·lador', 'installa', null, "$n llocs; compte $usuari");
             snapshot_regenera($pdo, $cfg, $ara);
             $text = "<?php\n// Configuració creada per installa.php el " . gmdate('Y-m-d H:i') . " UTC. SECRETS: no es puja mai al repositori.\nreturn " . var_export($cfg, true) . ";\n";
@@ -139,6 +140,6 @@ pagina('Instal·lació del pessebre', '<h2>1. Comprovacions</h2>' . $taula
         . '<input class="camp" name="mysql_bd" placeholder="nom de la base de dades" value="' . $v('mysql_bd') . '"><input class="camp" name="mysql_usuari" placeholder="usuari" value="' . $v('mysql_usuari') . '" autocomplete="off">'
         . '<input class="camp" name="mysql_clau" type="password" placeholder="contrasenya" autocomplete="off"></fieldset>'
         . '<label>Primer compte d\'administració (el teu)</label><input class="camp" name="usuari" placeholder="usuari (p. ex. eduard)" value="' . $v('usuari') . '" required>'
-        . '<input class="camp" name="contrasenya" type="password" placeholder="contrasenya (10 caràcters com a mínim)" autocomplete="new-password" required>'
+        . '<input class="camp" name="contrasenya" type="password" placeholder="contrasenya (12 caràcters com a mínim)" autocomplete="new-password" required>'
         . '<input class="camp" name="contrasenya2" type="password" placeholder="torna-la a escriure" autocomplete="new-password" required>'
         . '<button class="boto primari" type="submit">Instal·lar</button></form>' : ''));

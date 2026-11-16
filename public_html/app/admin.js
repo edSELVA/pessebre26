@@ -649,7 +649,7 @@
           UI.avis('Contrasenya canviada.');
         }).catch(function (e) { UI.avis(e.message); });
       })]),
-      h('p', { class: 'suau', text: 'Com a mínim 10 caràcters.' })
+      h('p', { class: 'suau', text: 'Com a mínim 12 caràcters. Millor tres o quatre paraules qualssevol que una paraula amb xifres.' })
     ];
     if (admin()) {
       var nom = h('input', { type: 'text', class: 'camp', autocapitalize: 'none', spellcheck: 'false', placeholder: 'nom (p. ex. marta)', 'aria-label': 'Nom d\'usuari' });

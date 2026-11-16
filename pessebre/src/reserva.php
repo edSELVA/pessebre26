@@ -345,10 +345,15 @@ function claustre_estat(PDO $pdo, DateTimeImmutable $ara): array
     return ['pot' => $missatge === null, 'missatge' => $missatge, 'fetes' => $fetes];
 }
 
+const MAX_RETENCIONS_CLAUSTRE = 60;   // l'enllaç és comú: qui el tingui no pot bloquejar centenars de llocs alhora
+
 function claustre_retenir(PDO $pdo, array $cfg, $lloc_id, DateTimeImmutable $ara): array
 {
     $e = claustre_estat($pdo, $ara);
     if (!$e['pot']) throw new ErrorPessebre($e['missatge'], 403, 'claustre_no');
+    $st = $pdo->prepare("SELECT COUNT(*) FROM ocupacions WHERE origen = 'claustre' AND estat = 'retingut' AND caduca > ?");
+    $st->execute([bd_hora($ara)]);
+    if ((int)$st->fetchColumn() >= MAX_RETENCIONS_CLAUSTRE) throw new ErrorPessebre('Ara hi ha molta gent triant alhora. Torna-ho a provar d\'aquí a un minut.', 429, 'massa_retencions');
     $l = lloc_lliure($pdo, $lloc_id);
     $general = $l['grup'] === 'general' && in_array($l['zona'], zones_obertes($pdo), true);
     if ($l['grup'] !== 'claustre' && !$general) throw new ErrorPessebre('Aquest lloc no es pot triar. Tria un pastor, un lloc de l\'anunciació o una silueta lliure.', 400, 'lloc');

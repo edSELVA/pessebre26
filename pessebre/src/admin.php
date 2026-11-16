@@ -14,7 +14,9 @@ const CONFIG_NUMERICA = ['llindar_zona' => [1, 100], 'usos_codi' => [1, 10], 'ob
 // ── Comptes d'administració personals (§31). Sense cookies ni sessions: l'usuari i la contrasenya es demanen a cada càrrega
 //    de la pàgina, només es guarden a la memòria de la pàgina i s'envien a cada acció. 5 fallades → 15 minuts d'espera.
 const USUARI_NOM = '/^[a-z0-9][a-z0-9._-]{1,29}$/';
-const CONTRASENYA_MIN = 10;
+const CONTRASENYA_MIN = 12;
+// Paraules que no poden formar la contrasenya (sense comptar xifres i símbols): massa fàcils d'endevinar en aquest context
+const CONTRASENYA_PROHIBIDES = ['pessebre', 'nadal', 'escola', 'vedruna', 'escorial', 'contrasenya', 'password', 'admin', 'qwerty', 'abcdef'];
 
 /** Comprova l'usuari i la contrasenya. Retorna ['nom', 'rol'] (rol: 'admin' o 'lectura'). */
 function admin_autentica(PDO $pdo, array $cfg, $usuari, $contrasenya, string $ip, DateTimeImmutable $ara): array
@@ -25,14 +27,21 @@ function admin_autentica(PDO $pdo, array $cfg, $usuari, $contrasenya, string $ip
         $st = $pdo->prepare('SELECT nom, hash, rol FROM usuaris WHERE nom = ?');
         $st->execute([mb_strtolower(trim($usuari))]);
         $u = $st->fetch();
-        if ($u && password_verify($contrasenya, $u['hash'])) return ['nom' => $u['nom'], 'rol' => $u['rol']];
+        // Sempre un password_verify (amb un hash fals si l'usuari no existeix): el temps de resposta no revela quins usuaris hi ha
+        $ok = password_verify($contrasenya, $u ? $u['hash'] : '$2y$10$lVoJ0.1w8W.Kcp0HRLIZXOz36kGmETassZ1aT2TNxtze3rA04IgzK');
+        if ($u && $ok) return ['nom' => $u['nom'], 'rol' => $u['rol']];
     }
     throw new ErrorPessebre('Usuari o contrasenya incorrectes.', 403, 'contrasenya');
 }
 
-function contrasenya_valida($c): string
+function contrasenya_valida($c, string $nom = ''): string
 {
     if (!is_string($c) || mb_strlen($c) < CONTRASENYA_MIN || mb_strlen($c) > 200) throw new ErrorPessebre('La contrasenya ha de tenir com a mínim ' . CONTRASENYA_MIN . ' caràcters.', 400, 'contrasenya_curta');
+    $lletres = preg_replace('/[^a-z]/', '', mb_strtolower($c));
+    $resta = str_replace(array_merge(CONTRASENYA_PROHIBIDES, $nom !== '' ? [$nom] : []), '', $lletres);
+    if (strlen($resta) < 4 || count(array_unique(mb_str_split($c))) < 5) {
+        throw new ErrorPessebre('Aquesta contrasenya és massa fàcil d\'endevinar (no hi posis el nom de l\'usuari, «pessebre», «nadal», «escola»…). Prova amb tres o quatre paraules qualssevol.', 400, 'contrasenya_feble');
+    }
     return $c;
 }
 
@@ -42,7 +51,7 @@ function usuari_desa(PDO $pdo, $nom, $contrasenya, $rol, DateTimeImmutable $ara,
     $nom = is_string($nom) ? mb_strtolower(trim($nom)) : '';
     if (!preg_match(USUARI_NOM, $nom)) throw new ErrorPessebre('El nom d\'usuari: de 2 a 30 lletres sense accents, xifres, punts o guions (p. ex. «eduard»).', 400, 'nom');
     if ($rol !== 'admin' && $rol !== 'lectura') throw new ErrorPessebre('El nivell ha de ser «admin» o «lectura».', 400, 'rol');
-    $hash = password_hash(contrasenya_valida($contrasenya), PASSWORD_DEFAULT, $cost ? ['cost' => $cost] : []);
+    $hash = password_hash(contrasenya_valida($contrasenya, $nom), PASSWORD_DEFAULT, $cost ? ['cost' => $cost] : []);
     $st = $pdo->prepare('SELECT rol FROM usuaris WHERE nom = ?');
     $st->execute([$nom]);
     $abans = $st->fetchColumn();
