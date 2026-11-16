@@ -227,7 +227,7 @@
     if (est.colors) while (est.colors.length < n) est.colors.push(0);
     var ed = UI.editorPeca(D(), l, est, function () {
       Visor.posa(l.id, { p: est.peca, c: est.colors, m: est.mirall, f: est.finestres, n: o && o.classe && /-P$/.test(est.peca) ? o.classe : undefined });
-      Visor.redibuixa();
+      Visor.redibuixaLloc(l.id);
     });
     var tanca = function () { Visor.treu(l.id); Visor.redibuixa(); if (nova && afegint) sel = null; pLloc(); };
     mostra([

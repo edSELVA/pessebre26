@@ -66,7 +66,7 @@
 
   function mostraALescena() {
     Visor.posa(tria.lloc.id, { p: tria.peca, c: tria.colors, m: tria.mirall, f: tria.finestres });
-    Visor.redibuixa();
+    Visor.redibuixaLloc(tria.lloc.id);
   }
 
   // ── panells

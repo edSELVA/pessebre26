@@ -170,7 +170,7 @@
   function actualitzaLocal() {
     if (!estat.lloc) return;
     Visor.posa(estat.lloc.id, { p: estat.lloc.codi, c: estat.colors.slice(), n: estat.classe.nom, m: estat.mirall, f: estat.finestres });
-    Visor.redibuixa();
+    Visor.redibuixaLloc(estat.lloc.id);
   }
 
   function netejaTria() {

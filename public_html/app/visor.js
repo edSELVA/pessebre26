@@ -122,44 +122,79 @@ var Visor = (function () {
 
     var poble = 0, ocupades = 0;
     D.mapa.llocs.forEach(function (l) {
-      var o = propis[l.id] || s.o[l.id];
-      if (l.grup === 'poble') { poble++; if (o) ocupades++; }
-      if (o) {
-        var peca = D.peces[o.p];
-        var mirall = o.m !== undefined ? !!o.m : !!l.mirall;
-        var vars = Compon.colors(peca, o.c, D.paletes, l.pastor ? 'pastors' : null);
-        if (s.moment === 'neu' && peca.cat === 'casa') Compon.neuTeulada(vars);
-        llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, propis[l.id] ? 'propia' : null) });
-        Compon.finestresTapades(o.f).forEach(function (i) {       // finestres que la classe ha tret: hi va paret
-          if (i < (peca.finestres || []).length) llista.push({ y: l.y, node: usa(o.p, l.x, l.y, mirall, vars, null, o.p + '-F' + i) });
-        });
-        if (peca.cat === 'casa') capes.tolls.appendChild(usa('LLUM-TOLL', l.x, l.y + 5));
-        if (o.p === 'ELE-FANAL') capes.halos.appendChild(usa('LLUM-HALO', l.x, l.y - 22));
-        if (o.n) llista.push({ y: l.y, node: textPlaca(peca, l, mirall, o.n) });
-        return;
-      }
-      if (!visibleLliure(l, s, zones)) return;
-      var ret = retinguts[l.id];
-      if (op.filtre) {
-        // Mode participar amb un tipus triat: només les siluetes d'aquest tipus als llocs que pot triar aquest grup
-        if (l.tipus !== op.filtre || !llocDelGrup(l, s)) return;
-        var codi = l.codi || SILUETA[l.tipus];
-        llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
-        if (!ret) llista.push({ y: l.y, node: usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
-        if (!ret && l.tipus !== 'casa') marca(l);          // les cases ja es veuen bé
-      } else if (l.tipus === 'casa' || l.tipus === 'element') {
-        llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')) });
-        if (l.tipus === 'casa' && !ret) llista.push({ y: l.y, node: usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora') });
-      }
+      if (l.grup === 'poble') { poble++; if (propis[l.id] || s.o[l.id]) ocupades++; }
+      nodesLloc(l, s, zones, retinguts).forEach(function (e) {
+        if (e.capa === 'peces') llista.push(e); else capes[e.capa].appendChild(e.node);
+      });
     });
 
     // El paviment del casc antic «es construeix» amb les cases de classe: del 35 % (cap) al 100 % (totes)
     svg.style.setProperty('--casc-op', (0.35 + 0.65 * ocupades / poble).toFixed(2));
 
     var frag = document.createDocumentFragment();
-    Compon.ordena(llista).forEach(function (e) { frag.appendChild(e.node); });
+    Compon.ordena(llista).forEach(function (e) { e.node.setAttribute('data-k', e.ordre !== undefined ? e.ordre : e.y); frag.appendChild(e.node); });
     capes.peces.appendChild(frag);
     mostraComptador(s.comptador);
+  }
+
+  // Nodes d'un lloc (ocupat, en tria o lliure). capa: 'peces' (ordenats per y), 'tolls', 'halos' o 'marques'.
+  function nodesLloc(l, s, zones, retinguts) {
+    var out = [];
+    var posa = function (capa, node) { node.setAttribute('data-lloc', l.id); out.push({ capa: capa, y: l.y, node: node }); };
+    var o = propis[l.id] || s.o[l.id];
+    if (o) {
+      var peca = D.peces[o.p];
+      var mirall = o.m !== undefined ? !!o.m : !!l.mirall;
+      var vars = Compon.colors(peca, o.c, D.paletes, l.pastor ? 'pastors' : null);
+      if (s.moment === 'neu' && peca.cat === 'casa') Compon.neuTeulada(vars);
+      posa('peces', usa(o.p, l.x, l.y, mirall, vars, propis[l.id] ? 'propia' : null));
+      Compon.finestresTapades(o.f).forEach(function (i) {       // finestres que la classe ha tret: hi va paret
+        if (i < (peca.finestres || []).length) posa('peces', usa(o.p, l.x, l.y, mirall, vars, null, o.p + '-F' + i));
+      });
+      if (peca.cat === 'casa') posa('tolls', usa('LLUM-TOLL', l.x, l.y + 5));
+      if (o.p === 'ELE-FANAL') posa('halos', usa('LLUM-HALO', l.x, l.y - 22));
+      if (o.n) posa('peces', textPlaca(peca, l, mirall, o.n));
+      return out;
+    }
+    if (!visibleLliure(l, s, zones)) return out;
+    var ret = retinguts[l.id];
+    if (op.filtre) {
+      // Mode participar amb un tipus triat: només les siluetes d'aquest tipus als llocs que pot triar aquest grup
+      if (l.tipus !== op.filtre || !llocDelGrup(l, s)) return out;
+      var codi = l.codi || SILUETA[l.tipus];
+      posa('peces', usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')));
+      if (!ret) posa('peces', usa(codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora'));
+      if (!ret && l.tipus !== 'casa') marca(l).forEach(function (n) { posa('marques', n); });     // les cases ja es veuen bé
+    } else if (l.tipus === 'casa' || l.tipus === 'element') {
+      posa('peces', usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma ' + l.tipus + (ret ? ' retingut' : '')));
+      if (l.tipus === 'casa' && !ret) posa('peces', usa(l.codi, l.x, l.y, !!l.mirall, null, 'fantasma-vora'));
+    }
+    return out;
+  }
+
+  // Redibuixa només un lloc (en triar colors o girar la figura): amb el pessebre ple, refer tota l'escena (≈2.600 nodes)
+  // costava ~1 s per toc en un mòbil lent. Si alguna cosa falla, es refà tota l'escena.
+  function dibuixaLloc(id) {
+    if (!darrer) return;
+    try {
+      var l = D.mapa.llocs.filter(function (x) { return x.id === id; })[0];
+      var zones = {}, retinguts = {};
+      darrer.zones.forEach(function (z) { zones[z] = true; });
+      (darrer.r || []).forEach(function (x) { retinguts[x] = true; });
+      [capes.peces, capes.tolls, capes.halos, capes.marques].forEach(function (g) {
+        Array.prototype.slice.call(g.querySelectorAll('[data-lloc="' + id + '"]')).forEach(function (n) { n.remove(); });
+      });
+      var fills = capes.peces.children;
+      nodesLloc(l, darrer, zones, retinguts).forEach(function (e) {
+        if (e.capa !== 'peces') { capes[e.capa].appendChild(e.node); return; }
+        e.node.setAttribute('data-k', e.y);
+        var abans = null;                     // primer node que va per davant (y més gran): s'hi insereix al davant
+        for (var i = 0; i < fills.length; i++) if (+fills[i].getAttribute('data-k') > e.y) { abans = fills[i]; break; }
+        capes.peces.insertBefore(e.node, abans);
+      });
+    } catch (err) {
+      dibuixa(darrer);
+    }
   }
 
   // ── Joc del caganer
@@ -208,8 +243,7 @@ var Visor = (function () {
   // Punt lluminós al peu d'un lloc lliure (persones, animals i elements). Fa la mateixa mida a la pantalla a qualsevol
   // zoom (escala --marca, que posa zoom.js), perquè es vegi encara que la figura sigui petita.
   function marca(l) {
-    el('circle', { cx: l.x, cy: l.y, r: 10, class: 'marca-ona' }, capes.marques);
-    el('circle', { cx: l.x, cy: l.y, r: 5.5, class: 'marca-punt' }, capes.marques);
+    return [el('circle', { cx: l.x, cy: l.y, r: 10, class: 'marca-ona' }), el('circle', { cx: l.x, cy: l.y, r: 5.5, class: 'marca-punt' })];
   }
 
   // Un lloc lliure es dibuixa (en transparent) si la seva zona és oberta, amb excepcions per grup.
@@ -324,6 +358,7 @@ var Visor = (function () {
     inicia: inicia,
     refresca: refresca,
     redibuixa: function () { if (darrer) dibuixa(darrer); },
+    redibuixaLloc: dibuixaLloc,
     // Mode participar: mostra només els llocs lliures d'un tipus ('persona', 'animal', 'casa', 'element') o cap (null)
     filtre: function (tipus) { op.filtre = tipus; if (darrer) dibuixa(darrer); },
     // Llocs lliures d'un tipus que pot triar el grup que participa

@@ -43,7 +43,7 @@ function enllac_crea(PDO $pdo, string $pebre, string $tipus, ?string $etapa, Dat
 function testimoni_neteja($t): ?string
 {
     if (!is_string($t)) return null;
-    $t = (string)preg_replace('/[^A-Za-z0-9_-]/', '', $t);
+    $t = (string)preg_replace(['/%[0-9A-Fa-f]{2}/', '/[^A-Za-z0-9_-]/'], '', $t);     // també «%20» sense descodificar
     return strlen($t) === 22 ? $t : null;
 }
 
