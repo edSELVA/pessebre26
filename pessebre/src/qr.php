@@ -1,8 +1,26 @@
 <?php
 // Generador de codis QR (ISO/IEC 18004) sense dependències: mode byte, correcció d'errors M, versions 1–9 (fins a 180 bytes).
 // N'hi ha prou per a una adreça curta amb el codi de família (uns 45 caràcters → versió 4).
-// Basat en l'algorisme de referència de Project Nayuki. Si aquest codi n'és una adaptació, cal conservar-ne l'avís de llicència:
-// «QR Code generator library — Copyright (c) Project Nayuki (https://www.nayuki.io/page/qr-code-generator-library). MIT License.»
+// Adaptació a PHP (reduïda: mode byte, nivell M, versions 1–9) de la «QR Code generator library» de Project Nayuki
+// (https://www.nayuki.io/page/qr-code-generator-library), que es distribueix amb la llicència MIT següent:
+//
+//   Copyright (c) Project Nayuki. (MIT License)
+//
+//   Permission is hereby granted, free of charge, to any person obtaining a copy of
+//   this software and associated documentation files (the "Software"), to deal in
+//   the Software without restriction, including without limitation the rights to
+//   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+//   the Software, and to permit persons to whom the Software is furnished to do so,
+//   subject to the following conditions:
+//   - The above copyright notice and this permission notice shall be included in
+//     all copies or substantial portions of the Software.
+//   - The Software is provided "as is", without warranty of any kind, express or
+//     implied, including but not limited to the warranties of merchantability,
+//     fitness for a particular purpose and noninfringement. In no event shall the
+//     authors or copyright holders be liable for any claim, damages or other
+//     liability, whether in an action of contract, tort or otherwise, arising from,
+//     out of or in connection with the Software or the use or other dealings in the
+//     Software.
 declare(strict_types=1);
 
 const QR_ECC_PER_BLOC = [1 => 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];   // nivell M

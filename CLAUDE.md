@@ -128,7 +128,7 @@ proves/    proves automàtiques PHP
 
 **Protecció**
 - **Codis de família:** 10 caràcters d'un alfabet de 31 sense ambigus (`23456789ABCDEFGHJKMNPQRSTUVWXYZ`), 9 aleatoris amb generador criptogràfic + 1 de control; s'imprimeixen com `K7M-QX4-P9TR`. La BD només desa un **HMAC** amb el pebre de `config.php`. El QR porta el codi **després del `#`** (`https://…/#c=K7MQX4P9TR`): el navegador no l'envia mai al servidor, i no queda als registres d'accés. Els errors de transcripció detectats pel caràcter de control no compten com a intents.
-- **Límit d'intents:** empremta = HMAC de la IP amb una sal que canvia cada hora (la vella s'esborra). 10 fallades en 15 min → espera. Fre global si hi ha moltes fallades per minut. **No es desa la IP.**
+- **Límit d'intents:** empremta = HMAC de la IP (IPv6: el /64) amb una sal que canvia cada hora (la vella s'esborra). 30 fallades en 15 min → espera (§33). Fre global si hi ha moltes fallades per minut. **No es desa la IP.**
 - **Enllaç del claustre:** testimoni aleatori de 128 bits després del `#`, desat com a hash, regenerable. **Codis d'etapa:** mateix format i protecció que els de família (§30).
 - **Administració:** comptes personals (§31: usuari i contrasenya, `password_hash` a la taula `usuaris`). Sense cookies no hi ha sessió: la pàgina demana usuari i contrasenya a cada càrrega, els guarda només a memòria i els envia a cada acció. 5 fallades → espera 15 min. HTTPS obligatori. Cada acció queda al registre amb el nom del compte.
 
@@ -274,7 +274,7 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 
 ## 31. Comptes personals d'administració (14 nov 2026, decidit i fet)
 - Taula `usuaris` (nom, `password_hash`, nivell `admin` o `lectura`). S'entra amb **usuari i contrasenya**; el registre diu «administració · nom».
-- Pestanya **«Comptes»**: tothom pot canviar la seva contrasenya; l'administració crea comptes (o en canvia la contrasenya i el nivell) i en treu. No et pots treure a tu mateix i sempre ha de quedar un compte d'administració. Contrasenyes de 10 caràcters com a mínim.
+- Pestanya **«Comptes»**: tothom pot canviar la seva contrasenya; l'administració crea comptes (o en canvia la contrasenya i el nivell) i en treu. No et pots treure a tu mateix i sempre ha de quedar un compte d'administració. Contrasenyes de 12 caràcters com a mínim i no trivials (§33).
 - El primer compte es crea amb `php eines/gestio.php usuari NOM admin` (o, si l'hosting no té terminal, amb l'instal·lador web que caldrà fer). `config.php` ja no porta contrasenyes.
 - **Demo:** usuari `demo`, contrasenya `demo-pessebre` (el panell hi entra sol).
 
@@ -285,3 +285,15 @@ Llista de classes per etapa (≤ 74) · dades de l'hosting (PHP, BD, subdomini, 
 - **Provat amb Apache de veritat** (MAMP + php-cgi, `sh eines/prova-apache.sh`): totes dues disposicions, instal·lació, capçaleres, bloquejos, API i administració (40 comprovacions). **No provat:** PHP 7.4 (no és a l'ordinador; el codi s'ha revisat i no fa servir res exclusiu de PHP 8), nginx (configuració a la guia) i l'hosting real.
 - **Guia:** `INSTAL·LACIO.md` (paquet, pujar, instal·lar, posar-ho en marxa des de l'administració, seguretat, nginx).
 - **Quan arribin les dades de l'hosting:** decidir SQLite o MySQL, on va `pessebre/`, l'adreça definitiva (va als QR: generar els codis d'etapa, l'enllaç de la torronada i els codis de família només després), activar HTTPS/HSTS al `.htaccess` i provar-ho amb mòbils.
+
+## 33. Revisió externa del 16 nov 2026 (integrada el 17 nov a la branca `revisio-pessebre`)
+- **Aplicada tal qual** (21 pedaços sobre el paquet `pessebre-20261116-1950`, idèntic al repositori): el detall és al `CANVIS.md` de la revisió (no es puja: és a `anàlisis/`, ignorat). Canvis de comportament que cal recordar:
+  - **Zones:** el 75 % compta el total menys les automàtiques. Automàtiques: s'aturen quan queda menys d'un 25 % de llocs per a famílies i **no comencen fins 48 h després d'obrir les famílies** (`AUTO_ESPERA_HORES`). Sostre de zones endarrerides.
+  - **Posta:** el llindar és el 70 % de **les classes de la llista** (no de les 74 cases); el comptador de classes mostra «N de (classes de la llista)». Els llindars no poden passar del 90 % de la participació màxima possible.
+  - **Límit d'intents:** 30 fallades per IP en 15 min (wifi de l'escola), IPv6 per /64, `::ffff:` com a IPv4, fre global 600/min; el codi de família escrit a la pàgina de tutors i els enllaços o codis d'etapa antics no compten.
+  - **Contrasenyes:** 12 caràcters com a mínim i sense paraules del context (pessebre, nadal, escola, el nom d'usuari…), també a l'instal·lador; `password_verify` sempre (temps constant). Màxim 60 reserves simultànies del claustre.
+  - **Instal·lador:** no torna a instal·lar mai si hi ha `config.php` (i esborra la clau); `url_base` ha de ser https (excepte localhost). SQLite amb nom aleatori `dades/pessebre-<24 hex>.sqlite` i `dades/.htaccess`.
+  - **Confirmacions idempotents** (un reintent després de perdre la resposta es dona per bo), llista de classes amb versió (409 si ha canviat), tick que no espera el bloqueig, 30 min d'inactivitat a l'admin, «Tria'm un lloc», «Desar el full» d'etiquetes, visor públic que es refresca cada 2 min.
+  - **`eines/diagnosi-hosting.php`:** es puja a l'arrel web abans d'instal·lar, s'obre, es fa una captura i s'esborra. Va al paquet (`eines/`).
+- **Adaptat al repositori:** proves (límits, llindars i missatges nous; `proves/prova-revisio.php` per al que no cobrien), la demo (el compte `demo`/`demo-pessebre` es crea directament a la taula: no passaria les regles noves), `eines/paquet.php` (copia la diagnosi), `eines/prova-apache.sh` (61 comprovacions: també reinstal·lació, https, contrasenya fàcil, nom de la BD, `dades/` i diagnosi) i `eines/secrets-permesos.txt` (el hash fals de `admin_autentica`).
+- **Pendent de decidir (no s'ha canviat cap valor per defecte):** figures per codi (`usos_codi`, ara 3; la revisió recomana 2, o 1 si participen més de 400 famílies), objectiu (600) i mínim de dies entre fites (1; la revisió recomana 2–3), data i hora reals de la torronada (ara 21 des 00:00–22:00), textos de privacitat (contacte, proveïdor de l'hosting i vistiplau de la DPD) i la **llicència del projecte** (MIT o cap; §9). `qr.php` és una adaptació de la biblioteca de Project Nayuki (MIT): porta l'avís de llicència sencer, que s'ha de conservar.
