@@ -121,7 +121,7 @@ function admin_estat(PDO $pdo, array $cfg, string $rol, DateTimeImmutable $ara):
     $config = [];
     foreach (CLAUS_CALENDARI as $k) $config[$k] = hora_local(config_llegeix($pdo, $k, DEFECTES_CALENDARI[$k] ?? '2026-12-21 22:59:00'));
     foreach (['aturada' => '0', 'usos_codi' => '3', 'zones' => 'Z0', 'llindar_zona' => '75', 'objectiu' => '600',
-              'minim_dies' => '1', 'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40', 'tancat' => '0',
+              'minim_dies' => '2', 'auto_posta' => '35', 'auto_nit' => '50', 'auto_neu' => '60', 'auto_max_zona' => '40', 'tancat' => '0',
               'moment' => 'dia', 'auto_fase' => ''] as $k => $d) $config[$k] = config_llegeix($pdo, $k, $d);
     return [
         'rol' => $rol,

@@ -75,7 +75,7 @@ function fites_aplica(PDO $pdo, DateTimeImmutable $ara): ?array
     foreach (fites($pdo) as $f) {
         if ($f['assolida'] !== null) { $anterior = $f; continue; }
         // Mínim de dies entre fites
-        $minim = (int)config_llegeix($pdo, 'minim_dies', '1');
+        $minim = (int)config_llegeix($pdo, 'minim_dies', '2');
         if ($anterior && bd_hora((new DateTimeImmutable($anterior['assolida'], new DateTimeZone('UTC')))->modify("+$minim days")) > $t) return null;
         $p = participacio_real($pdo);
         $valor = $f['base'] === 'classes' ? $p['classes'] : $p['reals'];

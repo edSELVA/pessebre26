@@ -11,6 +11,7 @@ $prova_fites = function (array $cfg, string $nom) {
     $mapa = disseny($cfg, 'mapa.json');
     llocs_carrega($pdo, $mapa);
     fites_inicialitza($pdo);
+    config_desa($pdo, 'minim_dies', '1');     // aquesta prova fa saltar les fites amb un dia de diferència (per defecte, 2)
     $crida = function (array $p, string $hora) use ($pdo, $cfg) {
         return app_executa($pdo, $cfg, $p, '10.3.0.1', new DateTimeImmutable($hora, new DateTimeZone('UTC')));
     };

@@ -29,6 +29,10 @@ $prova_revisio = function (array $cfg, string $nom) {
     $admin = function (string $a, array $p, string $hora) use ($crida) { return $crida(['a' => $a, 'usuari' => 'anna', 'contrasenya' => 'admin-de-prova-1234'] + $p, $hora, '10.6.9.9'); };
     $peces = disseny($cfg, 'peces.json')['peces'];
 
+    // Valors per defecte decidits el 17 nov: 3 figures per codi, 2 dies entre fites, torronada el 21 des de 17:00 a 22:00
+    igual(['3', '600', '2'], [config_llegeix($pdo, 'usos_codi'), config_llegeix($pdo, 'objectiu'), config_llegeix($pdo, 'minim_dies')], 'per defecte: 3 figures per codi, objectiu 600 i 2 dies entre fites');
+    igual(['2026-12-21 17:00', '2026-12-21 22:00'], [hora_local(calendari($pdo, 'claustre_des')), hora_local(calendari($pdo, 'claustre_tanca'))], 'per defecte la torronada és el 21 des de 17:00 a 22:00');
+
     // Llista de classes amb versió: si algú l'ha canviat mentrestant, no se substitueix
     $text = '';
     for ($i = 1; $i <= 50; $i++) $text .= 'primaria;C ' . $i . "\n";

@@ -142,7 +142,7 @@ const ORDRE_ZONES = ['Z0', 'Z1', 'Z2', 'Z3'];
 const DEFECTES_CALENDARI = [
     'families_des'  => '2026-12-20 23:00:00',   // 21 des 00:00 (Barcelona)
     'families_fins' => '2027-01-05 23:00:00',   // 6 gen 00:00 (Barcelona)
-    'claustre_des'  => '2026-12-20 23:00:00',   // 21 des 00:00
+    'claustre_des'  => '2026-12-21 16:00:00',   // 21 des 17:00 (torronada)
     'claustre_tanca' => '2026-12-21 21:00:00',  // 21 des 22:00
 ];
 
