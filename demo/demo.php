@@ -198,7 +198,11 @@ function demo_munta_fase(PDO $pdo, array $cfg, int $fase): array
     $e = ['fase' => $fase, 'hores' => 0, 'desfasament' => 0, 'enllacos' => [], 'etapes' => [], 'codis' => []];
 
     $pdo->beginTransaction();
-    usuari_desa($pdo, DEMO_USUARI, DEMO_CONTRASENYA, 'admin', $inici);     // compte d'administració de la demo
+    // Compte d'administració de la demo. Directament a la taula: la contrasenya coneguda de la demo no passaria les regles
+    // dels comptes reals (12 caràcters, sense «pessebre» ni el nom d'usuari), i la demo només funciona a la xarxa local.
+    $pdo->prepare('DELETE FROM usuaris WHERE nom = ?')->execute([DEMO_USUARI]);
+    $pdo->prepare('INSERT INTO usuaris (nom, hash, rol, creat) VALUES (?, ?, ?, ?)')
+        ->execute([DEMO_USUARI, password_hash(DEMO_CONTRASENYA, PASSWORD_DEFAULT), 'admin', bd_hora($inici)]);
     classes_carrega($pdo, demo_classes($cfg));
     foreach (array_keys(ETAPES) as $etapa) $e['etapes'][$etapa] = codi_etapa_nou($pdo, $cfg['pebre'], [$etapa], $inici);
     $e['enllacos']['claustre'] = enllac_crea($pdo, $cfg['pebre'], 'claustre', null, $inici);

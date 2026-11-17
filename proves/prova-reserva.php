@@ -28,9 +28,12 @@ $prova_reserva = function (array $cfg, string $nom) use ($ARREL) {
     igual(['Mussols', 'Guineus', '3r ESO B'], array_column($r['classes'] ?? [], 'nom'), 'només surten les classes de l\'etapa');
     [$e, $r] = $crida(['a' => 'classes.estat', 'c' => 'K7M-QX4'], $t0, '10.0.0.9');
     igual([400, 'format'], [$e, $r['codi'] ?? ''], 'un codi mal escrit → error de format (no compta com a intent)');
-    for ($i = 0; $i < 10; $i++) $crida(['a' => 'classes.estat', 'c' => codi_nou()], $t0, '10.0.0.9');
+    for ($i = 0; $i < LIMIT_FALLADES - 1; $i++) $crida(['a' => 'classes.estat', 'c' => codi_nou()], $t0, '10.0.0.9');
     [$e] = $crida(['a' => 'classes.estat', 'c' => $prim], $t0, '10.0.0.9');
-    igual(429, $e, 'després de 10 codis inventats, cal esperar encara que el codi sigui bo');
+    igual(200, $e, 'amb ' . (LIMIT_FALLADES - 1) . ' codis inventats encara es pot entrar (wifi de l\'escola: moltes persones amb la mateixa IP)');
+    $crida(['a' => 'classes.estat', 'c' => codi_nou()], $t0, '10.0.0.9');
+    [$e] = $crida(['a' => 'classes.estat', 'c' => $prim], $t0, '10.0.0.9');
+    igual(429, $e, 'després de ' . LIMIT_FALLADES . ' codis inventats, cal esperar encara que el codi sigui bo');
     [$e] = $crida(['a' => 'classes.estat', 'c' => $prim], $t0, '10.0.0.8');
     igual(200, $e, 'una altra adreça no queda afectada');
     [$e] = $crida(['a' => 'classes.estat', 'c' => $prim], $min(16), '10.0.0.9');
@@ -79,7 +82,7 @@ $prova_reserva = function (array $cfg, string $nom) use ($ARREL) {
     ksort($esperat);
     ksort($real);
     igual($esperat, $real, 'el snapshot porta la casa, si va girada, els colors (amb flors), el nom i les finestres');
-    igual(['tipus' => 'classes', 'fet' => 1, 'total' => 74], $s['comptador'], 'comptador: 1 de 74');
+    igual(['tipus' => 'classes', 'fet' => 1, 'total' => 4], $s['comptador'], 'comptador: 1 de 4 (el total són les classes de la llista, no les 74 cases)');
     igual([], snapshot_errors($s, disseny($cfg, 'mapa.json'), disseny($cfg, 'peces.json')['peces'], disseny($cfg, 'paletes.json')), 'el snapshot generat és vàlid');
     [$e, $r] = $crida(['a' => 'classes.retenir', 'c' => $prim, 'classe' => $id('Mussols'), 'lloc' => 'C004'], $min(4));
     igual([409, 'classe_feta'], [$e, $r['codi'] ?? ''], 'una classe amb casa no en pot reservar una altra');

@@ -18,7 +18,7 @@ foreach (glob("$pub/*.html") as $f) {
 }
 foreach (glob("$pub/app/*.js") as $f) {
     $t = (string)file_get_contents($f);
-    comprova(!preg_match('/\beval\(|new Function|innerHTML|setAttribute\(\s*[\'"]style/', $t), basename($f) . ' no fa servir eval, innerHTML ni style en línia');
+    comprova(!preg_match('/\beval\(|new Function|innerHTML\s*\+?=(?!=)|insertAdjacentHTML|outerHTML\s*=|setAttribute\(\s*[\'"]style/', $t), basename($f) . ' no fa servir eval, no escriu innerHTML ni posa style en línia');
 }
 $ht = (string)file_get_contents("$pub/.htaccess");
 comprova(strpos($ht, "Content-Security-Policy \"default-src 'self'") !== false, '.htaccess envia la CSP');
@@ -34,7 +34,7 @@ comprova(is_file("$ARREL/eines/comprova-secrets.sh"), 'hi ha eines/comprova-secr
 comprova(strpos($gi, 'paquet/') !== false, '.gitignore inclou paquet/ (porta la clau d\'instal·lació)');
 $inst = (string)file_get_contents("$ARREL/public_html/installa.php");
 comprova(strpos($inst, 'hash_equals($clau') !== false && strpos($inst, '@unlink($fitxer_clau)') !== false, 'installa.php demana la clau i l\'esborra en acabar (un sol ús)');
-comprova(strpos($inst, "if (!is_file(\$fitxer_clau))") !== false, 'sense la clau, installa.php no fa res');
+comprova(strpos($inst, "if (is_file(\$cami_config) || !is_file(\$fitxer_clau))") !== false, 'sense la clau, o si ja hi ha config.php, installa.php no fa res');
 foreach (['gestio.php', 'paquet.php', 'logo.php', 'converteix.php', 'dades-exemple.php'] as $f) {
     comprova(strpos((string)file_get_contents("$ARREL/eines/$f"), "PHP_SAPI !== 'cli'") !== false, "eines/$f només funciona des del terminal");
 }

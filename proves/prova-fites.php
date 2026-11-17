@@ -20,13 +20,14 @@ $prova_fites = function (array $cfg, string $nom) {
     $fita = function (int $n) use ($pdo) { $s = $pdo->prepare('SELECT * FROM fites WHERE numero = ?'); $s->execute([$n]); return $s->fetch(); };
     $autos = function () use ($pdo) { return (int)$pdo->query("SELECT COUNT(*) FROM ocupacions WHERE origen = 'auto'")->fetchColumn(); };
     $peces = disseny($cfg, 'peces.json')['peces'];
+    // 74 classes a la llista (una per casa): el llindar de la posta es calcula sobre les classes (fites_recalcula_posta)
+    for ($i = 1; $i <= 74; $i++) $pdo->prepare('INSERT INTO classes (etapa, nom, ordre) VALUES (?, ?, ?)')->execute(['primaria', 'C' . $i, $i]);
     $posa = function (array $llocs, string $origen, string $hora) use ($pdo, $peces) {
         $ins = $pdo->prepare("INSERT INTO ocupacions (lloc_id, estat, origen, classe_id, peca, mirall, colors, hora) VALUES (?, 'confirmat', ?, ?, ?, 0, ?, ?)");
         foreach ($llocs as $i => $l) {
             $classe = null;
             if ($origen === 'classe') {
-                $pdo->prepare('INSERT INTO classes (etapa, nom, ordre) VALUES (?, ?, ?)')->execute(['primaria', 'C' . $l['id'], $i]);
-                $classe = (int)$pdo->lastInsertId();
+                $classe = (int)$pdo->query('SELECT id FROM classes WHERE id NOT IN (SELECT classe_id FROM ocupacions WHERE classe_id IS NOT NULL) ORDER BY id LIMIT 1')->fetchColumn();
             }
             $peca = $l['codi'] ?? ($l['tipus'] === 'animal' ? 'ANI-OVELLA-D' : 'PER-ADU-F');
             $ins->execute([$l['id'], $origen, $classe, $peca, json_encode(array_fill(0, count($peces[$peca]['pers']), 0)), $hora]);

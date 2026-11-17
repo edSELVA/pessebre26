@@ -85,16 +85,18 @@ $prova_families = function (array $cfg, string $nom) use ($ARREL) {
     [$e, $r] = $crida(['a' => 'codi.validar', 'c' => 'ABC'], '2026-12-15 10:00:00');
     igual([400, 'format'], [$e, $r['codi'] ?? ''], 'codi amb format dolent → error de format');
     $inventat = 'ABCDEFGHJ' . codi_control('ABCDEFGHJ');
-    for ($i = 0; $i < 10; $i++) $crida(['a' => 'codi.validar', 'c' => $inventat], '2026-12-15 10:00:00', '10.1.0.8');
+    for ($i = 0; $i < LIMIT_FALLADES; $i++) $crida(['a' => 'codi.validar', 'c' => $inventat], '2026-12-15 10:00:00', '10.1.0.8');
     [$e] = $crida(['a' => 'codi.validar', 'c' => $c[0]], '2026-12-15 10:00:00', '10.1.0.8');
-    igual(429, $e, '10 codis inexistents (amb control bo) → cal esperar');
+    igual(429, $e, LIMIT_FALLADES . ' codis inexistents (amb control bo) → cal esperar');
 
     // Claustre: 21 des, abans de les 22:00
     $h = '2026-12-21 17:00:00';
     [$e, $r] = $crida(['a' => 'claustre.estat', 'k' => $k], $h);
     igual([200, true], [$e, $r['pot'] ?? null], 'el claustre pot participar el 21 des');
     [$e, $r] = $crida(['a' => 'claustre.estat', 'k' => 'x'], $h, '10.1.0.7');
-    igual(403, $e, 'enllaç del claustre dolent → 403');
+    igual([400, 'enllac_format'], [$e, $r['codi'] ?? ''], 'enllaç del claustre incomplet → error de format (no compta com a intent)');
+    [$e, $r] = $crida(['a' => 'claustre.estat', 'k' => str_repeat('A', 22)], $h, '10.1.0.7');
+    igual([403, 'enllac'], [$e, $r['codi'] ?? ''], 'enllaç del claustre ben format però inexistent → 403');
     // La torronada (§30): el claustre també pot posar figures als llocs de les famílies d'una zona oberta
     [$e, $r] = $crida(['a' => 'claustre.retenir', 'k' => $k, 'lloc' => $persona['id']], $h);
     igual(200, $e, 'el claustre pot triar un lloc lliure de les famílies (zona oberta)');
