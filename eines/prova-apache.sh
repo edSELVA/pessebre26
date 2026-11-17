@@ -61,6 +61,10 @@ EOF
   comprova 200 "$(curl -s -o /dev/null -w '%{http_code}' $U/installa.php)" "$DIS: installa.php demana la clau"
   conte "$(curl -s -d clau=dolenta $U/installa.php)" "no és correcta" "$DIS: una clau dolenta no entra"
   conte "$(curl -s -d clau=$CLAU $U/installa.php)" "Comprovacions" "$DIS: amb la clau surten les comprovacions"
+  conte "$(curl -s --data-urlencode clau=$CLAU -d installa=1 --data-urlencode url_base=http://pessebre.exemple.cat/ -d bd=sqlite -d usuari=eduard \
+       --data-urlencode contrasenya=prova-apache-1234 --data-urlencode contrasenya2=prova-apache-1234 $U/installa.php)" "ha de començar per https" "$DIS: una adreça http:// (que no sigui local) no s'accepta"
+  conte "$(curl -s --data-urlencode clau=$CLAU -d installa=1 --data-urlencode url_base=$U/ -d bd=sqlite -d usuari=eduard \
+       --data-urlencode contrasenya=pessebre2026 --data-urlencode contrasenya2=pessebre2026 $U/installa.php)" "massa fàcil" "$DIS: una contrasenya fàcil no s'accepta"
   R=$(curl -s --data-urlencode clau=$CLAU -d installa=1 --data-urlencode url_base=$U/ -d bd=sqlite -d usuari=eduard \
        --data-urlencode contrasenya=prova-apache-1234 --data-urlencode contrasenya2=prova-apache-1234 $U/installa.php)
   conte "$R" "Pessebre instal·lat" "$DIS: s'instal·la"
@@ -68,6 +72,12 @@ EOF
   P=$( [ "$DIS" = A ] && echo "$D/pessebre" || echo "$D/public_html/pessebre" )
   comprova "no" "$( [ -f "$P/clau-installacio.txt" ] && echo si || echo no )" "$DIS: la clau d'instal·lació s'ha esborrat"
   comprova "-rw-------" "$(ls -l "$P/config.php" | cut -c1-10)" "$DIS: config.php només el pot llegir el propietari"
+  SQ=$(cd "$P/dades" && ls pessebre-*.sqlite 2>/dev/null)
+  conte "$SQ" "^pessebre-[0-9a-f]\{24\}\.sqlite$" "$DIS: la base de dades té un nom impossible d'endevinar"
+  comprova "si" "$( [ -f "$P/dades/.htaccess" ] && echo si || echo no )" "$DIS: dades/ té el seu propi .htaccess"
+  echo prova > "$P/clau-installacio.txt"
+  comprova 403 "$(curl -s -o /dev/null -w '%{http_code}' -d clau=prova $U/installa.php)" "$DIS: amb config.php no es torna a instal·lar mai, encara que hi hagi una clau"
+  comprova "no" "$( [ -f "$P/clau-installacio.txt" ] && echo si || echo no )" "$DIS: i la clau que hi havia s'esborra"
 
   # Capçaleres i memòria cau
   H=$(curl -s -D - -o /dev/null $U/)
@@ -78,7 +88,7 @@ EOF
   conte "$(curl -s -o /dev/null -w '%{http_code}' $U/app/)" "40[34]" "$DIS: no es llisten carpetes (403 o 404, mai la llista)"
   comprova 403 "$(curl -s -o /dev/null -w '%{http_code}' $U/.htaccess)" "$DIS: .htaccess no es pot llegir"
   if [ "$DIS" = B ]; then
-    for f in pessebre/config.php pessebre/config.exemple.php pessebre/dades/pessebre.sqlite pessebre/src/app.php; do
+    for f in pessebre/config.php pessebre/config.exemple.php "pessebre/dades/$SQ" pessebre/dades/ pessebre/src/app.php; do
       comprova 403 "$(curl -s -o /dev/null -w '%{http_code}' $U/$f)" "B: $f bloquejat"
     done
   fi
@@ -89,6 +99,15 @@ EOF
   conte "$(curl -s -H 'Content-Type: application/json' -d '{"a":"admin.estat","usuari":"eduard","contrasenya":"prova-apache-1234"}' $U/api.php)" '"rol":"admin"' "$DIS: el primer compte entra a l'administració"
   conte "$(curl -s -H 'Content-Type: application/json' -d '{"a":"res"' $U/api.php)" '"codi":"json"' "$DIS: JSON trencat → error net, sense rutes"
   comprova 200 "$(curl -s -o /dev/null -w '%{http_code}' $U/snapshot.json)" "$DIS: snapshot.json creat"
+
+  # Diagnosi de l'hosting (es puja a l'arrel web, s'obre i s'esborra)
+  cp "$D/eines/diagnosi-hosting.php" "$D/public_html/"
+  DG=$(curl -s $U/diagnosi-hosting.php)
+  conte "$DG" "Diagnosi de l'hosting" "$DIS: la diagnosi s'obre"
+  conte "$DG" "Bloqueig de fitxers (flock)" "$DIS: la diagnosi prova el bloqueig de fitxers"
+  conte "$DG" "resposta 403" "$DIS: la diagnosi veu que el .htaccess bloqueja carpetes"
+  comprova "" "$(ls -d "$D"/public_html/diag-* 2>/dev/null)" "$DIS: la diagnosi no deixa carpetes temporals"
+  rm "$D/public_html/diagnosi-hosting.php"
 
   "$HTTPD" -f "$D/httpd.conf" -k stop; kill "$(cat "$D/fcgi.pid")" 2>/dev/null; sleep 1
 }

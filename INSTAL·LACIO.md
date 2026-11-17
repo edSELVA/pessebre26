@@ -2,7 +2,7 @@
 
 **Cal:** PHP 8.2 o 8.3 (funciona des de 7.4, però 7.4 ja no té actualitzacions de seguretat) amb PDO SQLite (o MySQL/MariaDB), **HTTPS** i Apache (amb nginx, vegeu el final). Res més: ni Composer ni Node.
 
-**Abans de res:** puja `diagnosi-hosting.php` a l'arrel web del subdomini, obre'l, fes una captura i esborra'l. Si el disc és de xarxa o el bloqueig de fitxers no funciona, tria **MySQL**. Si la IP que surt no és la teva IP pública, **no l'obris** fins que s'hagi resolt (el límit d'intents bloquejaria tothom).
+**Abans de res:** puja `diagnosi-hosting.php` (és a `eines/` dins del paquet) a l'arrel web del subdomini, obre'l, fes una captura i esborra'l. Si el disc és de xarxa o el bloqueig de fitxers no funciona, tria **MySQL**. Si la IP que surt no és la teva IP pública, **no l'obris** fins que s'hagi resolt (el límit d'intents bloquejaria tothom).
 
 **Calendari recomanat:** fes primer la instal·lació en un **subdomini de prova** (o al definitiu, abans d'anunciar-lo) i deixa-ho tot **provat abans del 14 de desembre**, quan comencen les tutories. Si a la prova surt alguna cosa, es corregeix i es prepara un paquet nou.
 

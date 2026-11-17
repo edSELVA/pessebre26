@@ -30,3 +30,6 @@ public_html/disseny/logo.svg
 
 # Paquets per pujar a l hosting (porten la clau d instal·lació i el logo)
 paquet/
+
+# Anàlisis i revisions externes (zips, informes): no es pugen
+anàlisis/

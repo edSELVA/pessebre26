@@ -5,6 +5,7 @@
 //   public_html/   el web (sense snapshot.json, exemples ni fitxers de proves), amb el logo si és a disseny/logo.svg
 //   pessebre/      el codi del servidor, config.exemple.php, .htaccess i la clau d'instal·lació (un sol ús)
 //   eines/gestio.php  per si l'hosting té terminal
+//   eines/diagnosi-hosting.php  per provar l'hosting abans d'instal·lar (es puja a l'arrel web, s'obre i s'esborra)
 //   INSTAL·LACIO.md   la guia
 // No hi va mai: config.php, la base de dades, dades/, la demo, les proves, el disseny d'origen ni classes.csv.
 // paquet/ és a .gitignore.
@@ -47,7 +48,7 @@ $servidor = function (string $rel, bool $dir): bool {
 };
 $n += copia("$arrel/pessebre", "$desti/pessebre", $servidor);
 mkdir("$desti/eines", 0755, true);
-copy("$arrel/eines/gestio.php", "$desti/eines/gestio.php");
+foreach (['gestio.php', 'diagnosi-hosting.php'] as $eina) copy("$arrel/eines/$eina", "$desti/eines/$eina");
 copy("$arrel/INSTAL·LACIO.md", "$desti/INSTAL·LACIO.md");
 
 // Clau d'instal·lació (per a installa.php): aleatòria, només en aquest paquet
@@ -72,7 +73,7 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($desti, Fi
 $zip->close();
 
 $logo = is_file("$desti/public_html/disseny/logo.svg");
-echo "Paquet a punt: paquet/$nom (i $nom.zip), " . ($n + 2) . " fitxers.\n";
+echo "Paquet a punt: paquet/$nom (i $nom.zip), " . ($n + 3) . " fitxers.\n";
 echo $logo ? "  ✓ Inclou el logo de l'escola.\n" : "  ! Sense logo (fes «php eines/logo.php» si el vols al cel).\n";
 echo "  Clau d'instal·lació per a installa.php (guarda-la; només serveix per a aquest paquet):\n\n      $clau\n\n";
 echo "  La guia és a INSTAL·LACIO.md. Les classes (classes.csv) s'enganxen després a l'administració.\n";
